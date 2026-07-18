@@ -111,26 +111,26 @@ active. Which positions depends on the piece's **formation pattern**.
 There are four patterns:
 
 ```
-  Corners                    Edges
- ┌───┬───┬───┐              ┌───┬───┬───┐
- │ ● │   │ ● │              │   │ ● │   │
- ├───┼───┼───┤              ├───┼───┼───┤
- │   │ ○ │   │              │ ● │ ○ │ ● │
- ├───┼───┼───┤              ├───┼───┼───┤
- │ ● │   │ ● │              │   │ ● │   │
- └───┴───┴───┘              └───┴───┴───┘
+   Corners                     Edges
++---+---+---+              +---+---+---+
+| X |   | X |              |   | X |   |
++---+---+---+              +---+---+---+
+|   | O |   |              | X | O | X |
++---+---+---+              +---+---+---+
+| X |   | X |              |   | X |   |
++---+---+---+              +---+---+---+
 
-  Upper Triangle              Lower Triangle
- ┌───┬───┬───┐              ┌───┬───┬───┐
- │   │ ● │   │              │ ● │   │ ● │
- ├───┼───┼───┤              ├───┼───┼───┤
- │   │ ○ │   │              │   │ ○ │   │
- ├───┼───┼───┤              ├───┼───┼───┤
- │ ● │   │ ● │              │   │ ● │   │
- └───┴───┴───┘              └───┴───┴───┘
+Upper Triangle             Lower Triangle
++---+---+---+              +---+---+---+
+|   | X |   |              | X |   | X |
++---+---+---+              +---+---+---+
+|   | O |   |              |   | O |   |
++---+---+---+              +---+---+---+
+| X |   | X |              |   | X |   |
++---+---+---+              +---+---+---+
 ```
 
-`○` marks the formation's owner standing at the center; `●` marks the
+`O` marks the formation's owner standing at the center; `X` marks the
 active positions.
 
 Each pattern belongs to one group of four pieces:
