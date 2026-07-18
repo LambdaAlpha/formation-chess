@@ -124,10 +124,10 @@ during placement.
 A snapshot is rejected as invalid when it breaks the rules it claims to
 be a position of:
 
-- a pool contains a piece of the wrong color, or a side has more than
-  one vital piece;
-- pool sizes are inconsistent with alternating placement and the side to
-  move;
+- a side has more than one vital piece;
+- pool sizes do not satisfy alternation (the player to move must have
+  the same number of pieces in pool as the opponent, or exactly one
+  more);
 - during the placement phase (some pool non-empty), a piece stands
   outside its side's half;
 - the recorded result is `未分` but the position is already decided:
@@ -148,7 +148,8 @@ by its single-character name. For instance `红车` is the Red Rook.
 
 When a piece is unique on the board — there is only one piece of that
 color and name — it can be referred to simply by its name. When there
-are multiple pieces with the same color and name (e.g. two Red Pawns),
+are multiple pieces with the same color and name (e.g. two White pieces
+on the board),
 each must be identified by the coordinates of its current point (see
 Position below).
 
@@ -354,9 +355,8 @@ The message must be a single line: an error reaction always occupies
 exactly one line of text.
 
 Only the `错误：` prefix is part of the protocol. The message text is
-meant for humans during development and debugging: it is written in
-English, is not stable across versions, and must not be parsed by
-machines.
+meant for humans during development and debugging, is not stable across
+versions, and must not be parsed by machines.
 
 ### Examples
 

@@ -99,7 +99,7 @@ These are not static — they can be altered by formations. The full list:
 | **Direction: Diagonal** | Can move diagonally. |
 | **Direction: L-shaped** | Can move in an L-shaped pattern (one step orthogonally plus one step diagonally, the knight's move). |
 | **Control White** | Can place white pieces from the pool onto empty points inside its own formation. Commanding the placed pieces is granted separately, by the wizard's formation effect. |
-| **Vital** | Losing all pieces with this ability means losing the game. The general carries it. |
+| **Vital** | Losing this piece means losing the game. The general carries it. |
 
 ## Formations
 
@@ -169,9 +169,10 @@ With the **Any Distance** ability, a piece may slide any number of points
 along an allowed direction. For L-shaped moves, this means chaining
 consecutive knight moves along the same diagonal line.
 
-A piece must have at least one direction ability to move at all. Many
-pieces lose their direction ability when straying outside friendly
-formations — so **keep your formation network intact**.
+A piece must have at least one direction ability to move at all. Enemy
+formations can strip direction abilities — stray into hostile territory
+without friendly support and you may find yourself immobilized. **Keep
+your formation network intact** so allies cover each other.
 
 ## Push, Pass-Through, and Capture
 
@@ -231,12 +232,12 @@ piece you cannot pass through, the move is blocked — the horse's leg is
 hobbled. The pass-through rules described above determine whether you can
 clear the blocking piece.
 
-**Pushing with an L-shaped move.** When you shove a target with an
-L-shaped move, the target is pushed to the next knight position along the
-same diagonal. From (1,1) through (2,3), the target lands at (3,5). The
-pushed piece traverses that knight step itself (no L-shaped ability
-required), so its own leg applies: if the leg is occupied by a piece the
-*pushed piece* cannot pass through, or the destination is occupied, the
+**Pushing with an L-shaped move.** When you shove a target via an
+L-shaped move, the target is pushed one knight step further in the same
+direction — from (1,1) via (2,3) to (3,5). The pushed piece makes this
+step as though moving on its own: no L-shaped ability is required, but
+its own leg-blocking rules apply. If the leg is blocked by a piece the
+pushed piece cannot pass through, or the destination is occupied, the
 push escalates to a capture as usual.
 
 **Jump capture with an L-shaped move.** A cannon can use its jump capture
@@ -267,7 +268,7 @@ deal with **who controls what**.
 | **Traitor** | 叛 | Cross, any distance | Enemies inside become **also** controlled by the traitor's player (converts them) |
 | **Spy** | 谍 | Cross, any distance, controlled by *both* players | Friends inside become **also** controlled by the opponent (double agent effect) |
 
-The **General** is your vital piece — lose all generals and you lose. It
+The **General** is your vital piece — lose your general and you lose. It
 moves freely but cannot capture, push, or pass through other pieces, so
 protect it with formations. Its own formation modifies no abilities, but
 its pattern still matters: if the two generals ever stand inside each
@@ -326,9 +327,8 @@ These pieces move in cross directions at any distance and specialize in
 | **Cannon** | 炮 | Cross, any distance, jump capture | Allies gain jump capture; enemies lose it |
 | **Mine** | 雷 | Cross, any distance, *Capture on Captured*, *Captured on Capture* | Everyone inside gains both effects — any capture becomes mutual destruction |
 
-The **Spear** cannot capture by default: it must stand within a friendly
-Spear's formation to gain the ability, while enemies inside a Spear's
-formation become harmless. The **Shield** protects everyone around it —
+The **Spear** cannot capture by default: its formation grants capture to
+allies and strips it from enemies. The **Shield** protects everyone around it —
 stack immunity on your general by keeping a Shield nearby. The **Cannon**
 can only take pieces by jump capture, so it always needs a screen piece
 between itself and the target. The **Mine** turns its surroundings into a
@@ -351,8 +351,11 @@ sides cover it); outside every wizard's formation a white piece cannot be
 moved. Capturing a white piece returns it to the pool — white pieces are
 recycled, not destroyed.
 
-This adds a third layer to the game: you can turn captured enemies into
-your own pawns, swelling your army while depleting your opponent's.
+This adds a third dimension to the game: captured enemies become white
+pieces that your Wizard can bring back onto the board. White pieces do
+not benefit from formation effects, so their combat strength is far
+weaker than in their original form — they are primarily useful for
+occupying space and blocking paths.
 
 ## How a Game Unfolds
 
@@ -414,31 +417,31 @@ board check.
 
 ## Strategic Notes
 
-1. **Formations are everything.** Your pieces' default abilities are
-   modest. Their true power comes from standing in the right formations.
-   A Spear without a formation cannot even capture. A Pawn next to a Rook
-   becomes a long-range threat.
+1. **Formations move with pieces — root them together.** Influence on the
+   board is never static: every move reshapes the formation web around it.
+   Build a mobile network — one where allies cover each other but can still
+   advance together, and critical positions have rotating backup coverage.
+   Positioning determines who covers whom, and where the weak spots are.
 
-2. **Inhibitory effects are absolute.** If you can get an enemy piece
-   inside a formation that strips its direction ability, it becomes
-   immobile — a sitting duck. Use this to lock down key enemy pieces.
+2. **Position and pass through — control the battlefield.** Position
+   pieces to block key routes and divide the enemy; use pass-through to
+   bridge gaps and connect allies. The two are complementary: who can
+   pass through a chokepoint depends on positioning; whether a position
+   matters depends on what can pass through.
 
-3. **Formations follow the piece.** Moving a piece also moves its
-   formation. A piece that was protected may suddenly find itself
-   vulnerable. Think one move ahead.
+3. **Pushing breaks formations.** Pushing and capturing serve different
+   purposes: capturing removes the enemy; pushing displaces them. A
+   well-placed shove can throw a key piece out of friendly formation
+   coverage, force it into bad terrain, or sever the opponent's formation
+   connections. Pushing does not eliminate the piece, but it can dismantle
+   the network that piece depends on.
 
-4. **White pieces matter.** Every capture feeds the shared white pool,
-   which either side's Wizard can deploy from. Consider whether capturing
-   is worth the cost.
-
-5. **The draw condition rewards aggression.** If your general and the
-   enemy general stand in each other's formation, the game ends in a
-   draw. This encourages positional play and zone control.
-
-6. **Push cannot destroy uncapturable pieces.** Pushing an enemy off the
-   board or into an occupied point escalates to a capture attempt, but
-   that capture succeeds only if the target is capturable. A shielded
-   piece cannot be eliminated by a push.
+4. **Read the tide — play the position, not the score.** When ahead, stay
+   disciplined: one reckless charge beyond friendly formation coverage can
+   turn your strongest piece into dead weight. When behind, don't give up:
+   the double-general draw is always within reach. Use positioning and
+   pushing to stall the opponent and create complications. A draw is closer
+   than it looks in this game.
 
 ## Glossary
 
