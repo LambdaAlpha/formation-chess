@@ -164,7 +164,7 @@ black resigns red wins
 变化：[]
 胜负：红胜
 =====
-resign during placement phase is rejected
+resign during placement phase is accepted
 -----
 行棋方：红
 红方：[卒]
@@ -179,13 +179,13 @@ resign during placement phase is rejected
 四[一一 一一 一一 一一 一一]
 五[一一 一一 一一 一一 红将]
 -----
-黑认负
+红认负
 -----
 行棋方：红
 红方：[卒]
 黑方：[]
 白方：0
-胜负：未分
+胜负：黑胜
 棋盘：
 零[一一 二二 三三 四四 五五]
 一[黑将 一一 一一 一一 一一]
@@ -194,7 +194,8 @@ resign during placement phase is rejected
 四[一一 一一 一一 一一 一一]
 五[一一 一一 一一 一一 红将]
 -----
-错误：cannot resign during the placement phase
+变化：[]
+胜负：黑胜
 =====
 no actions accepted after the game is decided
 -----

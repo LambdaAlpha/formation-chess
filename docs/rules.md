@@ -362,10 +362,11 @@ occupying space and blocking paths.
 **Placement phase.** The game begins with an empty board. Starting with
 Red, the players alternate placing one of their own pieces per turn onto
 any empty point in their half of the board: Red places on rows 6–10,
-Black on rows 1–5. Passing and resigning are not allowed, and white
+Black on rows 1–5. Passing is not allowed, and white
 pieces cannot be placed — every turn must place one of the player's 16
-pieces. No piece may move until both players have placed all their
-pieces. This is your one chance to design the initial formation web —
+pieces. Resigning is permitted at any time. No piece may move until both
+players have placed all their pieces. This is your one chance to design
+the initial formation web —
 position your pieces so they support each other's abilities.
 
 **Movement phase.** Once all 32 pieces stand on the board, the players

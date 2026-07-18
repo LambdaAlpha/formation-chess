@@ -228,9 +228,10 @@ name, position, or suffix. The color must match the player to move:
 - color + `认负` (resign): the player concedes; the opponent wins
   immediately — `红认负` or `黑认负`.
 
-Neither action is allowed during the placement phase: every placement
-turn must place a piece. (Placing a white piece is likewise forbidden
-during the placement phase.) Both actions produce an empty change list.
+Pass is not allowed during the placement phase: every placement
+turn must place a piece. Resign may be used at any time. (Placing a
+white piece is likewise forbidden during the placement phase.) Both
+actions produce an empty change list.
 
 ### Examples
 

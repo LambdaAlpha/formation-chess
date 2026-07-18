@@ -351,9 +351,6 @@ impl Game {
     }
 
     fn resign(&mut self, player: Player) -> Result<Vec<PieceChange>, String> {
-        if self.is_placement_phase() {
-            return Err("cannot resign during the placement phase".into());
-        }
         self.check_player(player)?;
         self.result = match self.player {
             Player::Red => GameResult::BlackWin,
