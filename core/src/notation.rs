@@ -117,9 +117,9 @@ impl Display for Action {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let na = match self {
             Action::Place(p) => ActionNotation::Place(place_notation(p)),
-            Action::Move(m) => ActionNotation::Move(piece_position(m)),
-            Action::Capture(m) => ActionNotation::Capture(piece_position(m)),
-            Action::Push(m) => ActionNotation::Push(piece_position(m)),
+            Action::Move(m) => ActionNotation::Move(piece_position(*m)),
+            Action::Capture(m) => ActionNotation::Capture(piece_position(*m)),
+            Action::Push(m) => ActionNotation::Push(piece_position(*m)),
             Action::Pass(p) => ActionNotation::Pass(*p),
             Action::Resign(p) => ActionNotation::Resign(*p),
         };
@@ -151,11 +151,11 @@ impl Display for Place {
 
 impl Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", piece_position(self))
+        write!(f, "{}", piece_position(*self))
     }
 }
 
-fn piece_position(m: &Move) -> PiecePosition {
+fn piece_position(m: Move) -> PiecePosition {
     PiecePosition {
         piece: PieceNotation::Coord(m.from.0 + 1, m.from.1 + 1),
         position: Position::Absolute(m.to.0 + 1, m.to.1 + 1),
@@ -168,7 +168,7 @@ fn place_notation(p: &Place) -> PlaceNotation {
 
 fn change_notation(c: &PieceChange) -> ChangeNotation {
     match c {
-        PieceChange::Move(m) => ChangeNotation::Move(piece_position(m)),
+        PieceChange::Move(m) => ChangeNotation::Move(piece_position(*m)),
         PieceChange::Place(p) => ChangeNotation::Place(place_notation(p)),
         PieceChange::Remove(x, y) => ChangeNotation::Remove(PieceNotation::Coord(x + 1, y + 1)),
     }
@@ -250,7 +250,7 @@ impl FromStr for ReactionNotation {
         } else {
             changes_str
                 .split_whitespace()
-                .map(|s| s.parse::<ChangeNotation>())
+                .map(str::parse::<ChangeNotation>)
                 .collect::<Result<Vec<_>, _>>()?
         };
 
@@ -644,7 +644,7 @@ impl<'a> NotationResolver<'a> {
     }
 
     fn position(&self, from: (u8, u8), to: (u8, u8)) -> Position {
-        let color = self.board.get(from).map(|p| p.color).unwrap_or(Color::White);
+        let color = self.board.get(from).map_or(Color::White, |p| p.color);
         Position::notation((from.0 + 1, from.1 + 1), color, (to.0 + 1, to.1 + 1))
     }
 
@@ -671,8 +671,8 @@ impl<'a> NotationResolver<'a> {
 impl Position {
     /// Resolve against 1-based coordinates; valid columns are 1..=width and
     /// valid rows 1..=height.
-    fn resolve(&self, from: (u8, u8), width: u8, height: u8, color: Color) -> Option<(u8, u8)> {
-        match *self {
+    fn resolve(self, from: (u8, u8), width: u8, height: u8, color: Color) -> Option<(u8, u8)> {
+        match self {
             Position::Absolute(col, row) => {
                 if (1 ..= width).contains(&col) && (1 ..= height).contains(&row) {
                     Some((col, row))
@@ -694,8 +694,8 @@ impl Position {
 
 impl RelativePosition {
     /// Resolve against 1-based coordinates; see [`Position::resolve`].
-    fn resolve(&self, from: (u8, u8), width: u8, height: u8, color: Color) -> Option<(u8, u8)> {
-        match *self {
+    fn resolve(self, from: (u8, u8), width: u8, height: u8, color: Color) -> Option<(u8, u8)> {
+        match self {
             RelativePosition::Horizontal(col) => {
                 if (1 ..= width).contains(&col) {
                     Some((col, from.1))
@@ -714,7 +714,7 @@ impl RelativePosition {
                 let y = match color {
                     Color::Red => from.1.checked_sub(steps)?,
                     Color::Black => from.1 + steps,
-                    _ => return None,
+                    Color::White => return None,
                 };
                 if (1 ..= height).contains(&y) { Some((from.0, y)) } else { None }
             },
@@ -722,7 +722,7 @@ impl RelativePosition {
                 let y = match color {
                     Color::Red => from.1 + steps,
                     Color::Black => from.1.checked_sub(steps)?,
-                    _ => return None,
+                    Color::White => return None,
                 };
                 if (1 ..= height).contains(&y) { Some((from.0, y)) } else { None }
             },

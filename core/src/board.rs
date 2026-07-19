@@ -95,13 +95,13 @@ impl Board {
     }
 
     fn index(&self, x: u8, y: u8) -> usize {
-        assert!(x < self.width && y < self.height);
+        assert!(x < self.width && y < self.height, "position out of bounds");
         y as usize * self.width as usize + x as usize
     }
 
     /// The (x,y) coordinates of a linear index into `pieces`.
     fn position(&self, index: usize) -> (u8, u8) {
-        assert!(index < self.pieces.len());
+        assert!(index < self.pieces.len(), "index out of bounds");
         ((index % self.width as usize) as u8, (index / self.width as usize) as u8)
     }
 
