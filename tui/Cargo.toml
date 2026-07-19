@@ -12,3 +12,5 @@ categories = ["games"]
 workspace = true
 
 [dependencies]
+formation-chess-core = { path = "../core" }
+rand = "0.10"
