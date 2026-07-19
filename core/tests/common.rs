@@ -92,7 +92,7 @@ fn run_case(case: &TestCase) -> Result<(), String> {
         let changes = pre_board
             .resolve_changes(&result.changes)
             .map_err(|e| format!("resolve changes: {e}"))?;
-        let mut board = pre_board.clone();
+        let mut board = pre_board;
         board.apply(&changes);
         let applied = format!("{:#}", board);
         let expected_board = format!("{:#}", case.expected_state.board());
@@ -164,8 +164,8 @@ fn assert_game_eq(actual: &Game, expected: &Game) -> Result<(), String> {
 
 fn parse_test_file(data: &str) -> Vec<TestCase> {
     let mut cases = Vec::new();
-    for block in data.split("=====").map(|s| s.trim()).filter(|s| !s.is_empty()) {
-        let sections: Vec<&str> = block.split("-----").map(|s| s.trim()).collect();
+    for block in data.split("=====").map(str::trim).filter(|s| !s.is_empty()) {
+        let sections: Vec<&str> = block.split("-----").map(str::trim).collect();
         assert_eq!(
             sections.len(),
             5,
@@ -208,7 +208,7 @@ fn gen_replacements(content: &str) -> String {
             continue;
         }
 
-        let sections: Vec<&str> = block.split("-----").map(|s| s.trim()).collect();
+        let sections: Vec<&str> = block.split("-----").map(str::trim).collect();
         if sections.len() != 5 {
             result.push_str(block);
             continue;

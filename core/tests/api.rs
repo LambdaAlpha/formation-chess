@@ -58,9 +58,8 @@ fn invalid_config_is_an_error_not_a_panic() {
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 ";
-    let err = match Game::from_str(state) {
-        Ok(_) => panic!("double vital must fail"),
-        Err(e) => e,
+    let Err(err) = Game::from_str(state) else {
+        panic!("double vital must fail");
     };
     assert!(err.contains("at most one vital piece"), "unexpected error: {err}");
 }
@@ -205,9 +204,8 @@ fn one_side_no_vital_must_declare_result() {
 四[一一 一一 一一 一一 一一]
 五[一一 一一 一一 一一 一一]
 ";
-    let err = match Game::from_str(state) {
-        Ok(_) => panic!("unfinished result on a decided position must fail"),
-        Err(e) => e,
+    let Err(err) = Game::from_str(state) else {
+        panic!("unfinished result on a decided position must fail");
     };
     assert!(err.contains("already decided"), "unexpected error: {err}");
 }
@@ -227,9 +225,8 @@ fn unfinished_but_already_drawn_is_error() {
 四[一一 一一 一一 黑将 一一]
 五[一一 一一 一一 一一 一一]
 ";
-    let err = match Game::from_str(state) {
-        Ok(_) => panic!("unfinished result on a decided position must fail"),
-        Err(e) => e,
+    let Err(err) = Game::from_str(state) else {
+        panic!("unfinished result on a decided position must fail");
     };
     assert!(err.contains("already decided"), "unexpected error: {err}");
 }
@@ -347,9 +344,8 @@ fn uneven_placement_pools_are_rejected() {
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 ";
-    let err = match Game::from_str(state) {
-        Ok(_) => panic!("uneven placement pools must fail"),
-        Err(e) => e,
+    let Err(err) = Game::from_str(state) else {
+        panic!("uneven placement pools must fail");
     };
     assert!(err.contains("cannot alternate"), "unexpected error: {err}");
 }
@@ -365,9 +361,8 @@ fn malformed_board_header_is_rejected() {
 零[一一 二二 三三 四四 五五]
 一[黑将 一一 一一 一一 红将]
 ";
-    let err = match Game::from_str(state) {
-        Ok(_) => panic!("malformed board header must fail"),
-        Err(e) => e,
+    let Err(err) = Game::from_str(state) else {
+        panic!("malformed board header must fail");
     };
     assert!(err.contains("invalid board line"), "unexpected error: {err}");
 }
@@ -383,9 +378,8 @@ fn wrong_column_header_is_rejected() {
 零[一一 二二 三三 四四 六六]
 一[黑将 一一 一一 一一 红将]
 ";
-    let err = match Game::from_str(state) {
-        Ok(_) => panic!("wrong column header must fail"),
-        Err(e) => e,
+    let Err(err) = Game::from_str(state) else {
+        panic!("wrong column header must fail");
     };
     assert!(err.contains("column header"), "unexpected error: {err}");
 }
@@ -403,9 +397,8 @@ fn ragged_board_row_is_rejected() {
 二[一一 一一 一一 一一]
 三[红将 一一 一一 一一 一一]
 ";
-    let err = match Game::from_str(state) {
-        Ok(_) => panic!("ragged board row must fail"),
-        Err(e) => e,
+    let Err(err) = Game::from_str(state) else {
+        panic!("ragged board row must fail");
     };
     assert!(err.contains("cells"), "unexpected error: {err}");
 }
@@ -422,9 +415,8 @@ fn wrong_row_label_is_rejected() {
 一[黑将 一一 一一 一一 一一]
 三[红将 一一 一一 一一 一一]
 ";
-    let err = match Game::from_str(state) {
-        Ok(_) => panic!("wrong row label must fail"),
-        Err(e) => e,
+    let Err(err) = Game::from_str(state) else {
+        panic!("wrong row label must fail");
     };
     assert!(err.contains("label"), "unexpected error: {err}");
 }

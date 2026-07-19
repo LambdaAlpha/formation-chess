@@ -18,6 +18,6 @@ fn main() -> Result<(), String> {
 "
     .parse()?;
 
-    assert!(game.is_placement_phase());
+    assert!(game.is_placement_phase(), "pools are not empty so phase must be placement");
     Ok(())
 }
