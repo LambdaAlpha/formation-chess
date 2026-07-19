@@ -1,14 +1,31 @@
-//! Tests for the concrete examples that appear in docs/rules.md and
-//! docs/notation.md. Engine-driven examples live in doc.txt; the tests
-//! below cover the examples that need direct API access.
+//! Tests for the concrete examples that appear in docs/rules.md,
+//! docs/notation.md, and README.md. Engine-driven examples live in
+//! doc.txt; the tests below cover the examples that need direct API
+//! access.
 
 use std::str::FromStr;
 
 use formation_chess_core::board::Board;
 use formation_chess_core::game::Game;
+use formation_chess_core::game::GameConfig;
 use formation_chess_core::notation::NotationResolver;
 
 mod common;
+
+/// The game state snapshot shared by notation.md (game state example) and
+/// README.md (custom positions example, examples/readme_custom.rs).
+const GAME_STATE_SNAPSHOT: &str = "行棋方：黑
+红方：[炮 马]
+黑方：[将 犬 盾]
+白方：0
+胜负：未分
+棋盘：
+零[一一 二二 三三 四四 五五]
+一[一一 黑车 一一 一一 一一]
+二[一一 一一 黑卒 一一 一一]
+三[红将 一一 一一 一一 一一]
+四[一一 一一 红车 一一 一一]
+";
 
 #[test]
 fn test_doc_examples() {
@@ -22,20 +39,51 @@ fn test_doc_examples() {
 /// back to the exact same text.
 #[test]
 fn notation_md_game_state_example_round_trips() {
-    let snapshot = "行棋方：黑
-红方：[炮 马]
-黑方：[将 犬 盾]
+    let game =
+        Game::from_str(GAME_STATE_SNAPSHOT).expect("notation.md snapshot must be a valid game");
+    assert_eq!(game.to_string(), GAME_STATE_SNAPSHOT);
+}
+
+/// The quick start in README.md (examples/readme.rs): the standard setup
+/// accepts the first two placement moves and prints the snapshot shown in
+/// the README.
+#[test]
+fn readme_quick_start_example() {
+    let mut game = Game::new(GameConfig::default()).expect("standard setup must be valid");
+    for text in ["红将五十", "黑将五一"] {
+        let action = NotationResolver::new(game.board())
+            .parse_action(text)
+            .unwrap_or_else(|e| panic!("parse {text}: {e}"));
+        let reaction = game.action(action).unwrap_or_else(|e| panic!("action {text}: {e}"));
+        assert_eq!(reaction.game_result.to_string(), "未分");
+    }
+    let expected = "行棋方：红
+红方：[雷 巫 叛 谍 车 卒 犬 马 河 山 风 林 矛 盾 炮]
+黑方：[雷 巫 叛 谍 车 卒 犬 马 河 山 风 林 矛 盾 炮]
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
-一[一一 黑车 一一 一一 一一]
-二[一一 一一 黑卒 一一 一一]
-三[红将 一一 一一 一一 一一]
-四[一一 一一 红车 一一 一一]
+零[一一 二二 三三 四四 五五 六六 七七 八八 九九]
+一[一一 一一 一一 一一 黑将 一一 一一 一一 一一]
+二[一一 一一 一一 一一 一一 一一 一一 一一 一一]
+三[一一 一一 一一 一一 一一 一一 一一 一一 一一]
+四[一一 一一 一一 一一 一一 一一 一一 一一 一一]
+五[一一 一一 一一 一一 一一 一一 一一 一一 一一]
+六[一一 一一 一一 一一 一一 一一 一一 一一 一一]
+七[一一 一一 一一 一一 一一 一一 一一 一一 一一]
+八[一一 一一 一一 一一 一一 一一 一一 一一 一一]
+九[一一 一一 一一 一一 一一 一一 一一 一一 一一]
+十[一一 一一 一一 一一 红将 一一 一一 一一 一一]
 ";
-    let game = Game::from_str(snapshot).expect("notation.md snapshot must be a valid game");
-    assert_eq!(game.to_string(), snapshot);
+    assert_eq!(game.to_string(), expected);
+}
+
+/// The custom positions example in README.md (examples/readme_custom.rs):
+/// the snapshot parses into a validated game still in its placement phase.
+#[test]
+fn readme_custom_position_example() {
+    let game: Game = GAME_STATE_SNAPSHOT.parse().expect("README.md snapshot must be a valid game");
+    assert!(game.is_placement_phase());
 }
 
 /// The cyclic swap example in notation.md: `变化：[一二三四 三四一二]`
