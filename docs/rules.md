@@ -131,7 +131,11 @@ Upper Triangle             Lower Triangle
 ```
 
 `O` marks the formation's owner standing at the center; `X` marks the
-active positions.
+active positions. The diagrams show the canonical orientation for Red,
+who sits at the bottom of the board with its advance direction toward
+the top. Black sits at the top and advances toward the bottom, so its
+formations are vertically mirrored: Black's upper-triangle pattern points
+downward, its lower-triangle pattern points upward.
 
 Each pattern belongs to one group of four pieces:
 
@@ -145,7 +149,8 @@ Think of it this way: a piece's influence reaches out in a specific
 surveying the battlefield from the flanks. An edges piece influences
 orthogonally, like infantry covering the cardinal approaches. The triangle
 patterns are asymmetric: upper triangle covers the front-center and rear
-wings; lower triangle covers the front wings and rear-center.
+wings; lower triangle covers the front wings and rear-center. "Front" is
+always the owner's advance direction — toward the opponent.
 
 **How overlapping formations combine:** when multiple formations try to
 modify the same ability on the same piece, the results are combined with

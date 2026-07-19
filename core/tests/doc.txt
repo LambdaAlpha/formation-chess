@@ -700,12 +700,12 @@ rules.md example: a cannon in an enemy cannon's formation loses jump capture
 棋盘：
 零[一一 二二 三三 四四 五五]
 一[一一 一一 一一 一一 黑将]
-二[一一 一一 一一 一一 一一]
-三[黑炮 一一 一一 一一 一一]
-四[红炮 红卒 一一 黑卒 一一]
+二[一一 黑炮 一一 一一 一一]
+三[红炮 红卒 黑卒 一一 一一]
+四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 -----
-红炮四四捉
+红炮三三捉
 -----
 行棋方：红
 红方：[]
@@ -715,12 +715,12 @@ rules.md example: a cannon in an enemy cannon's formation loses jump capture
 棋盘：
 零[一一 二二 三三 四四 五五]
 一[一一 一一 一一 一一 黑将]
-二[一一 一一 一一 一一 一一]
-三[黑炮 一一 一一 一一 一一]
-四[红炮 红卒 一一 黑卒 一一]
+二[一一 黑炮 一一 一一 一一]
+三[红炮 红卒 黑卒 一一 一一]
+四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 -----
-错误：cannot capture 黑卒 at (3,3)
+错误：cannot capture 黑卒 at (2,2)
 =====
 rules.md example: a lone spear cannot capture
 -----

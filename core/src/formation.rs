@@ -206,4 +206,15 @@ impl Formation {
         };
         (self.points & mask) != 0
     }
+
+    /// Return a copy with the top and bottom rows of the points bitmap
+    /// swapped (vertical mirror). The middle (left/right) row is unchanged.
+    /// This is used to orient formations for Black, whose advance direction
+    /// is opposite to the canonical Red-oriented layout.
+    pub const fn flipped(self) -> Self {
+        let top = (self.points & 0b000_00_111) << 5;
+        let bottom = (self.points & 0b111_00_000) >> 5;
+        let middle = self.points & 0b000_11_000;
+        Self { points: top | bottom | middle, effect: self.effect }
+    }
 }

@@ -45,6 +45,15 @@ impl Piece {
         }
     }
 
+    /// Vertically mirror a formation for Black pieces, whose advance
+    /// direction points toward the bottom of the board.
+    const fn orient(color: Color, formation: Formation) -> Formation {
+        match color {
+            Color::Black => formation.flipped(),
+            _ => formation,
+        }
+    }
+
     /// The white piece: one-step cross movement, capturable by anyone,
     /// controlled by nobody until a wizard's formation covers it.
     pub const WHITE: Piece = Piece {
@@ -82,7 +91,7 @@ impl Piece {
         Piece {
             name: '将',
             color,
-            formation: Formation::GENERAL,
+            formation: Self::orient(color, Formation::GENERAL),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -115,7 +124,7 @@ impl Piece {
         Piece {
             name: '巫',
             color,
-            formation: Formation::WIZARD,
+            formation: Self::orient(color, Formation::WIZARD),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -148,7 +157,7 @@ impl Piece {
         Piece {
             name: '叛',
             color,
-            formation: Formation::TRAITOR,
+            formation: Self::orient(color, Formation::TRAITOR),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -180,7 +189,7 @@ impl Piece {
         Piece {
             name: '谍',
             color,
-            formation: Formation::SPY,
+            formation: Self::orient(color, Formation::SPY),
             ability: AbilityConfig {
                 controlled_by_red: true,
                 controlled_by_black: true,
@@ -213,7 +222,7 @@ impl Piece {
         Piece {
             name: '车',
             color,
-            formation: Formation::ROOK,
+            formation: Self::orient(color, Formation::ROOK),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -246,7 +255,7 @@ impl Piece {
         Piece {
             name: '卒',
             color,
-            formation: Formation::PAWN,
+            formation: Self::orient(color, Formation::PAWN),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -279,7 +288,7 @@ impl Piece {
         Piece {
             name: '犬',
             color,
-            formation: Formation::DOG,
+            formation: Self::orient(color, Formation::DOG),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -312,7 +321,7 @@ impl Piece {
         Piece {
             name: '马',
             color,
-            formation: Formation::HORSE,
+            formation: Self::orient(color, Formation::HORSE),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -345,7 +354,7 @@ impl Piece {
         Piece {
             name: '河',
             color,
-            formation: Formation::RIVER,
+            formation: Self::orient(color, Formation::RIVER),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -378,7 +387,7 @@ impl Piece {
         Piece {
             name: '山',
             color,
-            formation: Formation::MOUNTAIN,
+            formation: Self::orient(color, Formation::MOUNTAIN),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -411,7 +420,7 @@ impl Piece {
         Piece {
             name: '风',
             color,
-            formation: Formation::WIND,
+            formation: Self::orient(color, Formation::WIND),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -444,7 +453,7 @@ impl Piece {
         Piece {
             name: '林',
             color,
-            formation: Formation::FOREST,
+            formation: Self::orient(color, Formation::FOREST),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -477,7 +486,7 @@ impl Piece {
         Piece {
             name: '矛',
             color,
-            formation: Formation::SPEAR,
+            formation: Self::orient(color, Formation::SPEAR),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -510,7 +519,7 @@ impl Piece {
         Piece {
             name: '盾',
             color,
-            formation: Formation::SHIELD,
+            formation: Self::orient(color, Formation::SHIELD),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -543,7 +552,7 @@ impl Piece {
         Piece {
             name: '炮',
             color,
-            formation: Formation::CANNON,
+            formation: Self::orient(color, Formation::CANNON),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -576,7 +585,7 @@ impl Piece {
         Piece {
             name: '雷',
             color,
-            formation: Formation::MINE,
+            formation: Self::orient(color, Formation::MINE),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
