@@ -7,7 +7,7 @@ rook removes any_distance from enemy rook via formation
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[红车 黑车 一一 一一 一一]
@@ -22,7 +22,7 @@ rook removes any_distance from enemy rook via formation
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[红车 黑车 一一 一一 一一]
@@ -39,7 +39,7 @@ pawn gives cross movement to ally dog via formation
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[红卒 红犬 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -54,7 +54,7 @@ pawn gives cross movement to ally dog via formation
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[红卒 一一 红犬 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -72,7 +72,7 @@ spear gives capture to shield via formation
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 红矛 一一 一一 一一]
 三[一一 红盾 黑车 一一 一一]
@@ -87,7 +87,7 @@ spear gives capture to shield via formation
 白方：1
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 红矛 一一 一一 一一]
 三[一一 一一 红盾 一一 一一]
@@ -105,7 +105,7 @@ dog formation strips diagonal from enemy
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[红犬 黑犬 一一 一一 一一]
@@ -120,7 +120,7 @@ dog formation strips diagonal from enemy
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[红犬 黑犬 一一 一一 一一]
@@ -137,7 +137,7 @@ shield formation makes allies uncapturable
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 红车 黑车 一一 一一]
 三[红盾 一一 一一 一一 一一]
@@ -152,7 +152,7 @@ shield formation makes allies uncapturable
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 红车 黑车 一一 一一]
 三[红盾 一一 一一 一一 一一]
@@ -169,7 +169,7 @@ mine formation grants capture_on_captured to ally causing mutual destruction
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 红雷 一一 一一 一一]
 三[一一 红车 一一 一一 一一]
@@ -184,7 +184,7 @@ mine formation grants capture_on_captured to ally causing mutual destruction
 白方：2
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 红雷 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -202,7 +202,7 @@ disabling beats enabling when ally and enemy rook formations overlap
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[黑车 黑卒 红车 一一 一一]
@@ -217,7 +217,7 @@ disabling beats enabling when ally and enemy rook formations overlap
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[黑车 黑卒 红车 一一 一一]
@@ -234,7 +234,7 @@ traitor formation converts enemy pieces
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 黑车 一一 一一 一一]
 三[红叛 一一 一一 一一 一一]
@@ -249,7 +249,7 @@ traitor formation converts enemy pieces
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[红叛 黑车 一一 一一 一一]
@@ -267,7 +267,7 @@ spy formation lets opponent control adjacent ally
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 红车 一一 一一 一一]
 三[一一 一一 红谍 一一 一一]
@@ -282,7 +282,7 @@ spy formation lets opponent control adjacent ally
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[红车 一一 一一 一一 一一]
 三[一一 一一 红谍 一一 一一]
@@ -300,7 +300,7 @@ mountain formation makes ally pushable by allies
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[红车 一一 红卒 一一 一一]
 三[一一 一一 红山 一一 一一]
@@ -315,7 +315,7 @@ mountain formation makes ally pushable by allies
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 红车 红卒 一一]
 三[一一 一一 红山 一一 一一]
@@ -333,7 +333,7 @@ mountain formation protects ally from enemy push
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[黑河 一一 红卒 一一 一一]
 三[一一 一一 红山 一一 一一]
@@ -348,7 +348,7 @@ mountain formation protects ally from enemy push
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[黑河 一一 红卒 一一 一一]
 三[一一 一一 红山 一一 一一]
@@ -365,7 +365,7 @@ forest formation makes ally passable by allies
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 红林 一一 一一]
@@ -380,7 +380,7 @@ forest formation makes ally passable by allies
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 红林 一一 一一]
@@ -398,7 +398,7 @@ horse jump captures over leg blocker via cannon formation
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 黑车 一一 黑将]
 二[一一 红卒 一一 一一 一一]
 三[一一 红马 一一 一一 一一]
@@ -413,7 +413,7 @@ horse jump captures over leg blocker via cannon formation
 白方：1
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 红马 一一 黑将]
 二[一一 红卒 一一 一一 一一]
 三[一一 一一 一一 一一 一一]

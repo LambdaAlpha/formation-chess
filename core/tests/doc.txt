@@ -7,7 +7,7 @@ notation.md game state: snapshot example parses and validates
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 黑车 一一 一一 一一]
 二[一一 一一 黑卒 一一 一一]
 三[红将 一一 一一 一一 一一]
@@ -20,7 +20,7 @@ notation.md game state: snapshot example parses and validates
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 黑车 一一 一一 一一]
 二[一一 一一 黑卒 一一 一一]
 三[红将 一一 一一 一一 一一]
@@ -37,7 +37,7 @@ notation.md example: red dog moves diagonally (红犬三四)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 红犬 一一 一一 一一]
@@ -52,7 +52,7 @@ notation.md example: red dog moves diagonally (红犬三四)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -70,7 +70,7 @@ notation.md example: black general advances two (黑将进二)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 一一 黑将 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -85,7 +85,7 @@ notation.md example: black general advances two (黑将进二)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -103,7 +103,7 @@ notation.md example: coordinate notation for duplicate rooks (一二三二)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[红车 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -118,7 +118,7 @@ notation.md example: coordinate notation for duplicate rooks (一二三二)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 红车 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -136,7 +136,7 @@ notation.md example: white piece moves vertically (白子直二)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 红巫 一一 一一 一一]
 三[一一 一一 白子 一一 一一]
@@ -151,7 +151,7 @@ notation.md example: white piece moves vertically (白子直二)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 红巫 白子 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -169,7 +169,7 @@ notation.md example: wizard places a white piece (白子二四占)
 白方：1
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 红巫 一一 一一]
@@ -184,7 +184,7 @@ notation.md example: wizard places a white piece (白子二四占)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 红巫 一一 一一]
@@ -202,7 +202,7 @@ notation.md example: red passes the turn (红按兵)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -217,7 +217,7 @@ notation.md example: red passes the turn (红按兵)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -235,7 +235,7 @@ notation.md example: black resigns and red wins (黑认负)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -250,7 +250,7 @@ notation.md example: black resigns and red wins (黑认负)
 白方：0
 胜负：红胜
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -268,7 +268,7 @@ notation.md result example: simple move (红车平五)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 红车 一一 一一 一一]
@@ -283,7 +283,7 @@ notation.md result example: simple move (红车平五)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 红车]
@@ -301,7 +301,7 @@ notation.md result example: a capture is written like a move (红车平五捉)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 红车 一一 一一 黑卒]
@@ -316,7 +316,7 @@ notation.md result example: a capture is written like a move (红车平五捉)
 白方：1
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 红车]
@@ -334,7 +334,7 @@ notation.md result example: mutual destruction (红雷提 黑车提)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 红矛 一一 一一]
 三[一一 一一 红雷 一一 一一]
@@ -349,7 +349,7 @@ notation.md result example: mutual destruction (红雷提 黑车提)
 白方：2
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 红矛 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -367,7 +367,7 @@ notation.md result example: push (红河平二 红车平三)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[红河 红车 一一 一一 一一]
@@ -382,7 +382,7 @@ notation.md result example: push (红河平二 红车平三)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 红河 红车 一一 一一]
@@ -400,7 +400,7 @@ notation.md result example: placement from the pool (红车四四占)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -415,7 +415,7 @@ notation.md result example: placement from the pool (红车四四占)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -433,7 +433,7 @@ notation.md result example: an action that wins the game (红车平二)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[红车 黑将 一一 一一 一一]
@@ -448,7 +448,7 @@ notation.md result example: an action that wins the game (红车平二)
 白方：1
 胜负：红胜
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[一一 红车 一一 一一 一一]
@@ -466,7 +466,7 @@ notation.md result example: no action taken on an already drawn board
 白方：0
 胜负：和棋
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 红将 一一 一一]
@@ -480,7 +480,7 @@ notation.md result example: no action taken on an already drawn board
 白方：0
 胜负：和棋
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 红将 一一 一一]
@@ -498,7 +498,7 @@ notation.md result example: illegal action error (path blocked)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[红车 一一 黑卒 一一 一一]
@@ -513,7 +513,7 @@ notation.md result example: illegal action error (path blocked)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[红车 一一 黑卒 一一 一一]
@@ -530,7 +530,7 @@ rules.md example: horse leg blocked at the intermediate point
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[红马 一一 一一 一一 黑将]
 二[红卒 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -545,7 +545,7 @@ rules.md example: horse leg blocked at the intermediate point
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[红马 一一 一一 一一 黑将]
 二[红卒 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -562,7 +562,7 @@ rules.md example: horse clears a passable piece on its leg
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[红马 一一 一一 一一 黑将]
 二[红林 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -577,7 +577,7 @@ rules.md example: horse clears a passable piece on its leg
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[红林 一一 一一 一一 一一]
 三[一一 红马 一一 一一 一一]
@@ -595,7 +595,7 @@ rules.md example: L-shaped push lands the target at the next knight point
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[红河 红马 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 黑卒 一一 一一 一一]
@@ -611,7 +611,7 @@ rules.md example: L-shaped push lands the target at the next knight point
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 红马 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 红河 一一 一一 一一]
@@ -630,7 +630,7 @@ rules.md example: jump capture through an L-shaped path
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[红炮 红马 一一 一一 黑将]
 二[红卒 一一 一一 一一 一一]
 三[一一 黑卒 一一 一一 一一]
@@ -645,7 +645,7 @@ rules.md example: jump capture through an L-shaped path
 白方：1
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 红马 一一 一一 黑将]
 二[红卒 一一 一一 一一 一一]
 三[一一 红炮 一一 一一 一一]
@@ -663,7 +663,7 @@ rules.md example: a pawn next to a rook gains unlimited range
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -679,7 +679,7 @@ rules.md example: a pawn next to a rook gains unlimited range
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 红卒 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -698,7 +698,7 @@ rules.md example: a cannon in an enemy cannon's formation loses jump capture
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 黑炮 一一 一一 一一]
 三[红炮 红卒 黑卒 一一 一一]
@@ -713,7 +713,7 @@ rules.md example: a cannon in an enemy cannon's formation loses jump capture
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 黑炮 一一 一一 一一]
 三[红炮 红卒 黑卒 一一 一一]
@@ -730,7 +730,7 @@ rules.md example: a lone spear cannot capture
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[红矛 一一 一一 黑卒 一一]
@@ -745,7 +745,7 @@ rules.md example: a lone spear cannot capture
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[红矛 一一 一一 黑卒 一一]
@@ -762,7 +762,7 @@ rules.md example: a spear inside a friendly spear formation gains capture
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[红矛 一一 一一 一一 一一]
 三[红矛 一一 一一 黑卒 一一]
@@ -777,7 +777,7 @@ rules.md example: a spear inside a friendly spear formation gains capture
 白方：1
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[红矛 一一 一一 一一 一一]
 三[一一 一一 一一 红矛 一一]
@@ -795,7 +795,7 @@ rules.md example: a shield formation makes allies uncapturable
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 红盾 一一 一一]
 三[一一 一一 红卒 一一 一一]
@@ -810,7 +810,7 @@ rules.md example: a shield formation makes allies uncapturable
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 红盾 一一 一一]
 三[一一 一一 红卒 一一 一一]
@@ -827,7 +827,7 @@ rules.md example: an enemy piece in a rook's formation loses any distance
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 黑车 一一 一一 一一]
@@ -842,7 +842,7 @@ rules.md example: an enemy piece in a rook's formation loses any distance
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 黑车 一一 一一 一一]
@@ -859,7 +859,7 @@ rules.md example: generals placed into each other's formation draw
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 黑将 一一 一一]
@@ -875,7 +875,7 @@ rules.md example: generals placed into each other's formation draw
 白方：0
 胜负：和棋
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 黑将 一一 一一]
@@ -894,7 +894,7 @@ README.md quick start: the first two placement moves
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五 六六 七七 八八 九九]
+零[一路 二路 三路 四路 五路 六路 七路 八路 九路]
 一[一一 一一 一一 一一 一一 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一 一一 一一 一一 一一]
@@ -915,7 +915,7 @@ README.md quick start: the first two placement moves
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五 六六 七七 八八 九九]
+零[一路 二路 三路 四路 五路 六路 七路 八路 九路]
 一[一一 一一 一一 一一 黑将 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一 一一 一一 一一 一一]
@@ -938,7 +938,7 @@ README.md example: horse capture (红马四五捉)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 红马 一一 一一]
@@ -953,7 +953,7 @@ README.md example: horse capture (红马四五捉)
 白方：1
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -971,7 +971,7 @@ README.md example: river push (红河五四推)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[黑将 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
@@ -986,7 +986,7 @@ README.md example: river push (红河五四推)
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[黑将 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 黑马]

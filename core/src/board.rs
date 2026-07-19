@@ -646,13 +646,12 @@ impl Debug for Board {
 }
 
 fn fmt_board(f: &mut dyn Write, board: &Board) -> std::fmt::Result {
-    write!(f, "零[")?;
+    write!(f, "{}[", fmt_num(0))?;
     for x in 0 .. board.width() {
         if x > 0 {
             write!(f, " ")?;
         }
-        let n = fmt_num(x + 1);
-        write!(f, "{n}{n}")?;
+        write!(f, "{}路", fmt_num(x + 1))?;
     }
     writeln!(f, "]")?;
     for y in 0 .. board.height() {
@@ -694,8 +693,8 @@ pub(crate) fn parse_board_from_lines(
     }
     for (x, cell) in header_cells.iter().enumerate() {
         let n = fmt_num(x as u8 + 1);
-        if *cell != format!("{n}{n}") {
-            return Err(format!("column header cell {x} must be {n}{n}, got {cell}"));
+        if !(cell.starts_with(n) && cell.ends_with("路") && cell.len() == n.len() + "路".len()) {
+            return Err(format!("column header cell {x} must be {n}路, got {cell}"));
         }
     }
 

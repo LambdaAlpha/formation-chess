@@ -20,7 +20,7 @@ const GAME_STATE_SNAPSHOT: &str = "行棋方：黑
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 黑车 一一 一一 一一]
 二[一一 一一 黑卒 一一 一一]
 三[红将 一一 一一 一一 一一]
@@ -63,7 +63,7 @@ fn readme_quick_start_example() {
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五 六六 七七 八八 九九]
+零[一路 二路 三路 四路 五路 六路 七路 八路 九路]
 一[一一 一一 一一 一一 黑将 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一 一一 一一 一一 一一]
@@ -90,7 +90,7 @@ fn readme_custom_position_example() {
 /// applied to a board must swap the two pieces.
 #[test]
 fn notation_md_swap_example_applies() {
-    let board: Board = "零[一一 二二 三三 四四 五五]
+    let board: Board = "零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[红卒 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]

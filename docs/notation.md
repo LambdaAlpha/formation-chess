@@ -58,7 +58,7 @@ A complete game snapshot consists of six lines followed by a board grid:
 白方：0
 胜负：未分
 棋盘：
-零[一一 二二 三三 四四 五五]
+零[一路 二路 三路 四路 五路]
 一[一一 黑车 一一 一一 一一]
 二[一一 一一 黑卒 一一 一一]
 三[红将 一一 一一 一一 一一]
@@ -95,8 +95,8 @@ the game is over and no further actions are accepted.
 The board begins with the line `棋盘：`, followed by the grid itself.
 
 The first row of the grid is a header row for the columns. It starts with
-`零` (zero) in the row-label position and then lists each column label
-twice — for instance `一一 二二 三三`. Double-wide labels ensure that
+`零` (zero) in the row-label position and then lists each column in
+`x路` format — for instance `一路 二路 三路`. The `路` suffix ensures that
 the two-character piece names align neatly in every row. The `零` is
 only a marker for the label row; columns and rows themselves are
 numbered from `一`.
@@ -494,7 +494,7 @@ white-line   = "白方：" , integer , newline ;
 result-line  = "胜负：" , result , newline ;
 board        = "棋盘：" , newline , header-row , { board-row } ;
 header-row   = "零[" , column-label , { " " , column-label } , "]" , newline ;
-column-label = numeral , numeral ;              (* the same numeral twice *)
+column-label = numeral , "路" ;
 board-row    = numeral , "[" , cell , { " " , cell } , "]" , newline ;
 cell         = "一一" | ( color , name ) ;
 
