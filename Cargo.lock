@@ -41,6 +41,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "formation-chess-web"
+version = "0.0.0"
+
+[[package]]
 name = "getrandom"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
