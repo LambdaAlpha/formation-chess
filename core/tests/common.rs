@@ -74,7 +74,7 @@ fn run_case(case: &TestCase) -> Result<(), String> {
         assert_game_eq(&game, &case.expected_state)?;
     }
 
-    compare_results(&pre_board, &actual, &expected)?;
+    compare_results(&actual, &expected)?;
 
     // Round-trip: formatting the actual result and re-parsing it must
     // resolve to the same changes.
@@ -82,16 +82,14 @@ fn run_case(case: &TestCase) -> Result<(), String> {
     let reparsed = NotationResolver::new(&pre_board)
         .parse_reaction(&formatted)
         .map_err(|e| format!("reparse formatted result `{formatted}`: {e}"))?;
-    compare_results(&pre_board, &actual, &reparsed)?;
+    compare_results(&actual, &reparsed)?;
 
     if let Ok(result) = &actual {
         assert_game_eq(&game, &case.expected_state)?;
 
         // The receiver resolves piece-based changes into position-based
         // changes and applies them; this must reproduce the final board.
-        let changes = pre_board
-            .resolve_changes(&result.changes)
-            .map_err(|e| format!("resolve changes: {e}"))?;
+        let changes = Board::normalize_changes(&result.changes);
         let mut board = pre_board;
         board.apply(&changes);
         let applied = format!("{:#}", board);
@@ -107,7 +105,7 @@ fn run_case(case: &TestCase) -> Result<(), String> {
 }
 
 fn compare_results(
-    board: &Board, actual: &Result<Reaction, String>, expected: &Result<Reaction, String>,
+    actual: &Result<Reaction, String>, expected: &Result<Reaction, String>,
 ) -> Result<(), String> {
     match (actual, expected) {
         (Err(a), Err(e)) => {
@@ -116,12 +114,8 @@ fn compare_results(
             }
         },
         (Ok(a), Ok(e)) => {
-            let a_changes = board
-                .resolve_changes(&a.changes)
-                .map_err(|e| format!("resolve actual changes: {e}"))?;
-            let e_changes = board
-                .resolve_changes(&e.changes)
-                .map_err(|e| format!("resolve expected changes: {e}"))?;
+            let a_changes = Board::normalize_changes(&a.changes);
+            let e_changes = Board::normalize_changes(&e.changes);
             if a_changes != e_changes {
                 return Err(format!(
                     "changes mismatch:\n  expected: {e_changes:?}\n  actual:   {a_changes:?}"

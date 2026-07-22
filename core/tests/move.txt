@@ -455,7 +455,7 @@ rook cannot move horizontally to occupied point without suffix
 四[一一 一一 一一 一一 一一]
 五[一一 一一 一一 一一 黑将]
 -----
-错误：move to an occupied destination requires a push/capture suffix
+错误：cannot move onto occupied destination (1,2)
 =====
 rook cannot move vertically to occupied point without suffix
 -----
@@ -487,4 +487,4 @@ rook cannot move vertically to occupied point without suffix
 四[黑车 一一 一一 一一 一一]
 五[一一 一一 一一 一一 黑将]
 -----
-错误：move to an occupied destination requires a push/capture suffix
+错误：cannot move onto occupied destination (0,3)

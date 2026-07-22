@@ -105,7 +105,7 @@ fn notation_md_swap_example_applies() {
         .expect("parse reaction")
         .expect("reaction is a success");
 
-    let changes = board.resolve_changes(&reaction.changes).expect("resolve changes");
+    let changes = Board::normalize_changes(&reaction.changes);
     let mut applied = board;
     applied.apply(&changes);
     assert_eq!(applied[(0, 1)].map(|p| p.name), Some('马'));

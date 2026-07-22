@@ -25,20 +25,15 @@ pub enum Action {
 /// the game result afterwards.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Reaction {
-    pub changes: Vec<PieceChange>,
+    pub changes: Vec<PositionChange>,
     pub game_result: GameResult,
 }
 
-/// A single piece change, expressed against the board as it stood when the
-/// action was executed.
+/// The new content of a single point: a piece, or None for empty.
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum PieceChange {
-    /// The piece at `from` now stands at `to`.
-    Move(Move),
-    /// A piece from outside the board now stands at `to`.
-    Place(Place),
-    /// The piece at (x,y) left the board and nothing arrived there.
-    Remove(u8, u8),
+pub struct PositionChange {
+    pub at: (u8, u8),
+    pub piece: Option<Piece>,
 }
 
 /// A piece arriving at `to` from outside the board.

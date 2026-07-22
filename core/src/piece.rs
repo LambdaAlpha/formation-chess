@@ -753,7 +753,7 @@ impl Piece {
     /// Whether this piece can move through `blocker`: same color needs
     /// mover PASS_ALLY **or** blocker PASSED_BY_ALLY; different colors need
     /// mover PASS_ENEMY **and** blocker PASSED_BY_ENEMY.
-    pub fn can_pass(&self, blocker: &Piece) -> bool {
+    pub fn can_pass(&self, blocker: Piece) -> bool {
         if self.color == blocker.color {
             self.ability.has_ability(Ability::PASS_ALLY)
                 || blocker.ability.has_ability(Ability::PASSED_BY_ALLY)
@@ -766,7 +766,7 @@ impl Piece {
     /// Whether this piece can shove `target`: same color needs mover
     /// PUSH_ALLY **or** target PUSHED_BY_ALLY; different colors need mover
     /// PUSH_ENEMY **and** target PUSHED_BY_ENEMY.
-    pub fn can_push(&self, target: &Piece) -> bool {
+    pub fn can_push(&self, target: Piece) -> bool {
         if self.color == target.color {
             self.ability.has_ability(Ability::PUSH_ALLY)
                 || target.ability.has_ability(Ability::PUSHED_BY_ALLY)
@@ -778,7 +778,7 @@ impl Piece {
 
     /// Whether this piece can capture `target` normally: different colors,
     /// mover CAPTURE, target CAPTURED. Path rules are the caller's concern.
-    pub fn can_capture(&self, target: &Piece) -> bool {
+    pub fn can_capture(&self, target: Piece) -> bool {
         self.color != target.color
             && self.ability.has_ability(Ability::CAPTURE)
             && target.ability.has_ability(Ability::CAPTURED)
@@ -787,7 +787,7 @@ impl Piece {
     /// Whether this piece can jump-capture `target` over `piece_count`
     /// screen pieces: different colors, mover JUMP_CAPTURE, target
     /// CAPTURED, and exactly one piece on the path (passable or not).
-    pub fn can_jump_capture(&self, target: &Piece, piece_count: u8) -> bool {
+    pub fn can_jump_capture(&self, target: Piece, piece_count: u8) -> bool {
         self.color != target.color
             && self.ability.has_ability(Ability::JUMP_CAPTURE)
             && target.ability.has_ability(Ability::CAPTURED)
@@ -829,7 +829,10 @@ impl FromStr for Piece {
             return Err(format!("invalid piece: {s}"));
         };
         let color: Color = s[.. name_start].parse()?;
-        Self::lookup(name, color).ok_or_else(|| format!("unknown piece: {s}"))
+        let Some(piece) = Self::lookup(name, color) else {
+            return Err(format!("unknown piece: {s}"));
+        };
+        Ok(piece)
     }
 }
 

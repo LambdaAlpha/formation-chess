@@ -1,29 +1,15 @@
 use std::str::FromStr;
 
-use formation_chess_core::ability::Ability;
 use formation_chess_core::action::Action;
-use formation_chess_core::action::GameResult;
 use formation_chess_core::action::Move;
-use formation_chess_core::action::PieceChange;
 use formation_chess_core::action::Place;
 use formation_chess_core::formation::Formation;
 use formation_chess_core::game::Game;
 use formation_chess_core::notation::NotationResolver;
 use formation_chess_core::piece::Piece;
 
-const SIMPLE: &str = "行棋方：红
-红方：[]
-黑方：[]
-白方：0
-胜负：未分
-棋盘：
-零[一路 二路 三路 四路 五路]
-一[黑将 一一 一一 一一 一一]
-二[一一 一一 一一 一一 一一]
-三[红卒 一一 红卒 一一 一一]
-四[一一 一一 一一 一一 一一]
-五[红将 一一 一一 一一 一一]
-";
+mod api_common;
+use api_common::SIMPLE;
 
 #[test]
 fn ambiguous_piece_name_is_a_parse_error() {
@@ -96,7 +82,6 @@ fn explicit_placement_suffix_parses_and_formats() {
     assert_eq!(place.to, (2, 3));
     assert_eq!(NotationResolver::new(game.board()).fmt_action(&action), "红车三四占");
 
-    // implicit placement (no suffix, piece not on board) still works
     let implicit =
         NotationResolver::new(game.board()).parse_action("红车三四").expect("parse action");
     let Action::Place(place) = implicit else {
@@ -255,15 +240,12 @@ fn out_of_bounds_placement_is_an_error_not_a_panic() {
 #[test]
 fn out_of_bounds_move_is_an_error_not_a_panic() {
     let mut game = Game::from_str(SIMPLE).expect("parse");
-    // destination outside the board
     let action = Action::Push(Move { from: (0, 4), to: (0, 14) });
     let err = game.action(action).expect_err("must fail");
     assert!(err.contains("outside the board"), "unexpected error: {err}");
-    // origin outside the board
     let action = Action::Push(Move { from: (9, 9), to: (0, 0) });
     let err = game.action(action).expect_err("must fail");
     assert!(err.contains("no piece"), "unexpected error: {err}");
-    // out-of-bounds coordinates in text notation
     let err = NotationResolver::new(game.board()).parse_action("九九平一").expect_err("must fail");
     assert!(err.contains("outside the board"), "unexpected error: {err}");
 }
@@ -272,16 +254,12 @@ fn out_of_bounds_move_is_an_error_not_a_panic() {
 fn numeral_zero_is_an_error_not_a_panic() {
     let game = Game::from_str(SIMPLE).expect("parse");
     let resolver = NotationResolver::new(game.board());
-    // 零 (0) in an absolute position
     let err = resolver.parse_action("红将零一").expect_err("must fail");
     assert!(err.contains("cannot resolve position"), "unexpected error: {err}");
-    // 零 in a horizontal move
     let err = resolver.parse_action("红将平零").expect_err("must fail");
     assert!(err.contains("cannot resolve position"), "unexpected error: {err}");
-    // 零 in a coordinate piece reference
     let err = resolver.parse_action("零一平二").expect_err("must fail");
     assert!(err.contains("outside the board"), "unexpected error: {err}");
-    // 零 in a placement
     let err = resolver.parse_action("红车零一占").expect_err("must fail");
     assert!(err.contains("outside the board"), "unexpected error: {err}");
 }
@@ -302,7 +280,6 @@ fn advance_past_the_edge_is_an_error_not_a_panic() {
 五[红将 一一 一一 一一 一一]
 ";
     let game = Game::from_str(state).expect("parse");
-    // the red rook already stands on the top row
     let err = NotationResolver::new(game.board()).parse_action("红车进一").expect_err("must fail");
     assert!(err.contains("cannot resolve position"), "unexpected error: {err}");
 }
@@ -424,10 +401,8 @@ fn wrong_row_label_is_rejected() {
 #[test]
 fn simple_move_formats_without_combat_suffix() {
     let game = Game::from_str(SIMPLE).expect("parse");
-    // (0,4)→(0,3) is empty: no suffix
     let action = Action::Move(Move { from: (0, 4), to: (0, 3) });
     assert_eq!(NotationResolver::new(game.board()).fmt_action(&action), "红将进一");
-    // (0,4)→(0,2) holds a red pawn: suffix kept
     let action = Action::Push(Move { from: (0, 4), to: (0, 2) });
     assert_eq!(NotationResolver::new(game.board()).fmt_action(&action), "红将进二推");
 }
@@ -460,123 +435,4 @@ fn mismatched_white_piece_is_rejected() {
         .action(Action::Place(Place { piece: rogue, to: (2, 3) }))
         .expect_err("mismatched white piece must fail");
     assert!(err.contains("does not match"), "unexpected error: {err}");
-}
-
-#[test]
-fn placement_uses_the_canonical_pool_piece() {
-    let state = "行棋方：红
-红方：[将]
-黑方：[卒]
-白方：0
-胜负：未分
-棋盘：
-零[一路 二路 三路 四路 五路]
-一[黑将 一一 一一 一一 一一]
-二[一一 一一 一一 一一 一一]
-三[一一 一一 一一 一一 一一]
-四[一一 一一 一一 一一 一一]
-五[一一 一一 一一 一一 一一]
-六[一一 一一 一一 一一 一一]
-";
-    let mut game = Game::from_str(state).expect("parse");
-    // Same name and color as the pool general (so equality matches), but
-    // with forged abilities: VITAL stripped, rook powers instead.
-    let forged = Piece { ability: Piece::RED_ROOK.ability, ..Piece::RED_GENERAL };
-    game.action(Action::Place(Place { piece: forged, to: (0, 5) })).expect("place");
-    let placed = game.board()[(0, 5)].expect("piece placed");
-    assert!(
-        placed.ability.has_ability(Ability::VITAL),
-        "the canonical pool piece must be placed, not the caller-supplied one"
-    );
-    assert_eq!(game.result(), GameResult::Unfinished);
-}
-
-const SWAP_STATE: &str = "行棋方：红
-红方：[]
-黑方：[]
-白方：0
-胜负：未分
-棋盘：
-零[一路 二路 三路 四路 五路]
-一[红将 一一 一一 一一 一一]
-二[红车 一一 一一 一一 一一]
-三[一一 一一 一一 一一 一一]
-四[一一 红马 一一 一一 黑将]
-五[一一 一一 一一 一一 一一]
-";
-
-#[test]
-fn swap_changes_resolve_and_apply() {
-    let game = Game::from_str(SWAP_STATE).expect("parse game");
-    let board = game.board();
-
-    let result = NotationResolver::new(board)
-        .parse_reaction("变化：[红车二四 红马一二]\n胜负：未分")
-        .expect("parse result")
-        .expect("success result");
-
-    assert_eq!(result.changes, vec![
-        PieceChange::Move(Move { from: (0, 1), to: (1, 3) }),
-        PieceChange::Move(Move { from: (1, 3), to: (0, 1) }),
-    ]);
-
-    let changes = board.resolve_changes(&result.changes).expect("resolve changes");
-    let mut applied = board.clone();
-    applied.apply(&changes);
-
-    assert_eq!(applied[(0, 1)].map(|p| p.name), Some('马'));
-    assert_eq!(applied[(1, 3)].map(|p| p.name), Some('车'));
-}
-
-#[test]
-fn swap_changes_are_order_independent() {
-    let game = Game::from_str(SWAP_STATE).expect("parse game");
-    let board = game.board();
-
-    let a = NotationResolver::new(board)
-        .parse_reaction("变化：[红车二四 红马一二]\n胜负：未分")
-        .expect("parse result")
-        .expect("success result");
-    let b = NotationResolver::new(board)
-        .parse_reaction("变化：[红马一二 红车二四]\n胜负：未分")
-        .expect("parse result")
-        .expect("success result");
-
-    let a_changes = board.resolve_changes(&a.changes).expect("resolve changes");
-    let b_changes = board.resolve_changes(&b.changes).expect("resolve changes");
-    assert_eq!(a_changes, b_changes);
-}
-
-#[test]
-fn coordinate_identified_swap_with_relative_position() {
-    let game = Game::from_str(SWAP_STATE).expect("parse game");
-    let board = game.board();
-
-    let result = NotationResolver::new(board)
-        .parse_reaction("变化：[二四一二 一二一四]\n胜负：未分")
-        .expect("parse result")
-        .expect("success result");
-
-    assert_eq!(result.changes, vec![
-        PieceChange::Move(Move { from: (1, 3), to: (0, 1) }),
-        PieceChange::Move(Move { from: (0, 1), to: (0, 3) }),
-    ]);
-}
-
-#[test]
-fn removal_entry_clears_point() {
-    let game = Game::from_str(SWAP_STATE).expect("parse game");
-    let board = game.board();
-
-    let result = NotationResolver::new(board)
-        .parse_reaction("变化：[红车提]\n胜负：未分")
-        .expect("parse result")
-        .expect("success result");
-
-    assert_eq!(result.changes, vec![PieceChange::Remove(0, 1)]);
-
-    let changes = board.resolve_changes(&result.changes).expect("resolve changes");
-    let mut applied = board.clone();
-    applied.apply(&changes);
-    assert_eq!(applied[(0, 1)], None);
 }

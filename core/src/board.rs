@@ -6,9 +6,10 @@ use std::ops::IndexMut;
 use std::str::FromStr;
 
 use crate::ability::Ability;
+use crate::action::Action;
 use crate::action::Move;
-use crate::action::PieceChange;
 use crate::action::Place;
+use crate::action::PositionChange;
 use crate::chinese_num::fmt_num;
 use crate::piece::Color;
 use crate::piece::Piece;
@@ -34,21 +35,6 @@ pub struct Local {
 pub struct Neighbor {
     pub dx: i8,
     pub dy: i8,
-    pub piece: Option<Piece>,
-}
-
-/// The outcome of a move on the board.
-#[derive(Debug, Clone, PartialEq)]
-pub struct MoveOutcome {
-    pub changes: Vec<PieceChange>,
-    /// Number of pieces removed from the board by capture.
-    pub captured: u8,
-}
-
-/// The new content of a single point: a piece, or None for empty.
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct PositionChange {
-    pub at: (u8, u8),
     pub piece: Option<Piece>,
 }
 
@@ -105,12 +91,6 @@ impl Board {
         ((index % self.width as usize) as u8, (index / self.width as usize) as u8)
     }
 
-    /// Move a piece from→to. Clears from.
-    fn move_(&mut self, from: (u8, u8), to: (u8, u8)) {
-        self[to] = self[from];
-        self[from] = None;
-    }
-
     /// Returns the center piece at (x,y) and its eight neighbors, each with
     /// its relative offset from the center.
     pub fn local(&self, x: u8, y: u8) -> Local {
@@ -152,20 +132,46 @@ impl Board {
 
     /// The first piece of `color` with the VITAL ability, and its position.
     /// VITAL is never modified by formation effects, so raw abilities suffice.
-    pub fn find_vital(&self, color: Color) -> Option<((u8, u8), Piece)> {
-        self.pieces.iter().enumerate().find_map(|(i, cell)| {
-            cell.filter(|p| p.color == color && p.ability.has_ability(Ability::VITAL))
-                .map(|p| (self.position(i), p))
-        })
+    pub fn find_vital(&self, color: Color) -> Option<Place> {
+        for (i, cell) in self.pieces.iter().enumerate() {
+            let Some(piece) = cell else {
+                continue;
+            };
+            if piece.color == color && piece.ability.has_ability(Ability::VITAL) {
+                return Some(Place { to: self.position(i), piece: *piece });
+            }
+        }
+        None
+    }
+
+    /// The first piece with the CONTROL_WHITE ability that `player`
+    /// commands, paired with its position. CONTROL_WHITE is never modified
+    /// by formation effects, so raw abilities suffice.
+    pub(crate) fn find_control_white(&self, player: Player) -> Option<Place> {
+        for (i, cell) in self.pieces.iter().enumerate() {
+            let Some(piece) = cell else {
+                continue;
+            };
+            if piece.ability.has_ability(Ability::CONTROL_WHITE) && piece.can_controlled_by(player)
+            {
+                return Some(Place { to: self.position(i), piece: *piece });
+            }
+        }
+        None
     }
 
     /// Number of pieces of `color` with the VITAL ability.
     pub fn vital_count(&self, color: Color) -> usize {
-        self.pieces
-            .iter()
-            .flatten()
-            .filter(|p| p.color == color && p.ability.has_ability(Ability::VITAL))
-            .count()
+        let mut count = 0;
+        for cell in &self.pieces {
+            let Some(p) = cell else {
+                continue;
+            };
+            if p.color == color && p.ability.has_ability(Ability::VITAL) {
+                count += 1;
+            }
+        }
+        count
     }
 
     /// Find the unique point holding `piece`.
@@ -184,19 +190,205 @@ impl Board {
                 pos = Some(self.position(i));
             }
         }
-        pos.ok_or(false)
+        match pos {
+            Some(p) => Ok(p),
+            None => Err(false),
+        }
+    }
+
+    /// Place a red or black piece onto an empty point in its own half.
+    pub fn place(&mut self, piece: Piece, to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
+        let changes = self.try_place(piece, to)?;
+        self.apply(&changes);
+        Ok(changes)
+    }
+
+    /// Validate a placement without modifying the board. Checks bounds,
+    /// vacancy, and the half-board rule (red bottom, black top).
+    pub fn try_place(&self, piece: Piece, to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
+        self.check_placement_target(to)?;
+        let half = self.height / 2;
+        let midpoint = self.height.div_ceil(2);
+        if piece.color == Color::Red && to.1 < midpoint {
+            return Err("red pieces can only be placed in the bottom half".into());
+        }
+        if piece.color == Color::Black && to.1 >= half {
+            return Err("black pieces can only be placed in the top half".into());
+        }
+        Ok(vec![PositionChange { at: to, piece: Some(piece) }])
+    }
+
+    /// Place a white piece on an empty point covered by a CONTROL_WHITE
+    /// formation the given player commands.
+    pub fn place_white(
+        &mut self, white: Piece, to: (u8, u8), player: Player,
+    ) -> Result<Vec<PositionChange>, String> {
+        let changes = self.try_place_white(white, to, player)?;
+        self.apply(&changes);
+        Ok(changes)
+    }
+
+    /// Validate a white-piece placement without modifying the board.
+    /// The target must be empty and covered by a CONTROL_WHITE piece
+    /// that the given player commands.
+    pub fn try_place_white(
+        &self, white: Piece, to: (u8, u8), player: Player,
+    ) -> Result<Vec<PositionChange>, String> {
+        self.check_placement_target(to)?;
+        let mut has_control = false;
+        for n in &self.local(to.0, to.1).neighbors {
+            let Some(piece) = n.piece else {
+                continue;
+            };
+            if piece.formation.contains(-n.dx, -n.dy)
+                && piece.ability.has_ability(Ability::CONTROL_WHITE)
+                && piece.can_controlled_by(player)
+            {
+                has_control = true;
+                break;
+            }
+        }
+        if !has_control {
+            return Err(format!(
+                "({},{}) is not covered by any piece with CONTROL_WHITE controlled by player {}",
+                to.0, to.1, player
+            ));
+        }
+        Ok(vec![PositionChange { at: to, piece: Some(white) }])
+    }
+
+    /// Verify `to` is in bounds and empty, for placement.
+    fn check_placement_target(&self, to: (u8, u8)) -> Result<(), String> {
+        if !self.in_bounds(to) {
+            return Err(format!("({},{}) is outside the board", to.0, to.1));
+        }
+        if self[to].is_some() {
+            return Err(format!("destination ({},{}) is already occupied", to.0, to.1));
+        }
+        Ok(())
+    }
+
+    /// Execute a simple move to an empty point (no capture or push intent).
+    pub fn move_(&mut self, move_: Move) -> Result<Vec<PositionChange>, String> {
+        let changes = self.try_move(move_.from, move_.to)?;
+        self.apply(&changes);
+        Ok(changes)
+    }
+
+    /// Validate a simple move to an empty point without modifying the board.
+    /// Checks movement ability, distance, and pass-through.
+    pub fn try_move(&self, from: (u8, u8), to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
+        let info = self.try_move_to(from, to)?;
+        if self[info.to].is_some() {
+            return Err(format!(
+                "cannot move onto occupied destination ({},{})",
+                info.to.0, info.to.1
+            ));
+        }
+        if info.path.unpassable > 0 {
+            return Err("path blocked, cannot reach empty destination".into());
+        }
+        Ok(vec![PositionChange { at: info.from, piece: None }, PositionChange {
+            at: info.to,
+            piece: Some(info.mover),
+        }])
+    }
+
+    /// Execute a capture (normal or jump, including mutual destruction).
+    pub fn capture(&mut self, move_: Move) -> Result<Vec<PositionChange>, String> {
+        let changes = self.try_capture(move_.from, move_.to)?;
+        self.apply(&changes);
+        Ok(changes)
+    }
+
+    /// Validate a capture without modifying the board. Checks movement,
+    /// pass-through, capture/jump-capture ability, and mutual-destruction
+    /// effects.
+    pub fn try_capture(&self, from: (u8, u8), to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
+        let info = self.try_move_to(from, to)?;
+        let Some(target) = self.effective(info.to) else {
+            return Err(format!(
+                "destination ({},{}) is empty, capture requires an occupied point",
+                info.to.0, info.to.1
+            ));
+        };
+        let normal_capture = info.path.unpassable == 0 && info.mover.can_capture(target);
+        let jump_capture = info.mover.can_jump_capture(target, info.path.pieces);
+        if !normal_capture && !jump_capture {
+            return Err(format!("cannot capture {} at ({},{})", target, info.to.0, info.to.1));
+        }
+        Ok(Self::capture_result(info.mover, target, info.from, info.to))
+    }
+
+    /// Execute a push (escalates to capture when blocked).
+    pub fn push(&mut self, move_: Move) -> Result<Vec<PositionChange>, String> {
+        let changes = self.try_push(move_.from, move_.to)?;
+        self.apply(&changes);
+        Ok(changes)
+    }
+
+    /// Validate a push without modifying the board. Checks movement,
+    /// pass-through, push ability, and the pushed piece's landing.
+    /// A blocked push may escalate to capture.
+    pub fn try_push(&self, from: (u8, u8), to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
+        let info = self.try_move_to(from, to)?;
+        let Some(target) = self.effective(info.to) else {
+            return Err(format!(
+                "destination ({},{}) is empty, push requires an occupied point",
+                info.to.0, info.to.1
+            ));
+        };
+        if info.path.unpassable > 0 {
+            return Err("cannot push through blocking pieces on path".into());
+        }
+        if !info.mover.can_push(target) {
+            return Err(format!("cannot push {} at ({},{})", target, info.to.0, info.to.1));
+        }
+        if let Some(pt) = self.pushed_target(info.from, info.to, target) {
+            return Ok(vec![
+                PositionChange { at: info.from, piece: None },
+                PositionChange { at: info.to, piece: Some(info.mover) },
+                PositionChange { at: pt, piece: Some(target) },
+            ]);
+        }
+        if info.mover.color != target.color && target.ability.has_ability(Ability::CAPTURED) {
+            return Ok(Self::capture_result(info.mover, target, info.from, info.to));
+        }
+        Err(format!("push blocked and cannot capture {} at ({},{})", target, info.to.0, info.to.1))
+    }
+
+    /// Shared pre-checks: bounds validation, piece lookup, movement ability,
+    /// path computation.
+    fn try_move_to(&self, from: (u8, u8), to: (u8, u8)) -> Result<MoveInfo, String> {
+        if !self.in_bounds(from) {
+            return Err(format!("({},{}) is outside the board", from.0, from.1));
+        }
+        if !self.in_bounds(to) {
+            return Err(format!("({},{}) is outside the board", to.0, to.1));
+        }
+        let Some(mover) = self.effective(from) else {
+            return Err(format!("no piece at ({},{})", from.0, from.1));
+        };
+        if !Self::can_move(mover, from, to) {
+            return Err(format!(
+                "piece {mover} at ({},{}) cannot move to ({},{})",
+                from.0, from.1, to.0, to.1
+            ));
+        }
+        let path = MovePath::new(self, mover, from, to);
+        Ok(MoveInfo { from, to, mover, path })
     }
 
     /// Whether from→to lies on a horizontal or vertical line. Note:
     /// `from == to` satisfies all three direction predicates; callers must
     /// exclude it first.
-    pub fn is_direction_cross(from: (u8, u8), to: (u8, u8)) -> bool {
+    fn is_direction_cross(from: (u8, u8), to: (u8, u8)) -> bool {
         from.0 == to.0 || from.1 == to.1
     }
 
     /// Whether from→to lies on a diagonal line. See the `from == to` note
     /// on [`Self::is_direction_cross`].
-    pub fn is_direction_diagonal(from: (u8, u8), to: (u8, u8)) -> bool {
+    fn is_direction_diagonal(from: (u8, u8), to: (u8, u8)) -> bool {
         from.0.abs_diff(to.0) == from.1.abs_diff(to.1)
     }
 
@@ -204,7 +396,7 @@ impl Board {
     /// knight moves). See the `from == to` note on
     /// [`Self::is_direction_cross`].
     #[expect(non_snake_case)]
-    pub fn is_direction_shape_L(from: (u8, u8), to: (u8, u8)) -> bool {
+    fn is_direction_shape_L(from: (u8, u8), to: (u8, u8)) -> bool {
         if from.0.abs_diff(to.0) * 2 == from.1.abs_diff(to.1) {
             return true;
         }
@@ -217,7 +409,7 @@ impl Board {
     /// Whether a piece can move from→to, checking direction ability and
     /// distance only. Pieces on the path are ignored; pass-through rules
     /// are handled by the `move_*` methods.
-    pub fn can_move(piece: &Piece, from: (u8, u8), to: (u8, u8)) -> bool {
+    fn can_move(piece: Piece, from: (u8, u8), to: (u8, u8)) -> bool {
         if from == to {
             return false;
         }
@@ -253,193 +445,134 @@ impl Board {
         }
     }
 
-    /// Place a red or black piece onto an empty point in its own half
-    /// (the placement-phase rule: red in the bottom half, black in the top
-    /// half, the center row of odd-height boards in neither). On error,
-    /// self is unchanged.
-    pub fn place(&mut self, piece: Piece, to: (u8, u8)) -> Result<Vec<PieceChange>, String> {
-        if !self.in_bounds(to) {
-            return Err(format!("({},{}) is outside the board", to.0, to.1));
-        }
-        if self[to].is_some() {
-            return Err(format!("destination ({},{}) is already occupied", to.0, to.1));
-        }
-        let half = self.height / 2;
-        let midpoint = self.height.div_ceil(2);
-        if piece.color == Color::Red && to.1 < midpoint {
-            return Err("red pieces can only be placed in the bottom half".into());
-        }
-        if piece.color == Color::Black && to.1 >= half {
-            return Err("black pieces can only be placed in the top half".into());
-        }
-        self[to] = Some(piece);
-        Ok(vec![PieceChange::Place(Place { piece, to })])
-    }
-
-    /// Place a white piece on an empty point covered by the formation of a
-    /// piece with CONTROL_WHITE that the given player controls. Raw abilities
-    /// suffice: no formation modifies CONTROL_WHITE, and control granted by
-    /// formations does not extend to placing white pieces. On error, self is
-    /// unchanged.
-    pub fn place_white(
-        &mut self, white: Piece, to: (u8, u8), player: Player,
-    ) -> Result<Vec<PieceChange>, String> {
-        if !self.in_bounds(to) {
-            return Err(format!("({},{}) is outside the board", to.0, to.1));
-        }
-        if self[to].is_some() {
-            return Err(format!("destination ({},{}) is already occupied", to.0, to.1));
-        }
-        let has_control = self.local(to.0, to.1).neighbors.iter().any(|n| {
-            n.piece.is_some_and(|piece| {
-                piece.formation.contains(-n.dx, -n.dy)
-                    && piece.ability.has_ability(Ability::CONTROL_WHITE)
-                    && piece.can_controlled_by(player)
-            })
-        });
-        if !has_control {
-            return Err(format!(
-                "({},{}) is not covered by any piece with CONTROL_WHITE controlled by player {}",
-                to.0, to.1, player
-            ));
-        }
-        self[to] = Some(white);
-        Ok(vec![PieceChange::Place(Place { piece: white, to })])
-    }
-
-    /// Execute a simple move to an empty point (no capture or push intent).
-    /// Validates movement and pass-through. On error, self is unchanged.
-    pub fn move_to(&mut self, move_: Move) -> Result<MoveOutcome, String> {
-        let info = self.move_info(move_)?;
-        if self[info.to].is_some() {
-            return Err(format!(
-                "cannot move onto occupied destination ({},{})",
-                info.to.0, info.to.1
-            ));
-        }
-        self.try_move(info.from, info.to, &info.path)
-    }
-
-    /// Execute a push: the mover attempts to shove the piece at the
-    /// destination. Validates movement, pass-through, push ability, and the
-    /// pushed piece's own path. Escalates to capture when the push is
-    /// blocked. On error, self is unchanged.
-    pub fn move_push(&mut self, move_: Move) -> Result<MoveOutcome, String> {
-        let info = self.move_info(move_)?;
-        let target = self.effective(info.to).ok_or_else(|| {
-            format!(
-                "destination ({},{}) is empty, push requires an occupied point",
-                info.to.0, info.to.1
-            )
-        })?;
-        self.try_push(info.from, info.to, &info.mover, &target, &info.path)
-    }
-
-    /// Execute a capture: the mover attempts to remove the piece at the
-    /// destination. Validates movement, pass-through, and capture ability.
-    /// On error, self is unchanged.
-    pub fn move_capture(&mut self, move_: Move) -> Result<MoveOutcome, String> {
-        let info = self.move_info(move_)?;
-        let target = self.effective(info.to).ok_or_else(|| {
-            format!(
-                "destination ({},{}) is empty, capture requires an occupied point",
-                info.to.0, info.to.1
-            )
-        })?;
-        self.try_capture(info.from, info.to, &info.mover, &target, &info.path)
-    }
-
-    /// Shared pre-checks: bounds validation, piece lookup, movement ability,
-    /// path computation.
-    fn move_info(&self, move_: Move) -> Result<MoveInfo, String> {
-        let from = move_.from;
-        let to = move_.to;
-        if !self.in_bounds(from) {
-            return Err(format!("({},{}) is outside the board", from.0, from.1));
-        }
-        if !self.in_bounds(to) {
-            return Err(format!("({},{}) is outside the board", to.0, to.1));
-        }
-        let mover =
-            self.effective(from).ok_or_else(|| format!("no piece at ({},{})", from.0, from.1))?;
-        if !Self::can_move(&mover, from, to) {
-            return Err(format!(
-                "piece {mover} at ({},{}) cannot move to ({},{})",
-                from.0, from.1, to.0, to.1
-            ));
-        }
-        let path = MovePath::new(self, &mover, from, to);
-        Ok(MoveInfo { from, to, mover, path })
-    }
-
-    fn try_move(
-        &mut self, from: (u8, u8), to: (u8, u8), path: &MovePath,
-    ) -> Result<MoveOutcome, String> {
-        if path.unpassable > 0 {
-            return Err("path blocked, cannot reach empty destination".into());
-        }
-        self.move_(from, to);
-        Ok(MoveOutcome { changes: vec![PieceChange::Move(Move { from, to })], captured: 0 })
-    }
-
-    fn try_capture(
-        &mut self, from: (u8, u8), to: (u8, u8), mover: &Piece, target: &Piece, path: &MovePath,
-    ) -> Result<MoveOutcome, String> {
-        // Normal capture requires a fully passable path. Jump capture requires
-        // exactly one piece on the path (checked by can_jump_capture), no
-        // matter whether that piece is passable.
-        let normal_capture = path.unpassable == 0 && mover.can_capture(target);
-        let jump_capture = mover.can_jump_capture(target, path.pieces);
-        if !normal_capture && !jump_capture {
-            return Err(format!("cannot capture {} at ({},{})", target, to.0, to.1));
-        }
-        Ok(self.execute_capture(from, to, mover, target))
-    }
-
-    /// Execute a capture: remove target, move attacker, apply
-    /// mutual-destruction effects.
-    fn execute_capture(
-        &mut self, from: (u8, u8), to: (u8, u8), mover: &Piece, target: &Piece,
-    ) -> MoveOutcome {
-        self[to] = None;
-        self.move_(from, to);
+    /// Compute the changes of a successful capture, including
+    /// mutual‑destruction effects.
+    fn capture_result(
+        mover: Piece, target: Piece, from: (u8, u8), to: (u8, u8),
+    ) -> Vec<PositionChange> {
         if mover.ability.has_ability(Ability::CAPTURED_ON_CAPTURE)
             || target.ability.has_ability(Ability::CAPTURE_ON_CAPTURED)
         {
-            self[to] = None;
-            MoveOutcome {
-                changes: vec![PieceChange::Remove(from.0, from.1), PieceChange::Remove(to.0, to.1)],
-                captured: 2,
-            }
+            vec![PositionChange { at: from, piece: None }, PositionChange { at: to, piece: None }]
         } else {
-            MoveOutcome { changes: vec![PieceChange::Move(Move { from, to })], captured: 1 }
+            vec![PositionChange { at: from, piece: None }, PositionChange {
+                at: to,
+                piece: Some(mover),
+            }]
         }
     }
 
-    fn try_push(
-        &mut self, from: (u8, u8), to: (u8, u8), mover: &Piece, target: &Piece, path: &MovePath,
-    ) -> Result<MoveOutcome, String> {
-        if path.unpassable > 0 {
-            return Err("cannot push through blocking pieces on path".into());
+    /// Enumerate all legal actions for the piece at `from`. The piece must
+    /// be present on the board. Actions are [`Action::Move`],
+    /// [`Action::Capture`], and [`Action::Push`]; placement, pass, and
+    /// resign are the caller's concern.
+    pub fn valid_actions(&self, from: (u8, u8)) -> Vec<Action> {
+        let Some(piece) = self.effective(from) else {
+            return vec![];
+        };
+        let max_steps = if piece.ability.has_ability(Ability::ANY_DISTANCE) {
+            self.width.max(self.height) as i8
+        } else {
+            1
+        };
+        let mut actions = Vec::new();
+        if piece.ability.has_ability(Ability::DIRECTION_CROSS) {
+            for (dx, dy) in [(0i8, -1), (0, 1), (-1, 0), (1, 0)] {
+                self.enumerate_line(piece, from, dx, dy, max_steps, &mut actions);
+            }
         }
-        if !mover.can_push(target) {
-            return Err(format!("cannot push {} at ({},{})", target, to.0, to.1));
+        if piece.ability.has_ability(Ability::DIRECTION_DIAGONAL) {
+            for (dx, dy) in [(-1i8, -1), (1, -1), (-1, 1), (1, 1)] {
+                self.enumerate_line(piece, from, dx, dy, max_steps, &mut actions);
+            }
         }
-        if let Some(pt) = self.pushed_target(from, to, target) {
-            self.move_(to, pt);
-            self.move_(from, to);
-            return Ok(MoveOutcome {
-                changes: vec![
-                    PieceChange::Move(Move { from, to }),
-                    PieceChange::Move(Move { from: to, to: pt }),
-                ],
-                captured: 0,
-            });
+        if piece.ability.has_ability(Ability::DIRECTION_SHAPE_L) {
+            for (dx, dy) in
+                [(1i8, 2), (2, 1), (-1, 2), (-2, 1), (1, -2), (2, -1), (-1, -2), (-2, -1)]
+            {
+                self.enumerate_line(piece, from, dx, dy, max_steps, &mut actions);
+            }
         }
-        if mover.color != target.color && target.ability.has_ability(Ability::CAPTURED) {
-            return Ok(self.execute_capture(from, to, mover, target));
+        actions
+    }
+
+    /// Scan from `from` along `(dx, dy)`, adding legal [`Action`]s for each
+    /// reachable cell.  Uses [`MovePath`] for per‑step path validation so
+    /// that leg‑blocking and pass‑through rules stay in one place.
+    fn enumerate_line(
+        &self, mover: Piece, from: (u8, u8), dx: i8, dy: i8, max_steps: i8,
+        actions: &mut Vec<Action>,
+    ) {
+        let mut origin = from;
+        let mut blocked = false;
+        let mut path_pieces: u8 = 0;
+
+        for _ in 0 .. max_steps {
+            let nx = origin.0 as i8 + dx;
+            let ny = origin.1 as i8 + dy;
+            if nx < 0 || ny < 0 || nx as u8 >= self.width || ny as u8 >= self.height {
+                break;
+            }
+            let to = (nx as u8, ny as u8);
+
+            let step_path = MovePath::new(self, mover, origin, to);
+            path_pieces += step_path.pieces;
+            if step_path.unpassable > 0 {
+                blocked = true;
+            }
+
+            if self[to].is_none() {
+                if blocked {
+                    break;
+                }
+                actions.push(Action::Move(Move { from, to }));
+            } else if let Some(target) = self.effective(to) {
+                let move_ = Move { from, to };
+                self.enumerate_action(mover, move_, target, blocked, path_pieces, actions);
+                path_pieces += 1;
+                if !mover.can_pass(target) {
+                    if blocked {
+                        break;
+                    }
+                    blocked = true;
+                }
+            }
+
+            origin = to;
         }
-        Err(format!("push blocked and cannot capture {} at ({},{})", target, to.0, to.1))
+    }
+
+    /// Add every capture and push action legal against `target` at `move_.to`,
+    /// given the accumulated `blocked` / `path_pieces` state for this cell.
+    fn enumerate_action(
+        &self, mover: Piece, move_: Move, target: Piece, blocked: bool, path_pieces: u8,
+        actions: &mut Vec<Action>,
+    ) {
+        if target.color != mover.color {
+            let mut captured = false;
+            if !blocked {
+                if mover.can_capture(target) {
+                    actions.push(Action::Capture(move_));
+                    captured = true;
+                }
+                if mover.can_push(target) {
+                    if let Some(_pt) = self.pushed_target(move_.from, move_.to, target) {
+                        actions.push(Action::Push(move_));
+                    } else if !captured && target.ability.has_ability(Ability::CAPTURED) {
+                        actions.push(Action::Capture(move_));
+                        captured = true;
+                    }
+                }
+            }
+            if !captured && mover.can_jump_capture(target, path_pieces) {
+                actions.push(Action::Capture(move_));
+            }
+        } else if !blocked
+            && mover.can_push(target)
+            && self.pushed_target(move_.from, move_.to, target).is_some()
+        {
+            actions.push(Action::Push(move_));
+        }
     }
 
     /// Where the pushed piece would land, continuing one step along the push
@@ -449,7 +582,7 @@ impl Board {
     /// or the pushed piece cannot traverse its own path there (the same
     /// pass-through rules as a normal move; for L-shaped pushes this is the
     /// pushed piece's leg).
-    fn pushed_target(&self, from: (u8, u8), to: (u8, u8), pushed: &Piece) -> Option<(u8, u8)> {
+    fn pushed_target(&self, from: (u8, u8), to: (u8, u8), pushed: Piece) -> Option<(u8, u8)> {
         let dx: i8 = to.0 as i8 - from.0 as i8;
         let dy: i8 = to.1 as i8 - from.1 as i8;
         let sx = dx.signum();
@@ -482,63 +615,31 @@ impl Board {
         Some(pt)
     }
 
-    /// Write position-based changes (produced by [`Self::resolve_changes`])
-    /// onto the board. Panics when a change lies outside the board.
+    /// Write position-based changes onto the board. Panics when a change
+    /// lies outside the board.
     pub fn apply(&mut self, changes: &[PositionChange]) {
         for change in changes {
             self[change.at] = change.piece;
         }
     }
 
-    /// Convert piece-based changes into position-based changes. `self` must
-    /// be the board as it stood when the action was executed. Points that a
-    /// piece left or was removed from become empty unless another piece
-    /// arrived there, so cyclic changes (e.g. two pieces swapping points)
-    /// resolve correctly.
-    pub fn resolve_changes(&self, changes: &[PieceChange]) -> Result<Vec<PositionChange>, String> {
-        let mut vacated: Vec<(u8, u8)> = Vec::new();
-        let mut occupied: Vec<((u8, u8), Piece)> = Vec::new();
-        for change in changes {
-            match *change {
-                PieceChange::Move(Move { from, to }) => {
-                    let piece = self
-                        .get(from)
-                        .ok_or_else(|| format!("no piece at ({},{})", from.0, from.1))?;
-                    if !self.in_bounds(to) {
-                        return Err(format!("({},{}) is outside the board", to.0, to.1));
-                    }
-                    vacated.push(from);
-                    occupied.push((to, piece));
-                },
-                PieceChange::Place(Place { piece, to }) => {
-                    if !self.in_bounds(to) {
-                        return Err(format!("({},{}) is outside the board", to.0, to.1));
-                    }
-                    occupied.push((to, piece));
-                },
-                PieceChange::Remove(x, y) => {
-                    if self.get((x, y)).is_none() {
-                        return Err(format!("no piece at ({x},{y})"));
-                    }
-                    vacated.push((x, y));
-                },
-            }
-        }
+    /// Normalize a flat list of position changes: when a point appears as
+    /// both vacated and occupied the occupant wins. The result is sorted by
+    /// position. This handles cyclic changes (e.g. two pieces swapping
+    /// points) correctly.
+    pub fn normalize_changes(changes: &[PositionChange]) -> Vec<PositionChange> {
         let mut result: Vec<PositionChange> = Vec::new();
-        for (i, &(at, piece)) in occupied.iter().enumerate() {
-            if occupied[.. i].iter().any(|&(other, _)| other == at) {
-                return Err(format!("conflicting changes at ({},{})", at.0, at.1));
-            }
-            result.push(PositionChange { at, piece: Some(piece) });
-        }
-        for at in vacated {
-            if !occupied.iter().any(|&(other, _)| other == at) {
-                result.push(PositionChange { at, piece: None });
+        for change in changes {
+            if let Some(pos) = result.iter_mut().find(|c| c.at == change.at) {
+                if pos.piece.is_none() && change.piece.is_some() {
+                    pos.piece = change.piece;
+                }
+            } else {
+                result.push(PositionChange { at: change.at, piece: change.piece });
             }
         }
         result.sort_by_key(|c| c.at);
-        result.dedup();
-        Ok(result)
+        result
     }
 }
 
@@ -561,13 +662,13 @@ impl IndexMut<(u8, u8)> for Board {
 }
 
 impl MovePath {
-    fn new(board: &Board, mover: &Piece, from: (u8, u8), to: (u8, u8)) -> Self {
+    fn new(board: &Board, mover: Piece, from: (u8, u8), to: (u8, u8)) -> Self {
         let mut pieces: u8 = 0;
         let mut unpassable: u8 = 0;
         for pos in Self::path_positions(from, to) {
             if let Some(blocker) = board.effective(pos) {
                 pieces += 1;
-                if !mover.can_pass(&blocker) {
+                if !mover.can_pass(blocker) {
                     unpassable += 1;
                 }
             }
@@ -682,7 +783,10 @@ impl FromStr for Board {
 pub(crate) fn parse_board_from_lines(
     lines: &mut dyn Iterator<Item = &str>,
 ) -> Result<Board, String> {
-    let header = lines.next().ok_or("missing column header row")?.trim();
+    let Some(header) = lines.next() else {
+        return Err("missing column header row".into());
+    };
+    let header = header.trim();
     let header_cells = bracket_cells(header, "零")?;
     let width = header_cells.len();
     if width == 0 {
@@ -711,11 +815,13 @@ pub(crate) fn parse_board_from_lines(
         if cells.len() != width {
             return Err(format!("row {} has {} cells, expected {width}", rows.len(), cells.len()));
         }
-        let row = cells
-            .iter()
-            .map(|c| parse_board_piece(c))
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| format!("row {}: {e}", rows.len()))?;
+        let mut row = Vec::new();
+        for c in cells {
+            match parse_board_piece(c) {
+                Ok(p) => row.push(p),
+                Err(e) => return Err(format!("row {}: {e}", rows.len())),
+            }
+        }
         rows.push(row);
     }
     if rows.is_empty() {
@@ -734,20 +840,23 @@ pub(crate) fn parse_board_from_lines(
 /// Split a `label[cell cell ...]` row into cells, validating the row label
 /// and bracket structure.
 fn bracket_cells<'s>(line: &'s str, label: &str) -> Result<Vec<&'s str>, String> {
-    let rest = line
-        .strip_prefix(label)
-        .ok_or_else(|| format!("row must start with label {label}: {line}"))?;
-    let inner = rest
-        .strip_prefix('[')
-        .and_then(|s| s.strip_suffix(']'))
-        .ok_or_else(|| format!("row must be bracketed: {line}"))?;
+    let Some(rest) = line.strip_prefix(label) else {
+        return Err(format!("row must start with label {label}: {line}"));
+    };
+    let Some(inner) = rest.strip_prefix('[').and_then(|s| s.strip_suffix(']')) else {
+        return Err(format!("row must be bracketed: {line}"));
+    };
     if inner.is_empty() {
         return Ok(Vec::new());
     }
-    inner
-        .split(' ')
-        .map(|c| if c.is_empty() { Err(format!("empty cell in row: {line}")) } else { Ok(c) })
-        .collect()
+    let mut result = Vec::new();
+    for c in inner.split(' ') {
+        if c.is_empty() {
+            return Err(format!("empty cell in row: {line}"));
+        }
+        result.push(c);
+    }
+    Ok(result)
 }
 
 /// Parse a single board cell text: `一一` (empty) or a color-prefixed piece.
@@ -755,5 +864,8 @@ fn parse_board_piece(s: &str) -> Result<Option<Piece>, String> {
     if s == "一一" {
         return Ok(None);
     }
-    s.parse().map(Some)
+    match s.parse() {
+        Ok(p) => Ok(Some(p)),
+        Err(e) => Err(e),
+    }
 }

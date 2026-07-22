@@ -184,7 +184,7 @@ fn main() -> Result<(), String> {
 | Module | Contents |
 |---|---|
 | `game` | `Game` and `GameConfig`: validation, turn flow, result tracking, snapshot `Display`/`FromStr` |
-| `action` | plain data types: `Action`, `Reaction`, `PieceChange`, `GameResult` |
+| `action` | plain data types: `Action`, `Reaction`, `PositionChange`, `GameResult` |
 | `board` | `Board`: geometry, movement/push/capture execution, formation-effective piece lookup |
 | `piece` | `Piece`, `Color`, `Player`, and every canonical piece as a constant (`Piece::RED_GENERAL`, …) |
 | `formation` | `Formation`: the neighbor pattern and its ability-rewriting effect |
