@@ -123,7 +123,7 @@ impl Game {
         Self::validate_vital(config, Player::Red)?;
         Self::validate_vital(config, Player::Black)?;
         if !config.red_pool.is_empty() || !config.black_pool.is_empty() {
-            Self::validate_halves(config)?;
+            config.board.validate_halves()?;
             Self::validate_alternation(config)?;
         }
         Self::validate_result(config)?;
@@ -156,35 +156,6 @@ impl Game {
         let count = pool_count + config.board.vital_count(player.color());
         if count > 1 {
             return Err(format!("{player} must have at most one vital piece, found {count}"));
-        }
-        Ok(())
-    }
-
-    fn validate_halves(config: &GameConfig) -> Result<(), String> {
-        let height = config.board.height();
-        let half = height / 2;
-        let midpoint = height.div_ceil(2);
-        for y in 0 .. midpoint {
-            for x in 0 .. config.board.width() {
-                let Some(piece) = config.board[(x, y)] else { continue };
-                if piece.color != Color::Red {
-                    continue;
-                }
-                return Err(format!(
-                    "red piece {piece} at ({x},{y}) must be in the bottom half during placement"
-                ));
-            }
-        }
-        for y in half .. height {
-            for x in 0 .. config.board.width() {
-                let Some(piece) = config.board[(x, y)] else { continue };
-                if piece.color != Color::Black {
-                    continue;
-                }
-                return Err(format!(
-                    "black piece {piece} at ({x},{y}) must be in the top half during placement"
-                ));
-            }
         }
         Ok(())
     }
@@ -311,7 +282,7 @@ impl Game {
         if !piece.can_controlled_by(self.player) {
             return vec![];
         }
-        self.board.valid_actions((x, y))
+        self.board.valid_moves((x, y))
     }
 
     /// Positions where the current player may place a white piece.
@@ -326,31 +297,7 @@ impl Game {
         {
             return vec![];
         }
-        let Some(place) = self.board.find_control_white(self.player) else {
-            return vec![];
-        };
-        let mut targets = Vec::new();
-        for dy in -1i8 ..= 1 {
-            for dx in -1i8 ..= 1 {
-                if dx == 0 && dy == 0 {
-                    continue;
-                }
-                if !place.piece.formation.contains(dx, dy) {
-                    continue;
-                }
-                let tx = place.to.0 as i8 + dx;
-                let ty = place.to.1 as i8 + dy;
-                if tx < 0 || ty < 0 {
-                    continue;
-                }
-                let to = (tx as u8, ty as u8);
-                if !self.board.in_bounds(to) || self.board[to].is_some() {
-                    continue;
-                }
-                targets.push(to);
-            }
-        }
-        targets
+        self.board.valid_white_placements(self.player)
     }
 
     /// Non‑mutating placement validation (handles both colored and white).

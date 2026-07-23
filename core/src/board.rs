@@ -91,6 +91,35 @@ impl Board {
         ((index % self.width as usize) as u8, (index / self.width as usize) as u8)
     }
 
+    pub(crate) fn validate_halves(&self) -> Result<(), String> {
+        let height = self.height();
+        let half = height / 2;
+        let midpoint = height.div_ceil(2);
+        for y in 0 .. midpoint {
+            for x in 0 .. self.width() {
+                let Some(piece) = self[(x, y)] else { continue };
+                if piece.color != Color::Red {
+                    continue;
+                }
+                return Err(format!(
+                    "red piece {piece} at ({x},{y}) must be in the bottom half during placement"
+                ));
+            }
+        }
+        for y in half .. height {
+            for x in 0 .. self.width() {
+                let Some(piece) = self[(x, y)] else { continue };
+                if piece.color != Color::Black {
+                    continue;
+                }
+                return Err(format!(
+                    "black piece {piece} at ({x},{y}) must be in the top half during placement"
+                ));
+            }
+        }
+        Ok(())
+    }
+
     /// Returns the center piece at (x,y) and its eight neighbors, each with
     /// its relative offset from the center.
     pub fn local(&self, x: u8, y: u8) -> Local {
@@ -138,22 +167,6 @@ impl Board {
                 continue;
             };
             if piece.color == color && piece.ability.has_ability(Ability::VITAL) {
-                return Some(Place { to: self.position(i), piece: *piece });
-            }
-        }
-        None
-    }
-
-    /// The first piece with the CONTROL_WHITE ability that `player`
-    /// commands, paired with its position. CONTROL_WHITE is never modified
-    /// by formation effects, so raw abilities suffice.
-    pub(crate) fn find_control_white(&self, player: Player) -> Option<Place> {
-        for (i, cell) in self.pieces.iter().enumerate() {
-            let Some(piece) = cell else {
-                continue;
-            };
-            if piece.ability.has_ability(Ability::CONTROL_WHITE) && piece.can_controlled_by(player)
-            {
                 return Some(Place { to: self.position(i), piece: *piece });
             }
         }
@@ -462,11 +475,55 @@ impl Board {
         }
     }
 
+    pub fn valid_white_placements(&self, player: Player) -> Vec<(u8, u8)> {
+        let Some(place) = self.find_control_white(player) else {
+            return vec![];
+        };
+        let mut targets = Vec::new();
+        for dy in -1i8 ..= 1 {
+            for dx in -1i8 ..= 1 {
+                if dx == 0 && dy == 0 {
+                    continue;
+                }
+                if !place.piece.formation.contains(dx, dy) {
+                    continue;
+                }
+                let tx = place.to.0 as i8 + dx;
+                let ty = place.to.1 as i8 + dy;
+                if tx < 0 || ty < 0 {
+                    continue;
+                }
+                let to = (tx as u8, ty as u8);
+                if !self.in_bounds(to) || self[to].is_some() {
+                    continue;
+                }
+                targets.push(to);
+            }
+        }
+        targets
+    }
+
+    /// The first piece with the CONTROL_WHITE ability that `player`
+    /// commands, paired with its position. CONTROL_WHITE is never modified
+    /// by formation effects, so raw abilities suffice.
+    fn find_control_white(&self, player: Player) -> Option<Place> {
+        for (i, cell) in self.pieces.iter().enumerate() {
+            let Some(piece) = cell else {
+                continue;
+            };
+            if piece.ability.has_ability(Ability::CONTROL_WHITE) && piece.can_controlled_by(player)
+            {
+                return Some(Place { to: self.position(i), piece: *piece });
+            }
+        }
+        None
+    }
+
     /// Enumerate all legal actions for the piece at `from`. The piece must
     /// be present on the board. Actions are [`Action::Move`],
     /// [`Action::Capture`], and [`Action::Push`]; placement, pass, and
     /// resign are the caller's concern.
-    pub fn valid_actions(&self, from: (u8, u8)) -> Vec<Action> {
+    pub fn valid_moves(&self, from: (u8, u8)) -> Vec<Action> {
         let Some(piece) = self.effective(from) else {
             return vec![];
         };
