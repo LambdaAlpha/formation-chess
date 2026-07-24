@@ -270,16 +270,16 @@ deal with **who controls what**.
 
 | Piece | Symbol | Default Abilities | Formation Effect |
 |---|---|---|---|
-| **General** | 将 | Cross, any distance, *Vital* | Modifies no abilities — but see below |
-| **Wizard** | 巫 | Cross, any distance, *Control White* | White pieces inside become controlled by the wizard's player |
-| **Traitor** | 叛 | Cross, any distance | Enemies inside become **also** controlled by the traitor's player (converts them) |
-| **Spy** | 谍 | Cross, any distance, controlled by *both* players | Friends inside become **also** controlled by the opponent (double agent effect) |
+| **General** | 将 | Cross, any distance, *Push Ally*, *Push Enemy*, *Vital* | Modifies no abilities — but see below |
+| **Wizard** | 巫 | Cross, any distance, *Push Ally*, *Push Enemy*, *Control White* | White pieces inside become controlled by the wizard's player |
+| **Traitor** | 叛 | Cross, any distance, *Push Ally*, *Push Enemy* | Enemies inside become **also** controlled by the traitor's player (converts them) |
+| **Spy** | 谍 | Cross, any distance, *Push Ally*, *Push Enemy*, controlled by *both* players | Friends inside become **also** controlled by the opponent (double agent effect) |
 
 The **General** is your vital piece — lose your general and you lose. It
-moves freely but cannot capture, push, or pass through other pieces, so
-protect it with formations. Its own formation modifies no abilities, but
-its pattern still matters: if the two generals ever stand inside each
-other's formation, the game is drawn (see
+moves freely but cannot capture or pass through other pieces; protect it
+with formations. Its own formation modifies no abilities, but its pattern
+still matters: if the two generals ever stand inside each other's
+formation, the game is drawn (see
 [How the Game Ends](#how-the-game-ends)).
 
 The **Wizard** brings captured pieces back into play: it places white

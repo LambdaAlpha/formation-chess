@@ -95,8 +95,8 @@ impl Piece {
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
-                push_ally: false,
-                push_enemy: false,
+                push_ally: true,
+                push_enemy: true,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
                 pass_ally: false,
@@ -128,8 +128,8 @@ impl Piece {
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
-                push_ally: false,
-                push_enemy: false,
+                push_ally: true,
+                push_enemy: true,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
                 pass_ally: false,
@@ -161,8 +161,8 @@ impl Piece {
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
-                push_ally: false,
-                push_enemy: false,
+                push_ally: true,
+                push_enemy: true,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
                 pass_ally: false,
@@ -193,8 +193,8 @@ impl Piece {
             ability: AbilityConfig {
                 controlled_by_red: true,
                 controlled_by_black: true,
-                push_ally: false,
-                push_enemy: false,
+                push_ally: true,
+                push_enemy: true,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
                 pass_ally: false,
