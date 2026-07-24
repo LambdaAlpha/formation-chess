@@ -189,9 +189,9 @@ is treated as if it had the required direction ability, so its own
 movement abilities are irrelevant. The push fails only when the pushed
 piece cannot physically make that step — the landing point is occupied or
 off the board, or its path there is blocked by a piece it cannot pass
-through — in which case the push escalates into a capture attempt (the
-target must have *Captured* for the capture to succeed; otherwise the push
-is blocked).
+through — in which case the push escalates into a capture, destroying the
+target regardless of its abilities or color (unlike normal capture, push
+escalation works against friendly pieces as well).
 
 - To push a **friendly** piece: you need *Push Ally* **or** the target
   needs *Pushed by Ally*. Either side's consent is enough.
@@ -209,7 +209,8 @@ there while moving past it. You cannot stop on an occupied point, however.
 **Normal capture** means moving onto an enemy-occupied point and removing
 that piece. You need *Capture*, the target needs *Captured*, and your
 colors must differ. The path must be clear (all intervening pieces must be
-passable).
+passable). Note that this color restriction only applies to normal capture;
+a push that escalates into a capture (see above) works against any piece.
 
 **Jump capture** (the cannon) allows capturing by jumping over exactly one
 intervening piece. You need *Jump Capture*, the target needs *Captured*,
@@ -382,7 +383,8 @@ turn a player takes exactly one of these actions:
 - **Capture:** move onto an occupied point, declaring the intent to take
   the piece there.
 - **Push:** move onto an occupied point, declaring the intent to shove it.
-  If the shove is blocked, it becomes a capture attempt automatically.
+  If the shove is blocked, it becomes a capture automatically (the target
+  is destroyed even if it is a friendly piece or lacks *Captured*).
 - **Place** a white piece through a wizard (this consumes the turn).
 - **Pass:** skip the turn without moving. Because passing is always
   available, having no legal move never forces a loss — there is no

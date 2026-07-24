@@ -60,7 +60,9 @@ impl Ability {
     /// sends it to (2,4). The shove is external force, so the target
     /// needs no direction ability of its own. If the target cannot make
     /// that step — landing occupied or off the board, or its own path
-    /// there blocked — the push escalates into a capture attempt.
+    /// there blocked — the push escalates into a capture, destroying
+    /// the target regardless of its abilities or color. Unlike normal
+    /// capture, escalated push works against friendly pieces too.
     ///
     /// Pushing an ally requires mover PUSH_ALLY **or** target
     /// PUSHED_BY_ALLY; either side's consent suffices.
@@ -92,8 +94,10 @@ impl Ability {
     /// piece. Requires attacker CAPTURE and target CAPTURED, and every
     /// piece on the path must be passable.
     pub const CAPTURE: Ability = Ability(1 << 10);
-    /// Can be captured — by normal capture, jump capture, or an escalated
-    /// push.
+    /// Required for normal capture and jump capture. Escalated push
+    /// captures bypass both this ability and the color restriction —
+    /// a blocked push destroys the target regardless of CAPTURED or
+    /// whether it is friend or foe.
     pub const CAPTURED: Ability = Ability(1 << 11);
     /// Retaliation: when this piece is captured, the capturer is
     /// destroyed as well.

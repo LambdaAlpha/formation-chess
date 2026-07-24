@@ -364,10 +364,7 @@ impl Board {
                 PositionChange { at: pt, piece: Some(target) },
             ]);
         }
-        if info.mover.color != target.color && target.ability.has_ability(Ability::CAPTURED) {
-            return Ok(Self::capture_result(info.mover, target, info.from, info.to));
-        }
-        Err(format!("push blocked and cannot capture {} at ({},{})", target, info.to.0, info.to.1))
+        Ok(Self::capture_result(info.mover, target, info.from, info.to))
     }
 
     /// Shared pre-checks: bounds validation, piece lookup, movement ability,
@@ -605,30 +602,22 @@ impl Board {
         &self, mover: Piece, move_: Move, target: Piece, blocked: bool, path_pieces: u8,
         actions: &mut Vec<Action>,
     ) {
-        if target.color != mover.color {
-            let mut captured = false;
-            if !blocked {
-                if mover.can_capture(target) {
-                    actions.push(Action::Capture(move_));
-                    captured = true;
-                }
-                if mover.can_push(target) {
-                    if let Some(_pt) = self.pushed_target(move_.from, move_.to, target) {
-                        actions.push(Action::Push(move_));
-                    } else if !captured && target.ability.has_ability(Ability::CAPTURED) {
-                        actions.push(Action::Capture(move_));
-                        captured = true;
-                    }
-                }
-            }
-            if !captured && mover.can_jump_capture(target, path_pieces) {
+        #[expect(clippy::useless_let_if_seq)]
+        let mut captured = false;
+        if !blocked && mover.can_capture(target) {
+            actions.push(Action::Capture(move_));
+            captured = true;
+        }
+        if !captured && mover.can_jump_capture(target, path_pieces) {
+            actions.push(Action::Capture(move_));
+            captured = true;
+        }
+        if !blocked && mover.can_push(target) {
+            if let Some(_pt) = self.pushed_target(move_.from, move_.to, target) {
+                actions.push(Action::Push(move_));
+            } else if !captured {
                 actions.push(Action::Capture(move_));
             }
-        } else if !blocked
-            && mover.can_push(target)
-            && self.pushed_target(move_.from, move_.to, target).is_some()
-        {
-            actions.push(Action::Push(move_));
         }
     }
 
