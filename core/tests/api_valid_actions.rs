@@ -341,7 +341,7 @@ fn valid_moves_river_push_blocked_by_edge() {
     );
     let actions = g.valid_moves(2, 1);
     assert_moves(&actions, &[(2, 2), (2, 3), (2, 4), (0, 1), (1, 1), (3, 1), (4, 1)]);
-    assert_captures(&actions, &[(2, 0)]);
+    assert_pushes(&actions, &[(2, 0)]);
     assert_eq!(actions.len(), 8);
 }
 
@@ -515,8 +515,8 @@ fn valid_moves_river_push_blocked_escalates_to_single_capture() {
     let actions = g.valid_moves(2, 3);
     assert_moves(&actions, &[(0, 3), (1, 3), (3, 3), (4, 3)]);
     assert_captures(&actions, &[(2, 4)]);
-    assert_pushes(&actions, &[(2, 2)]);
-    assert_eq!(actions.len(), 6, "4 moves + 1 capture + 1 push (ally spear), no duplicate capture");
+    assert_pushes(&actions, &[(2, 2), (2, 4)]);
+    assert_eq!(actions.len(), 7, "4 moves + 1 capture + 2 pushes, no duplicate capture");
 }
 
 // ── formation-granted CAPTURE + JUMP_CAPTURE: no duplicate ─────────────────

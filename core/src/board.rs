@@ -610,14 +610,9 @@ impl Board {
         }
         if !captured && mover.can_jump_capture(target, path_pieces) {
             actions.push(Action::Capture(move_));
-            captured = true;
         }
         if !blocked && mover.can_push(target) {
-            if let Some(_pt) = self.pushed_target(move_.from, move_.to, target) {
-                actions.push(Action::Push(move_));
-            } else if !captured {
-                actions.push(Action::Capture(move_));
-            }
+            actions.push(Action::Push(move_));
         }
     }
 
