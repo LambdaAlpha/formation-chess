@@ -258,9 +258,10 @@ pattern.
 
 By default every Red and Black piece has *Pushed by Enemy*, *Passed by
 Enemy*, and *Captured*; the only exceptions are the **Mountain** (not
-pushable by enemies) and the **Forest** (not passable by enemies). In
-other words, most pieces can be pushed, passed through, and captured by
-the enemy unless a formation changes those settings.
+pushable by enemies), the **Forest** (not passable by enemies), and the
+**Shield** (not capturable). In other words, most pieces can be pushed,
+passed through, and captured by the enemy unless a formation changes
+those settings.
 
 ### Control Group — Corners Pattern
 
@@ -328,17 +329,20 @@ These pieces move in cross directions at any distance and specialize in
 
 | Piece | Symbol | Default Abilities | Formation Effect |
 |---|---|---|---|
-| **Spear** | 矛 | Cross, any distance (no capture!) | Allies gain capture; enemies lose it |
-| **Shield** | 盾 | Cross, any distance | Allies become uncapturable (immune); enemies become capturable |
-| **Cannon** | 炮 | Cross, any distance, jump capture | Allies gain jump capture; enemies lose it |
-| **Mine** | 雷 | Cross, any distance, *Capture on Captured*, *Captured on Capture* | Everyone inside gains both effects — any capture becomes mutual destruction |
+| **Spear** | 矛 | Cross, any distance, capture | Allies gain capture; enemies lose it |
+| **Shield** | 盾 | Cross, any distance, **not** captured | Allies become uncapturable (immune); enemies become capturable |
+| **Cannon** | 炮 | Cross, any distance, *jump capture* | Allies gain jump capture; enemies lose it |
+| **Mine** | 雷 | Cross, any distance, capture, *capture-on-captured*, *captured-on-capture* | Everyone inside gains both effects — any capture becomes mutual destruction |
 
-The **Spear** cannot capture by default: its formation grants capture to
-allies and strips it from enemies. The **Shield** protects everyone around it —
-stack immunity on your general by keeping a Shield nearby. The **Cannon**
-can only take pieces by jump capture, so it always needs a screen piece
-between itself and the target. The **Mine** turns its surroundings into a
-no-go zone where nobody wants to initiate an attack.
+The **Spear** can capture on its own, and its formation further grants
+capture to allies while stripping it from enemies. The **Shield** is itself
+uncapturable and protects everyone around it — stack immunity on your
+general by keeping a Shield nearby. The **Cannon** can only take pieces by
+jump capture, so it always needs a screen piece between itself and the
+target. The **Mine** can capture directly, and when it does (or is
+captured), both pieces are destroyed — its formation extends this mutual
+destruction to every piece nearby, turning its surroundings into a no-go
+zone where nobody wants to initiate an attack.
 
 ## White Pieces
 
