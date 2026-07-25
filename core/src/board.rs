@@ -39,7 +39,8 @@ pub struct Neighbor {
 }
 
 struct MoveInfo {
-    mover: Piece,
+    effective_mover: Piece,
+    original_mover: Piece,
     from: (u8, u8),
     to: (u8, u8),
     path: MovePath,
@@ -303,7 +304,7 @@ impl Board {
         }
         Ok(vec![PositionChange { at: info.from, piece: None }, PositionChange {
             at: info.to,
-            piece: Some(info.mover),
+            piece: Some(info.original_mover),
         }])
     }
 
@@ -325,12 +326,12 @@ impl Board {
                 info.to.0, info.to.1
             ));
         };
-        let normal_capture = info.path.unpassable == 0 && info.mover.can_capture(target);
-        let jump_capture = info.mover.can_jump_capture(target, info.path.pieces);
+        let normal_capture = info.path.unpassable == 0 && info.effective_mover.can_capture(target);
+        let jump_capture = info.effective_mover.can_jump_capture(target, info.path.pieces);
         if !normal_capture && !jump_capture {
             return Err(format!("cannot capture {} at ({},{})", target, info.to.0, info.to.1));
         }
-        Ok(Self::capture_result(info.mover, target, info.from, info.to))
+        Ok(Self::capture_result(info, target))
     }
 
     /// Execute a push (escalates to capture when blocked).
@@ -351,20 +352,21 @@ impl Board {
                 info.to.0, info.to.1
             ));
         };
+        let original_target = self[info.to].unwrap();
         if info.path.unpassable > 0 {
             return Err("cannot push through blocking pieces on path".into());
         }
-        if !info.mover.can_push(target) {
+        if !info.effective_mover.can_push(target) {
             return Err(format!("cannot push {} at ({},{})", target, info.to.0, info.to.1));
         }
         if let Some(pt) = self.pushed_target(info.from, info.to, target) {
             return Ok(vec![
                 PositionChange { at: info.from, piece: None },
-                PositionChange { at: info.to, piece: Some(info.mover) },
-                PositionChange { at: pt, piece: Some(target) },
+                PositionChange { at: info.to, piece: Some(info.original_mover) },
+                PositionChange { at: pt, piece: Some(original_target) },
             ]);
         }
-        Ok(Self::capture_result(info.mover, target, info.from, info.to))
+        Ok(Self::capture_result(info, target))
     }
 
     /// Shared pre-checks: bounds validation, piece lookup, movement ability,
@@ -379,6 +381,7 @@ impl Board {
         let Some(mover) = self.effective(from) else {
             return Err(format!("no piece at ({},{})", from.0, from.1));
         };
+        let original_mover = self[from].unwrap();
         if !Self::can_move(mover, from, to) {
             return Err(format!(
                 "piece {mover} at ({},{}) cannot move to ({},{})",
@@ -386,7 +389,7 @@ impl Board {
             ));
         }
         let path = MovePath::new(self, mover, from, to);
-        Ok(MoveInfo { from, to, mover, path })
+        Ok(MoveInfo { effective_mover: mover, original_mover, from, to, path })
     }
 
     /// Whether from→to lies on a horizontal or vertical line. Note:
@@ -457,17 +460,18 @@ impl Board {
 
     /// Compute the changes of a successful capture, including
     /// mutual‑destruction effects.
-    fn capture_result(
-        mover: Piece, target: Piece, from: (u8, u8), to: (u8, u8),
-    ) -> Vec<PositionChange> {
-        if mover.ability.has_ability(Ability::CAPTURED_ON_CAPTURE)
+    fn capture_result(info: MoveInfo, target: Piece) -> Vec<PositionChange> {
+        if info.effective_mover.ability.has_ability(Ability::CAPTURED_ON_CAPTURE)
             || target.ability.has_ability(Ability::CAPTURE_ON_CAPTURED)
         {
-            vec![PositionChange { at: from, piece: None }, PositionChange { at: to, piece: None }]
+            vec![PositionChange { at: info.from, piece: None }, PositionChange {
+                at: info.to,
+                piece: None,
+            }]
         } else {
-            vec![PositionChange { at: from, piece: None }, PositionChange {
-                at: to,
-                piece: Some(mover),
+            vec![PositionChange { at: info.from, piece: None }, PositionChange {
+                at: info.to,
+                piece: Some(info.original_mover),
             }]
         }
     }

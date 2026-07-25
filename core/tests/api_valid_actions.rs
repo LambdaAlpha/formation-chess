@@ -1,3 +1,4 @@
+use formation_chess_core::ability::Ability;
 use formation_chess_core::action::Action;
 use formation_chess_core::action::GameResult;
 use formation_chess_core::action::Move;
@@ -546,4 +547,77 @@ fn valid_moves_cannon_jump_capture_no_duplicate_when_normal_also_available() {
     assert_moves(&actions, &[(0, 1), (1, 1), (3, 1), (4, 1)]);
     assert_captures(&actions, &[(2, 2), (2, 3)]);
     assert_eq!(actions.len(), 6, "4 moves + 2 captures, no jump-capture duplicate at (2,3)");
+}
+
+// ── try_xxx returns original (not effective) pieces in PositionChange ───────
+
+/// Red Rook at (0,1) strips ANY_DISTANCE from enemy Black Rook at (1,1).
+/// `try_move` must return the original Black Rook in the PositionChange, not
+/// the effective one that lost ANY_DISTANCE.
+#[test]
+fn try_move_returns_original_piece_not_effective() {
+    let mut board = Board::new(3, 4);
+    board[(0, 1)] = Some(Piece::RED_ROOK);
+    board[(1, 1)] = Some(Piece::BLACK_ROOK);
+
+    let changes = board.try_move((1, 1), (1, 2)).expect("1-step move should succeed");
+
+    let placed = changes.iter().find(|c| c.at == (1, 2)).unwrap().piece.unwrap();
+    assert_eq!(placed, Piece::BLACK_ROOK, "PositionChange must return the original piece");
+    assert!(
+        placed.ability.has_ability(Ability::ANY_DISTANCE),
+        "original Black Rook must retain ANY_DISTANCE"
+    );
+}
+
+/// Red Spear at (2,1) grants CAPTURE to ally Red River at (2,2) via formation.
+/// `try_capture` must return the original River in the PositionChange, not
+/// the effective one that gained CAPTURE.
+#[test]
+fn try_capture_returns_original_mover_not_effective() {
+    let mut board = Board::new(5, 5);
+    board[(2, 1)] = Some(Piece::RED_SPEAR);
+    board[(2, 2)] = Some(Piece::RED_RIVER);
+    board[(2, 3)] = Some(Piece::BLACK_GENERAL);
+    board[(0, 4)] = Some(Piece::RED_GENERAL);
+    board[(4, 0)] = Some(Piece::BLACK_GENERAL);
+
+    let changes = board.try_capture((2, 2), (2, 3)).expect("capture should succeed");
+
+    let placed = changes.iter().find(|c| c.at == (2, 3)).unwrap().piece.unwrap();
+    assert_eq!(placed, Piece::RED_RIVER, "PositionChange must return the original piece");
+    assert!(
+        !placed.ability.has_ability(Ability::CAPTURE),
+        "original River must NOT have CAPTURE (that came from formation)"
+    );
+}
+
+/// Red Spear (2,1) grants CAPTURE to Red River (2,2). Black Rook (1,3) grants
+/// ANY_DISTANCE to Black Dog (2,3).  Red River pushes Black Dog to (2,4).
+/// `try_push` must return the *original* River and Dog in PositionChanges,
+/// not the effective versions with modified abilities.
+#[test]
+fn try_push_returns_original_pieces_not_effective() {
+    let mut board = Board::new(5, 5);
+    board[(2, 1)] = Some(Piece::RED_SPEAR);
+    board[(2, 2)] = Some(Piece::RED_RIVER);
+    board[(2, 3)] = Some(Piece::BLACK_DOG);
+    board[(1, 3)] = Some(Piece::BLACK_ROOK);
+    board[(0, 4)] = Some(Piece::RED_GENERAL);
+    board[(4, 0)] = Some(Piece::BLACK_GENERAL);
+
+    let changes = board.try_push((2, 2), (2, 3)).expect("push should succeed");
+
+    // The mover occupies the target's old position.
+    let mover = changes.iter().find(|c| c.at == (2, 3)).unwrap().piece.unwrap();
+    assert_eq!(mover, Piece::RED_RIVER, "mover PositionChange must return original River");
+    assert!(!mover.ability.has_ability(Ability::CAPTURE), "original River must NOT have CAPTURE");
+
+    // The pushed piece lands one step further.
+    let pushed = changes.iter().find(|c| c.at == (2, 4)).unwrap().piece.unwrap();
+    assert_eq!(pushed, Piece::BLACK_DOG, "pushed PositionChange must return original Dog");
+    assert!(
+        !pushed.ability.has_ability(Ability::ANY_DISTANCE),
+        "original Dog must NOT have ANY_DISTANCE"
+    );
 }
