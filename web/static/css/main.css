@@ -29,9 +29,7 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 .toolbar-spacer { flex: 1; }
 .toolbar-sep { margin: 0 2px; color: #999; }
 #player-indicator { font-weight: 600; }
-#white-indicator { cursor: pointer; user-select: none; }
-#white-indicator:hover { text-decoration: underline; }
-#white-indicator.no-white { cursor: default; pointer-events: none; }
+#white-indicator:disabled { opacity: 0.5; pointer-events: none; }
 
 /* ---- main ---- */
 #main { display: flex; flex: 1; overflow: hidden; }
@@ -221,7 +219,7 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
     padding: 3px 7px; font-size: 11px;
   }
   #player-indicator { font-size: 12px; }
-  #white-indicator { font-size: 12px; }
+  #white-indicator { font-size: 11px; }
 
   #main { flex-direction: column; }
 

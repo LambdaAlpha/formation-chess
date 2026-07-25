@@ -112,8 +112,9 @@ export function render(state) {
     const p = phase();
     const playing = state.result === 'Unfinished' && p === 'movement';
     document.getElementById('btn-pass').style.display = playing ? '' : 'none';
-    document.getElementById('btn-resign').style.display = playing ? '' : 'none';
-    document.getElementById('white-indicator').classList.toggle('no-white', state.white_pool === 0 || !playing);
+    document.getElementById('btn-resign').style.display = state.result === 'Unfinished' ? '' : 'none';
+    document.getElementById('white-indicator').disabled = (state.white_pool === 0 || !playing);
+    document.getElementById('sidebar').style.display = p === 'placement' ? '' : 'none';
 
     if (state.result !== 'Unfinished') {
         setStatus(resultLabel(state.result));
