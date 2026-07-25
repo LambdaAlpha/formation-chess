@@ -20,7 +20,7 @@ pub struct Formation {
 impl Formation {
     pub const GENERAL: Self = Self { points: Self::CORNER, effect: Self::general };
     pub const WIZARD: Self = Self { points: Self::CORNER, effect: Self::wizard };
-    pub const TRAITOR: Self = Self { points: Self::CORNER, effect: Self::traitor };
+    pub const AGENT: Self = Self { points: Self::CORNER, effect: Self::agent };
     pub const SPY: Self = Self { points: Self::CORNER, effect: Self::spy };
     pub const ROOK: Self = Self { points: Self::MIDDLE, effect: Self::rook };
     pub const PAWN: Self = Self { points: Self::MIDDLE, effect: Self::pawn };
@@ -70,10 +70,10 @@ impl Formation {
         }
     }
 
-    /// Enemy pieces become also controlled by the traitor's player;
+    /// Enemy pieces become also controlled by the agent's player;
     /// allies have the opponent's control disabled (purges foreign
-    /// control from the traitor's own side).
-    pub fn traitor(owner: Color, object: Color) -> (Ability, Ability) {
+    /// control from the agent's own side).
+    pub fn agent(owner: Color, object: Color) -> (Ability, Ability) {
         match (owner, object) {
             (Color::Red, Color::Red) => (Ability::CONTROLLED_BY_BLACK, Ability::NONE),
             (Color::Red, Color::Black) => (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED),

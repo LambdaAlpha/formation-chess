@@ -152,12 +152,12 @@ impl Piece {
         }
     }
 
-    const fn traitor(color: Color) -> Piece {
+    const fn agent(color: Color) -> Piece {
         let (controlled_by_red, controlled_by_black) = Self::controlled(color);
         Piece {
-            name: '叛',
+            name: '间',
             color,
-            formation: Self::orient(color, Formation::TRAITOR),
+            formation: Self::orient(color, Formation::AGENT),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -618,8 +618,8 @@ impl Piece {
     pub const BLACK_GENERAL: Piece = Self::general(Color::Black);
     pub const RED_WIZARD: Piece = Self::wizard(Color::Red);
     pub const BLACK_WIZARD: Piece = Self::wizard(Color::Black);
-    pub const RED_TRAITOR: Piece = Self::traitor(Color::Red);
-    pub const BLACK_TRAITOR: Piece = Self::traitor(Color::Black);
+    pub const RED_AGENT: Piece = Self::agent(Color::Red);
+    pub const BLACK_AGENT: Piece = Self::agent(Color::Black);
     pub const RED_SPY: Piece = Self::spy(Color::Red);
     pub const BLACK_SPY: Piece = Self::spy(Color::Black);
     pub const RED_ROOK: Piece = Self::rook(Color::Red);
@@ -651,7 +651,7 @@ impl Piece {
     pub const RED_PLAYER_PIECES: [Piece; 16] = [
         Piece::RED_GENERAL,
         Piece::RED_WIZARD,
-        Piece::RED_TRAITOR,
+        Piece::RED_AGENT,
         Piece::RED_SPY,
         Piece::RED_ROOK,
         Piece::RED_PAWN,
@@ -671,7 +671,7 @@ impl Piece {
     pub const BLACK_PLAYER_PIECES: [Piece; 16] = [
         Piece::BLACK_GENERAL,
         Piece::BLACK_WIZARD,
-        Piece::BLACK_TRAITOR,
+        Piece::BLACK_AGENT,
         Piece::BLACK_SPY,
         Piece::BLACK_ROOK,
         Piece::BLACK_PAWN,
@@ -696,8 +696,8 @@ impl Piece {
             ('将', Color::Black) => Piece::BLACK_GENERAL,
             ('巫', Color::Red) => Piece::RED_WIZARD,
             ('巫', Color::Black) => Piece::BLACK_WIZARD,
-            ('叛', Color::Red) => Piece::RED_TRAITOR,
-            ('叛', Color::Black) => Piece::BLACK_TRAITOR,
+            ('间', Color::Red) => Piece::RED_AGENT,
+            ('间', Color::Black) => Piece::BLACK_AGENT,
             ('谍', Color::Red) => Piece::RED_SPY,
             ('谍', Color::Black) => Piece::BLACK_SPY,
             ('车', Color::Red) => Piece::RED_ROOK,

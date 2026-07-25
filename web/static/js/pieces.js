@@ -30,5 +30,5 @@ export function createPieceElement(piece, pool = false) {
     return el;
 }
 
-export const PIECE_NAMES_RED = ['将', '巫', '叛', '谍', '车', '卒', '犬', '马', '河', '山', '风', '林', '矛', '盾', '炮', '雷'];
+export const PIECE_NAMES_RED = ['将', '巫', '间', '谍', '车', '卒', '犬', '马', '河', '山', '风', '林', '矛', '盾', '炮', '雷'];
 export const PIECE_NAMES_BLACK = PIECE_NAMES_RED;

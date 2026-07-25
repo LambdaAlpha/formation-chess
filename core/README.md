@@ -51,7 +51,7 @@ Each side fields 16 distinct pieces in four groups:
 
 | Group | Pieces | Formation theme |
 |---|---|---|
-| Control | 将 General (vital), 巫 Wizard, 叛 Traitor, 谍 Spy | who commands whom |
+| Control | 将 General (vital), 巫 Wizard, 间 Agent, 谍 Spy | who commands whom |
 | Movement | 车 Rook, 卒 Pawn, 犬 Dog, 马 Horse | grant allies their movement, strip it from enemies |
 | Push & pass | 河 River, 山 Mountain, 风 Wind, 林 Forest | shoving pieces and moving through them |
 | Capture | 矛 Spear, 盾 Shield, 炮 Cannon, 雷 Mine | capture, immunity, jump capture, mutual destruction |
@@ -87,8 +87,8 @@ of the text protocol:
 红将五十 → 未分
 黑将五一 → 未分
 行棋方：红
-红方：[雷 巫 叛 谍 车 卒 犬 马 河 山 风 林 矛 盾 炮]
-黑方：[雷 巫 叛 谍 车 卒 犬 马 河 山 风 林 矛 盾 炮]
+红方：[雷 巫 间 谍 车 卒 犬 马 河 山 风 林 矛 盾 炮]
+黑方：[雷 巫 间 谍 车 卒 犬 马 河 山 风 林 矛 盾 炮]
 白方：0
 胜负：未分
 棋盘：
