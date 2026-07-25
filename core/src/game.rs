@@ -120,13 +120,11 @@ impl Game {
 
     fn validate_config(config: &GameConfig) -> Result<(), String> {
         Self::validate_pool(config)?;
-        Self::validate_vital(config, Player::Red)?;
-        Self::validate_vital(config, Player::Black)?;
         if !config.red_pool.is_empty() || !config.black_pool.is_empty() {
             config.board.validate_halves()?;
             Self::validate_alternation(config)?;
         }
-        Self::validate_result(config)?;
+        Self::validate_vital_result(config)?;
         Ok(())
     }
 
@@ -147,19 +145,6 @@ impl Game {
         Ok(())
     }
 
-    fn validate_vital(config: &GameConfig, player: Player) -> Result<(), String> {
-        let pool = match player {
-            Player::Red => &config.red_pool,
-            Player::Black => &config.black_pool,
-        };
-        let pool_count = pool.iter().filter(|p| p.ability.has_ability(Ability::VITAL)).count();
-        let count = pool_count + config.board.vital_count(player.color());
-        if count > 1 {
-            return Err(format!("{player} must have at most one vital piece, found {count}"));
-        }
-        Ok(())
-    }
-
     fn validate_alternation(config: &GameConfig) -> Result<(), String> {
         match config.result {
             GameResult::RedWin if config.player != Player::Red => {
@@ -173,6 +158,9 @@ impl Game {
                     "result is {} but {} is to move",
                     config.result, config.player,
                 ));
+            },
+            GameResult::Draw => {
+                return Err(format!("result is {} in placement phase", config.result));
             },
             _ => {},
         }
@@ -196,19 +184,42 @@ impl Game {
         Ok(())
     }
 
-    fn validate_result(config: &GameConfig) -> Result<(), String> {
-        if config.result != GameResult::Unfinished {
+    fn validate_vital_result(config: &GameConfig) -> Result<(), String> {
+        let red = Self::count_vital(config, Player::Red);
+        if red > 1 {
+            return Err(format!("{} must have at most one vital piece, found {red}", Player::Red));
+        }
+        let black = Self::count_vital(config, Player::Black);
+        if black > 1 {
+            return Err(format!(
+                "{} must have at most one vital piece, found {black}",
+                Player::Black
+            ));
+        }
+        let valid = match config.result {
+            GameResult::Unfinished => red > 0 && black > 0,
+            GameResult::RedWin => red > 0,
+            GameResult::BlackWin => black > 0,
+            GameResult::Draw => true,
+        };
+        if valid {
             return Ok(());
         }
-        let red = config.board.find_vital(Color::Red);
-        let red_in_pool = Self::move_pool_vital(&config.red_pool);
-        let black = config.board.find_vital(Color::Black);
-        let black_in_pool = Self::move_pool_vital(&config.black_pool);
-        let result = Self::decide_result(red, red_in_pool, black, black_in_pool);
-        if result == GameResult::Unfinished {
-            return Ok(());
-        }
-        Err(format!("declared result is Unfinished, but the position is already decided: {result}"))
+        Err(format!(
+            "validate_vital_result failed, declared result is {}, but red has vital: {red}, black has vital: {black}",
+            config.result
+        ))
+    }
+
+    fn count_vital(config: &GameConfig, player: Player) -> usize {
+        let pool = match player {
+            Player::Red => &config.red_pool,
+            Player::Black => &config.black_pool,
+        };
+        let pool = pool.iter().filter(|p| p.ability.has(Ability::VITAL)).count();
+        let vital = |p: &Piece| p.color == player.color() && p.ability.has(Ability::VITAL);
+        let board = config.board.iter().filter(vital).count();
+        pool + board
     }
 
     /// Execute an action for the player to move. On success the turn
@@ -220,15 +231,17 @@ impl Game {
             return Err(format!("game is already decided: {}", self.result));
         }
         match action {
-            Action::Place(mut place) => {
+            Action::Place(place) => {
                 let pr = self.try_place(place)?;
-                place.piece = pr.piece;
-                let result = self.place_result(place);
-                self.apply_place(pr.piece, pr.index, pr.changes, result)
+                self.apply_place(pr.piece, pr.index, pr.changes, GameResult::Unfinished)
             },
             Action::Move(move_) => self.apply_move(self.try_move(move_)?),
             Action::Capture(move_) => self.apply_move(self.try_capture(move_)?),
             Action::Push(move_) => self.apply_move(self.try_push(move_)?),
+            Action::Draw(move_) => {
+                let changes = self.try_draw(move_)?;
+                self.apply_draw(changes)
+            },
             Action::Pass(player) => {
                 self.try_pass(player)?;
                 self.switch_player();
@@ -250,11 +263,9 @@ impl Game {
             return Err(format!("game is already decided: {}", self.result));
         }
         match action {
-            Action::Place(mut place) => {
+            Action::Place(place) => {
                 let pr = self.try_place(place)?;
-                place.piece = pr.piece;
-                let game_result = self.place_result(place);
-                Ok(Reaction { changes: pr.changes, game_result })
+                Ok(Reaction { changes: pr.changes, game_result: GameResult::Unfinished })
             },
             Action::Move(move_) => {
                 let changes = self.try_move(move_)?;
@@ -270,6 +281,10 @@ impl Game {
                 let changes = self.try_push(move_)?;
                 let game_result = self.move_result(&changes);
                 Ok(Reaction { changes, game_result })
+            },
+            Action::Draw(move_) => {
+                let changes = self.try_draw(move_)?;
+                Ok(Reaction { changes, game_result: GameResult::Draw })
             },
             Action::Pass(player) => {
                 self.try_pass(player)?;
@@ -297,7 +312,7 @@ impl Game {
         if !piece.can_controlled_by(self.player) {
             return vec![];
         }
-        self.board.valid_moves((x, y))
+        self.board.valid_moves(self.player, (x, y))
     }
 
     /// Positions where the current player may place a white piece.
@@ -383,32 +398,6 @@ impl Game {
         Ok(Reaction { changes, game_result: result })
     }
 
-    fn place_result(&self, place: Place) -> GameResult {
-        let red_board = self.place_board_vital(Color::Red, place);
-        let black_board = self.place_board_vital(Color::Black, place);
-        let red_pool = self.place_pool_vital(Color::Red, place.piece);
-        let black_pool = self.place_pool_vital(Color::Black, place.piece);
-        Self::decide_result(red_board, red_pool, black_board, black_pool)
-    }
-
-    fn place_board_vital(&self, color: Color, place: Place) -> Option<Place> {
-        if place.piece.color == color && place.piece.ability.has_ability(Ability::VITAL) {
-            return Some(place);
-        }
-        self.board.find_vital(color)
-    }
-
-    /// Whether the pool for `color` contains a vital piece, skipping
-    /// `piece` when it matches (it is about to leave the pool).
-    fn place_pool_vital(&self, color: Color, piece: Piece) -> bool {
-        let pool = match color {
-            Color::Red => &self.red_pool,
-            Color::Black => &self.black_pool,
-            Color::White => return false,
-        };
-        pool.iter().any(|p| p.ability.has_ability(Ability::VITAL) && *p != piece)
-    }
-
     fn try_move(&self, move_: Move) -> Result<Vec<PositionChange>, String> {
         self.check_move(move_.from)?;
         self.board.try_move(move_.from, move_.to)
@@ -422,6 +411,30 @@ impl Game {
     fn try_capture(&self, move_: Move) -> Result<Vec<PositionChange>, String> {
         self.check_move(move_.from)?;
         self.board.try_capture(move_.from, move_.to)
+    }
+
+    fn try_draw(&self, move_: Move) -> Result<Vec<PositionChange>, String> {
+        self.check_move(move_.from)?;
+        let Some(target) = self.board.get(move_.to) else {
+            return Err(format!("destination ({},{}) is empty", move_.to.0, move_.to.1));
+        };
+        let opponent_color = match self.player {
+            Player::Red => Color::Black,
+            Player::Black => Color::Red,
+        };
+        if target.color != opponent_color {
+            return Err(format!("cannot draw with {} at ({},{})", target, move_.to.0, move_.to.1));
+        }
+        self.board.try_draw(move_.from, move_.to)
+    }
+
+    fn apply_draw(&mut self, changes: Vec<PositionChange>) -> Result<Reaction, String> {
+        self.board.apply(&changes);
+        self.white_pool += 1;
+        self.switch_player();
+        let game_result = GameResult::Draw;
+        self.result = game_result;
+        Ok(Reaction { changes, game_result })
     }
 
     fn check_move(&self, from: (u8, u8)) -> Result<(), String> {
@@ -469,34 +482,34 @@ impl Game {
     }
 
     fn move_result(&self, changes: &[PositionChange]) -> GameResult {
-        let red_board = self.move_board_vital(Color::Red, changes);
-        let black_board = self.move_board_vital(Color::Black, changes);
-        let red_pool = Self::move_pool_vital(&self.red_pool);
-        let black_pool = Self::move_pool_vital(&self.black_pool);
-        Self::decide_result(red_board, red_pool, black_board, black_pool)
-    }
-
-    fn move_board_vital(&self, color: Color, changes: &[PositionChange]) -> Option<Place> {
-        let place = self.board.find_vital(color)?;
-        let mut alive = true;
-        let mut new_to = place.to;
-        for change in changes {
-            if change.at == place.to {
-                alive = change.piece == Some(place.piece);
-            }
-            if change.piece == Some(place.piece) {
-                new_to = change.at;
-            }
-        }
-        if alive || new_to != place.to {
-            Some(Place { piece: place.piece, to: new_to })
-        } else {
-            None
+        let red = self.move_vital(Color::Red, changes);
+        let black = self.move_vital(Color::Black, changes);
+        match (red, black) {
+            (false, false) => GameResult::Draw,
+            (false, true) => GameResult::BlackWin,
+            (true, false) => GameResult::RedWin,
+            (true, true) => GameResult::Unfinished,
         }
     }
 
-    fn move_pool_vital(pool: &[Piece]) -> bool {
-        pool.iter().any(|p| p.ability.has_ability(Ability::VITAL))
+    fn move_vital(&self, color: Color, changes: &[PositionChange]) -> bool {
+        let mut removed = false;
+        let mut added = false;
+        for &change in changes {
+            if let Some(old) = self.board.get(change.at)
+                && old.color == color
+                && old.ability.has(Ability::VITAL)
+            {
+                removed = true;
+            }
+            if let Some(new) = change.piece
+                && new.color == color
+                && new.ability.has(Ability::VITAL)
+            {
+                added = true;
+            }
+        }
+        added || !removed
     }
 
     fn try_pass(&self, player: Player) -> Result<(), String> {
@@ -513,26 +526,6 @@ impl Game {
             Player::Black => GameResult::RedWin,
         };
         Ok(result)
-    }
-
-    fn decide_result(
-        red_board: Option<Place>, red_pool: bool, black_board: Option<Place>, black_pool: bool,
-    ) -> GameResult {
-        match (red_board.is_some() || red_pool, black_board.is_some() || black_pool) {
-            (false, false) => return GameResult::Draw,
-            (false, true) => return GameResult::BlackWin,
-            (true, false) => return GameResult::RedWin,
-            (true, true) => {},
-        }
-        if let Some(red) = red_board
-            && let Some(black) = black_board
-        {
-            let (dx, dy) = (red.to.0 as i8 - black.to.0 as i8, red.to.1 as i8 - black.to.1 as i8);
-            if black.piece.formation.contains(dx, dy) && red.piece.formation.contains(-dx, -dy) {
-                return GameResult::Draw;
-            }
-        }
-        GameResult::Unfinished
     }
 
     fn check_player(&self, player: Player) -> Result<(), String> {

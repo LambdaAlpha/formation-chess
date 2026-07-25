@@ -54,9 +54,11 @@ impl Formation {
     pub const BOTTOM_MIDDLE: u8 = 0b010_00_000;
     pub const BOTTOM_RIGHT: u8 = 0b100_00_000;
 
-    /// No effect (placeholder).
-    pub fn general(_owner: Color, _object: Color) -> (Ability, Ability) {
-        (Ability::NONE, Ability::NONE)
+    /// Allies gain DRAW; enemies lose it.
+    pub fn general(owner: Color, object: Color) -> (Ability, Ability) {
+        let mask = Ability::DRAW;
+        let update = if owner == object { Ability::DRAW } else { Ability::NONE };
+        (mask, update)
     }
 
     /// White pieces become controlled by the wizard's player.

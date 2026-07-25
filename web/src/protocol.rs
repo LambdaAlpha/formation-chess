@@ -93,6 +93,7 @@ pub enum ApiActionRequest {
     Move { from: [u8; 2], to: [u8; 2] },
     Capture { from: [u8; 2], to: [u8; 2] },
     Push { from: [u8; 2], to: [u8; 2] },
+    Draw { from: [u8; 2], to: [u8; 2] },
     Pass,
     Resign,
 }
@@ -111,6 +112,9 @@ impl ApiActionRequest {
             },
             ApiActionRequest::Push { from, to } => {
                 Ok(Action::Push(Move { from: (from[0], from[1]), to: (to[0], to[1]) }))
+            },
+            ApiActionRequest::Draw { from, to } => {
+                Ok(Action::Draw(Move { from: (from[0], from[1]), to: (to[0], to[1]) }))
             },
             ApiActionRequest::Pass => Ok(Action::Pass(current_player)),
             ApiActionRequest::Resign => Ok(Action::Resign(current_player)),
@@ -302,6 +306,7 @@ pub fn action_type_str(action: &Action) -> &'static str {
         Action::Move(_) => "move",
         Action::Capture(_) => "capture",
         Action::Push(_) => "push",
+        Action::Draw(_) => "draw",
         _ => "move", // valid_moves never returns other variants; safe fallback
     }
 }

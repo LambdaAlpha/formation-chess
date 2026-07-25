@@ -33,7 +33,7 @@ fn coordinates_disambiguate_same_name_pieces() {
 fn invalid_config_is_an_error_not_a_panic() {
     let state = "行棋方：红
 红方：[将]
-黑方：[]
+黑方：[卒]
 白方：0
 胜负：未分
 棋盘：
@@ -192,11 +192,11 @@ fn one_side_no_vital_must_declare_result() {
     let Err(err) = Game::from_str(state) else {
         panic!("unfinished result on a decided position must fail");
     };
-    assert!(err.contains("already decided"), "unexpected error: {err}");
+    assert!(err.contains("validate_vital_result failed"), "unexpected error: {err}");
 }
 
 #[test]
-fn unfinished_but_already_drawn_is_error() {
+fn unfinished_with_generals_in_formation_is_valid() {
     let state = "行棋方：红
 红方：[]
 黑方：[]
@@ -210,10 +210,7 @@ fn unfinished_but_already_drawn_is_error() {
 四[一一 一一 一一 黑将 一一]
 五[一一 一一 一一 一一 一一]
 ";
-    let Err(err) = Game::from_str(state) else {
-        panic!("unfinished result on a decided position must fail");
-    };
-    assert!(err.contains("already decided"), "unexpected error: {err}");
+    Game::from_str(state).expect("generals in formation is no longer an automatic draw");
 }
 
 #[test]

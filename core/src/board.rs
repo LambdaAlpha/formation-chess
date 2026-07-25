@@ -123,7 +123,7 @@ impl Board {
 
     /// Returns the center piece at (x,y) and its eight neighbors, each with
     /// its relative offset from the center.
-    pub fn local(&self, x: u8, y: u8) -> Local {
+    pub fn local(&self, (x, y): (u8, u8)) -> Local {
         let at = |dx: i8, dy: i8| {
             let nx = x as i8 + dx;
             let ny = y as i8 + dy;
@@ -154,40 +154,15 @@ impl Board {
         if !self.in_bounds((x, y)) {
             return None;
         }
-        let local = self.local(x, y);
+        let local = self.local((x, y));
         let mut piece = local.center?;
         piece.take_effect(&local.neighbors);
         Some(piece)
     }
 
-    /// The first piece of `color` with the VITAL ability, and its position.
-    /// VITAL is never modified by formation effects, so raw abilities suffice.
-    pub fn find_vital(&self, color: Color) -> Option<Place> {
-        for (i, cell) in self.pieces.iter().enumerate() {
-            let Some(piece) = cell else {
-                continue;
-            };
-            if piece.color == color && piece.ability.has_ability(Ability::VITAL) {
-                return Some(Place { to: self.position(i), piece: *piece });
-            }
-        }
-        None
+    pub fn iter(&self) -> impl Iterator<Item = Piece> {
+        self.pieces.iter().filter_map(|p| *p)
     }
-
-    /// Number of pieces of `color` with the VITAL ability.
-    pub fn vital_count(&self, color: Color) -> usize {
-        let mut count = 0;
-        for cell in &self.pieces {
-            let Some(p) = cell else {
-                continue;
-            };
-            if p.color == color && p.ability.has_ability(Ability::VITAL) {
-                count += 1;
-            }
-        }
-        count
-    }
-
     /// Find the unique point holding `piece`.
     ///
     /// * `Ok(pos)` — exactly one copy at `pos`.
@@ -250,12 +225,12 @@ impl Board {
     ) -> Result<Vec<PositionChange>, String> {
         self.check_placement_target(to)?;
         let mut has_control = false;
-        for n in &self.local(to.0, to.1).neighbors {
+        for n in &self.local(to).neighbors {
             let Some(piece) = n.piece else {
                 continue;
             };
             if piece.formation.contains(-n.dx, -n.dy)
-                && piece.ability.has_ability(Ability::CONTROL_WHITE)
+                && piece.ability.has(Ability::CONTROL_WHITE)
                 && piece.can_controlled_by(player)
             {
                 has_control = true;
@@ -369,6 +344,37 @@ impl Board {
         Ok(Self::capture_result(info, target))
     }
 
+    /// Validate a draw without modifying the board. Checks movement,
+    /// pass-through, that the mover has DRAW ability, and that the target
+    /// is a vital piece. A piece with DRAW may move onto an opponent's vital
+    /// piece to end the game in a draw without needing capture or push
+    /// abilities.
+    pub fn try_draw(&self, from: (u8, u8), to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
+        let info = self.try_move_to(from, to)?;
+        let Some(target) = self.get(info.to) else {
+            return Err(format!(
+                "destination ({},{}) is empty, draw requires an occupied point",
+                info.to.0, info.to.1
+            ));
+        };
+        if !info.effective_mover.ability.has(Ability::DRAW) {
+            return Err("only pieces with DRAW ability can draw".into());
+        }
+        if !target.ability.has(Ability::VITAL) {
+            return Err(format!(
+                "{} at ({},{}) is not a vital piece",
+                target, info.to.0, info.to.1
+            ));
+        }
+        if info.path.unpassable > 0 {
+            return Err("path blocked, cannot reach destination for draw".into());
+        }
+        Ok(vec![PositionChange { at: info.from, piece: None }, PositionChange {
+            at: info.to,
+            piece: Some(info.original_mover),
+        }])
+    }
+
     /// Shared pre-checks: bounds validation, piece lookup, movement ability,
     /// path computation.
     fn try_move_to(&self, from: (u8, u8), to: (u8, u8)) -> Result<MoveInfo, String> {
@@ -433,16 +439,16 @@ impl Board {
         if !is_cross && !is_diagonal && !is_shape_L {
             return false;
         }
-        if is_cross && !piece.ability.has_ability(Ability::DIRECTION_CROSS) {
+        if is_cross && !piece.ability.has(Ability::DIRECTION_CROSS) {
             return false;
         }
-        if is_diagonal && !piece.ability.has_ability(Ability::DIRECTION_DIAGONAL) {
+        if is_diagonal && !piece.ability.has(Ability::DIRECTION_DIAGONAL) {
             return false;
         }
-        if is_shape_L && !piece.ability.has_ability(Ability::DIRECTION_SHAPE_L) {
+        if is_shape_L && !piece.ability.has(Ability::DIRECTION_SHAPE_L) {
             return false;
         }
-        if piece.ability.has_ability(Ability::ANY_DISTANCE) {
+        if piece.ability.has(Ability::ANY_DISTANCE) {
             return true;
         }
         let dx = from.0.abs_diff(to.0);
@@ -461,8 +467,8 @@ impl Board {
     /// Compute the changes of a successful capture, including
     /// mutual‑destruction effects.
     fn capture_result(info: MoveInfo, target: Piece) -> Vec<PositionChange> {
-        if info.effective_mover.ability.has_ability(Ability::CAPTURED_ON_CAPTURE)
-            || target.ability.has_ability(Ability::CAPTURE_ON_CAPTURED)
+        if info.effective_mover.ability.has(Ability::CAPTURED_ON_CAPTURE)
+            || target.ability.has(Ability::CAPTURE_ON_CAPTURED)
         {
             vec![PositionChange { at: info.from, piece: None }, PositionChange {
                 at: info.to,
@@ -512,8 +518,7 @@ impl Board {
             let Some(piece) = cell else {
                 continue;
             };
-            if piece.ability.has_ability(Ability::CONTROL_WHITE) && piece.can_controlled_by(player)
-            {
+            if piece.ability.has(Ability::CONTROL_WHITE) && piece.can_controlled_by(player) {
                 return Some(Place { to: self.position(i), piece: *piece });
             }
         }
@@ -522,33 +527,36 @@ impl Board {
 
     /// Enumerate all legal actions for the piece at `from`. The piece must
     /// be present on the board. Actions are [`Action::Move`],
-    /// [`Action::Capture`], and [`Action::Push`]; placement, pass, and
-    /// resign are the caller's concern.
-    pub fn valid_moves(&self, from: (u8, u8)) -> Vec<Action> {
+    /// [`Action::Capture`], [`Action::Push`], and [`Action::Draw`];
+    /// placement, pass, and resign are the caller's concern.
+    ///
+    /// `player` filters draw actions: only draws targeting the opponent's
+    /// colored pieces are returned.
+    pub fn valid_moves(&self, player: Player, from: (u8, u8)) -> Vec<Action> {
         let Some(piece) = self.effective(from) else {
             return vec![];
         };
-        let max_steps = if piece.ability.has_ability(Ability::ANY_DISTANCE) {
+        let max_steps = if piece.ability.has(Ability::ANY_DISTANCE) {
             self.width.max(self.height) as i8
         } else {
             1
         };
         let mut actions = Vec::new();
-        if piece.ability.has_ability(Ability::DIRECTION_CROSS) {
+        if piece.ability.has(Ability::DIRECTION_CROSS) {
             for (dx, dy) in [(0i8, -1), (0, 1), (-1, 0), (1, 0)] {
-                self.enumerate_line(piece, from, dx, dy, max_steps, &mut actions);
+                self.enumerate_line(player, piece, from, dx, dy, max_steps, &mut actions);
             }
         }
-        if piece.ability.has_ability(Ability::DIRECTION_DIAGONAL) {
+        if piece.ability.has(Ability::DIRECTION_DIAGONAL) {
             for (dx, dy) in [(-1i8, -1), (1, -1), (-1, 1), (1, 1)] {
-                self.enumerate_line(piece, from, dx, dy, max_steps, &mut actions);
+                self.enumerate_line(player, piece, from, dx, dy, max_steps, &mut actions);
             }
         }
-        if piece.ability.has_ability(Ability::DIRECTION_SHAPE_L) {
+        if piece.ability.has(Ability::DIRECTION_SHAPE_L) {
             for (dx, dy) in
                 [(1i8, 2), (2, 1), (-1, 2), (-2, 1), (1, -2), (2, -1), (-1, -2), (-2, -1)]
             {
-                self.enumerate_line(piece, from, dx, dy, max_steps, &mut actions);
+                self.enumerate_line(player, piece, from, dx, dy, max_steps, &mut actions);
             }
         }
         actions
@@ -557,8 +565,9 @@ impl Board {
     /// Scan from `from` along `(dx, dy)`, adding legal [`Action`]s for each
     /// reachable cell.  Uses [`MovePath`] for per‑step path validation so
     /// that leg‑blocking and pass‑through rules stay in one place.
+    #[expect(clippy::too_many_arguments)]
     fn enumerate_line(
-        &self, mover: Piece, from: (u8, u8), dx: i8, dy: i8, max_steps: i8,
+        &self, player: Player, mover: Piece, from: (u8, u8), dx: i8, dy: i8, max_steps: i8,
         actions: &mut Vec<Action>,
     ) {
         let mut origin = from;
@@ -586,7 +595,7 @@ impl Board {
                 actions.push(Action::Move(Move { from, to }));
             } else if let Some(target) = self.effective(to) {
                 let move_ = Move { from, to };
-                self.enumerate_action(mover, move_, target, blocked, path_pieces, actions);
+                self.enumerate_action(player, mover, move_, target, blocked, path_pieces, actions);
                 path_pieces += 1;
                 if !mover.can_pass(target) {
                     if blocked {
@@ -602,9 +611,10 @@ impl Board {
 
     /// Add every capture and push action legal against `target` at `move_.to`,
     /// given the accumulated `blocked` / `path_pieces` state for this cell.
+    #[expect(clippy::too_many_arguments)]
     fn enumerate_action(
-        &self, mover: Piece, move_: Move, target: Piece, blocked: bool, path_pieces: u8,
-        actions: &mut Vec<Action>,
+        &self, player: Player, mover: Piece, move_: Move, target: Piece, blocked: bool,
+        path_pieces: u8, actions: &mut Vec<Action>,
     ) {
         #[expect(clippy::useless_let_if_seq)]
         let mut captured = false;
@@ -617,6 +627,17 @@ impl Board {
         }
         if !blocked && mover.can_push(target) {
             actions.push(Action::Push(move_));
+        }
+        let opponent_color = match player {
+            Player::Red => Color::Black,
+            Player::Black => Color::Red,
+        };
+        if !blocked
+            && mover.ability.has(Ability::DRAW)
+            && target.ability.has(Ability::VITAL)
+            && target.color == opponent_color
+        {
+            actions.push(Action::Draw(move_));
         }
     }
 

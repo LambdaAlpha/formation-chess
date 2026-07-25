@@ -201,8 +201,8 @@ async function handleBoardClick(x, y) {
         return;
     }
 
-    /* Phase: movement — clicking a move/capture/push target */
-    if (p === 'movement' && (hintType === 'move' || hintType === 'capture' || hintType === 'push' || hintTypes)) {
+    /* Phase: movement — clicking a move/capture/push/draw target */
+    if (p === 'movement' && (hintType === 'move' || hintType === 'capture' || hintType === 'push' || hintType === 'draw' || hintTypes)) {
         if (hintTypes) {
             showPopup(x, y, hintTypes.split(','));
         } else {
@@ -255,6 +255,10 @@ function executeHintAction(hintType, x, y) {
         if (onAction) onAction({ type: 'capture', from: getSelectedBoardPos(), to: [x, y] });
     } else if (hintType === 'push') {
         if (onAction) onAction({ type: 'push', from: getSelectedBoardPos(), to: [x, y] });
+    } else if (hintType === 'draw') {
+        if (onAction) onAction({ type: 'draw', from: getSelectedBoardPos(), to: [x, y] });
+    } else {
+        console.error('unknown hint type for action:', hintType);
     }
 }
 
@@ -295,7 +299,7 @@ async function onWhiteIndicator() {
     }
 }
 
-/* ======== Popup (capture / push choice) ======== */
+/* ======== Popup (capture / push / draw choice) ======== */
 
 function showPopup(x, y, types) {
     const popup = document.getElementById('popup-choose');
@@ -305,8 +309,18 @@ function showPopup(x, y, types) {
         btn.dataset.choice = t;
         btn.dataset.tx = x;
         btn.dataset.ty = y;
-        btn.textContent = t === 'capture' ? '吃子' : '推子';
-        btn.className = t === 'capture' ? 'capture-opt' : 'push-opt';
+        if (t === 'draw') {
+            btn.textContent = '和棋';
+            btn.className = 'draw-opt';
+        } else if (t === 'capture') {
+            btn.textContent = '吃子';
+            btn.className = 'capture-opt';
+        } else if (t === 'push') {
+            btn.textContent = '推子';
+            btn.className = 'push-opt';
+        } else {
+            console.error('unknown hint type for popup:', t);
+        }
         popup.appendChild(btn);
     }
 

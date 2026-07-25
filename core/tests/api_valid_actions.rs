@@ -565,7 +565,7 @@ fn try_move_returns_original_piece_not_effective() {
     let placed = changes.iter().find(|c| c.at == (1, 2)).unwrap().piece.unwrap();
     assert_eq!(placed, Piece::BLACK_ROOK, "PositionChange must return the original piece");
     assert!(
-        placed.ability.has_ability(Ability::ANY_DISTANCE),
+        placed.ability.has(Ability::ANY_DISTANCE),
         "original Black Rook must retain ANY_DISTANCE"
     );
 }
@@ -587,7 +587,7 @@ fn try_capture_returns_original_mover_not_effective() {
     let placed = changes.iter().find(|c| c.at == (2, 3)).unwrap().piece.unwrap();
     assert_eq!(placed, Piece::RED_RIVER, "PositionChange must return the original piece");
     assert!(
-        !placed.ability.has_ability(Ability::CAPTURE),
+        !placed.ability.has(Ability::CAPTURE),
         "original River must NOT have CAPTURE (that came from formation)"
     );
 }
@@ -611,13 +611,130 @@ fn try_push_returns_original_pieces_not_effective() {
     // The mover occupies the target's old position.
     let mover = changes.iter().find(|c| c.at == (2, 3)).unwrap().piece.unwrap();
     assert_eq!(mover, Piece::RED_RIVER, "mover PositionChange must return original River");
-    assert!(!mover.ability.has_ability(Ability::CAPTURE), "original River must NOT have CAPTURE");
+    assert!(!mover.ability.has(Ability::CAPTURE), "original River must NOT have CAPTURE");
 
     // The pushed piece lands one step further.
     let pushed = changes.iter().find(|c| c.at == (2, 4)).unwrap().piece.unwrap();
     assert_eq!(pushed, Piece::BLACK_DOG, "pushed PositionChange must return original Dog");
-    assert!(
-        !pushed.ability.has_ability(Ability::ANY_DISTANCE),
-        "original Dog must NOT have ANY_DISTANCE"
+    assert!(!pushed.ability.has(Ability::ANY_DISTANCE), "original Dog must NOT have ANY_DISTANCE");
+}
+
+// ── draw via general formation ────────────────────────────────────────────
+
+/// Red Pawn in Red General's CORNERS formation gains DRAW and may draw
+/// with the Black General.
+#[test]
+fn general_formation_grants_draw_to_ally() {
+    let g = game_with(
+        Player::Red,
+        &[(Piece::RED_GENERAL, (1, 1)), (Piece::RED_PAWN, (0, 0)), (Piece::BLACK_GENERAL, (0, 1))],
+        5,
+        5,
     );
+    let actions = g.valid_moves(0, 0);
+    // Pawn at (0,0) can move right to (1,0)
+    assert_moves(&actions, &[(1, 0)]);
+    // Can also capture and draw at (0,1) where Black General sits
+    assert_captures(&actions, &[(0, 1)]);
+    assert!(
+        actions.iter().any(|a| matches!(a, Action::Draw(Move { to: (0, 1), .. }))),
+        "pawn in general's formation should gain DRAW"
+    );
+}
+
+/// Red Pawn near Red General but NOT in formation does not gain DRAW.
+#[test]
+fn pawn_outside_general_formation_has_no_draw() {
+    let g = game_with(
+        Player::Red,
+        &[(Piece::RED_GENERAL, (2, 2)), (Piece::RED_PAWN, (2, 1)), (Piece::BLACK_GENERAL, (2, 0))],
+        5,
+        5,
+    );
+    let actions = g.valid_moves(2, 1);
+    // Pawn at (2,1) is above general at (2,2): dy=-1, dx=0 → EDGE, not CORNERS
+    // Black general at (2,0) is 1 step up
+    assert!(
+        !actions.iter().any(|a| matches!(a, Action::Draw(_))),
+        "pawn outside general's formation should not have DRAW"
+    );
+}
+
+/// Black General inside Red General's CORNERS formation loses DRAW.
+#[test]
+fn enemy_general_formation_strips_draw() {
+    let g = game_with(
+        Player::Black,
+        &[(Piece::RED_GENERAL, (1, 1)), (Piece::BLACK_GENERAL, (2, 2))],
+        5,
+        5,
+    );
+    let actions = g.valid_moves(2, 2);
+    // Black General at (2,2) in CORNERS of Red General at (1,1): loses DRAW
+    assert!(
+        !actions.iter().any(|a| matches!(a, Action::Draw(_))),
+        "general in enemy formation should have DRAW stripped"
+    );
+}
+
+/// Red General itself has DRAW by default and may draw with Black General.
+#[test]
+fn general_draws_own_ability() {
+    let g = game_with(
+        Player::Red,
+        &[(Piece::BLACK_GENERAL, (0, 1)), (Piece::RED_GENERAL, (0, 2))],
+        5,
+        5,
+    );
+    let actions = g.valid_moves(0, 2);
+    assert!(
+        actions.iter().any(|a| matches!(a, Action::Draw(Move { to: (0, 1), .. }))),
+        "general should have DRAW by default"
+    );
+}
+
+/// Draw action rejected when the target is a friendly piece.
+#[test]
+fn draw_rejected_against_friendly() {
+    let g = game_with(
+        Player::Red,
+        &[(Piece::RED_GENERAL, (0, 2)), (Piece::RED_PAWN, (1, 2)), (Piece::BLACK_GENERAL, (4, 2))],
+        5,
+        5,
+    );
+    // Pawn at (1,2) is not in CORNERS of (0,2) (dx=+1, dy=0 → EDGE)
+    // So pawn doesn't have DRAW anyway. But even if it did, (1,2)→(0,2)
+    // would be a friendly target — try_draw should reject.
+    let result = g.try_action(Action::Draw(Move { from: (1, 2), to: (0, 2) }));
+    assert!(result.is_err(), "draw against friendly piece should be rejected");
+}
+
+/// Draw action rejected when the mover lacks DRAW.
+#[test]
+fn draw_rejected_without_draw_ability() {
+    let g = game_with(
+        Player::Red,
+        &[(Piece::RED_PAWN, (2, 2)), (Piece::BLACK_GENERAL, (2, 1)), (Piece::RED_GENERAL, (4, 4))],
+        5,
+        5,
+    );
+    let result = g.try_action(Action::Draw(Move { from: (2, 2), to: (2, 1) }));
+    assert!(result.is_err(), "draw without DRAW ability should be rejected");
+}
+
+/// Draw action rejected when target is not a vital piece.
+#[test]
+fn draw_rejected_against_non_vital() {
+    let g = game_with(
+        Player::Red,
+        &[
+            (Piece::RED_GENERAL, (2, 2)),
+            (Piece::BLACK_PAWN, (2, 1)),
+            (Piece::BLACK_GENERAL, (4, 4)),
+        ],
+        5,
+        5,
+    );
+    let result = g.try_action(Action::Draw(Move { from: (2, 2), to: (2, 1) }));
+    assert!(result.is_err(), "draw against non-vital should be rejected");
 }

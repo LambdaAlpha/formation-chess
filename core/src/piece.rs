@@ -82,6 +82,7 @@ impl Piece {
             direction_shape_L: false,
             control_white: false,
             vital: false,
+            draw: false,
         }
         .build(),
     };
@@ -114,6 +115,7 @@ impl Piece {
                 direction_shape_L: false,
                 control_white: false,
                 vital: true,
+                draw: true,
             }
             .build(),
         }
@@ -147,6 +149,7 @@ impl Piece {
                 direction_shape_L: false,
                 control_white: true,
                 vital: false,
+                draw: false,
             }
             .build(),
         }
@@ -180,6 +183,7 @@ impl Piece {
                 direction_shape_L: false,
                 control_white: false,
                 vital: false,
+                draw: false,
             }
             .build(),
         }
@@ -212,6 +216,7 @@ impl Piece {
                 direction_shape_L: false,
                 control_white: false,
                 vital: false,
+                draw: false,
             }
             .build(),
         }
@@ -245,6 +250,7 @@ impl Piece {
                 direction_shape_L: false,
                 control_white: false,
                 vital: false,
+                draw: false,
             }
             .build(),
         }
@@ -278,6 +284,7 @@ impl Piece {
                 direction_shape_L: false,
                 control_white: false,
                 vital: false,
+                draw: false,
             }
             .build(),
         }
@@ -311,6 +318,7 @@ impl Piece {
                 direction_shape_L: false,
                 control_white: false,
                 vital: false,
+                draw: false,
             }
             .build(),
         }
@@ -344,6 +352,7 @@ impl Piece {
                 direction_shape_L: true,
                 control_white: false,
                 vital: false,
+                draw: false,
             }
             .build(),
         }
@@ -377,6 +386,7 @@ impl Piece {
                 direction_shape_L: false,
                 control_white: false,
                 vital: false,
+                draw: false,
             }
             .build(),
         }
@@ -410,6 +420,7 @@ impl Piece {
                 direction_shape_L: false,
                 control_white: false,
                 vital: false,
+                draw: false,
             }
             .build(),
         }
@@ -443,6 +454,7 @@ impl Piece {
                 direction_shape_L: false,
                 control_white: false,
                 vital: false,
+                draw: false,
             }
             .build(),
         }
@@ -476,6 +488,7 @@ impl Piece {
                 direction_shape_L: false,
                 control_white: false,
                 vital: false,
+                draw: false,
             }
             .build(),
         }
@@ -509,6 +522,7 @@ impl Piece {
                 direction_shape_L: false,
                 control_white: false,
                 vital: false,
+                draw: false,
             }
             .build(),
         }
@@ -542,6 +556,7 @@ impl Piece {
                 direction_shape_L: false,
                 control_white: false,
                 vital: false,
+                draw: false,
             }
             .build(),
         }
@@ -575,6 +590,7 @@ impl Piece {
                 direction_shape_L: false,
                 control_white: false,
                 vital: false,
+                draw: false,
             }
             .build(),
         }
@@ -608,6 +624,7 @@ impl Piece {
                 direction_shape_L: false,
                 control_white: false,
                 vital: false,
+                draw: false,
             }
             .build(),
         }
@@ -755,11 +772,9 @@ impl Piece {
     /// mover PASS_ENEMY **and** blocker PASSED_BY_ENEMY.
     pub fn can_pass(&self, blocker: Piece) -> bool {
         if self.color == blocker.color {
-            self.ability.has_ability(Ability::PASS_ALLY)
-                || blocker.ability.has_ability(Ability::PASSED_BY_ALLY)
+            self.ability.has(Ability::PASS_ALLY) || blocker.ability.has(Ability::PASSED_BY_ALLY)
         } else {
-            self.ability.has_ability(Ability::PASS_ENEMY)
-                && blocker.ability.has_ability(Ability::PASSED_BY_ENEMY)
+            self.ability.has(Ability::PASS_ENEMY) && blocker.ability.has(Ability::PASSED_BY_ENEMY)
         }
     }
 
@@ -768,11 +783,9 @@ impl Piece {
     /// PUSH_ENEMY **and** target PUSHED_BY_ENEMY.
     pub fn can_push(&self, target: Piece) -> bool {
         if self.color == target.color {
-            self.ability.has_ability(Ability::PUSH_ALLY)
-                || target.ability.has_ability(Ability::PUSHED_BY_ALLY)
+            self.ability.has(Ability::PUSH_ALLY) || target.ability.has(Ability::PUSHED_BY_ALLY)
         } else {
-            self.ability.has_ability(Ability::PUSH_ENEMY)
-                && target.ability.has_ability(Ability::PUSHED_BY_ENEMY)
+            self.ability.has(Ability::PUSH_ENEMY) && target.ability.has(Ability::PUSHED_BY_ENEMY)
         }
     }
 
@@ -780,8 +793,8 @@ impl Piece {
     /// mover CAPTURE, target CAPTURED. Path rules are the caller's concern.
     pub fn can_capture(&self, target: Piece) -> bool {
         self.color != target.color
-            && self.ability.has_ability(Ability::CAPTURE)
-            && target.ability.has_ability(Ability::CAPTURED)
+            && self.ability.has(Ability::CAPTURE)
+            && target.ability.has(Ability::CAPTURED)
     }
 
     /// Whether this piece can jump-capture `target` over `piece_count`
@@ -789,8 +802,8 @@ impl Piece {
     /// CAPTURED, and exactly one piece on the path (passable or not).
     pub fn can_jump_capture(&self, target: Piece, piece_count: u8) -> bool {
         self.color != target.color
-            && self.ability.has_ability(Ability::JUMP_CAPTURE)
-            && target.ability.has_ability(Ability::CAPTURED)
+            && self.ability.has(Ability::JUMP_CAPTURE)
+            && target.ability.has(Ability::CAPTURED)
             && piece_count == 1
     }
 
@@ -798,8 +811,8 @@ impl Piece {
     /// abilities.
     pub fn can_controlled_by(&self, player: Player) -> bool {
         match player {
-            Player::Red => self.ability.has_ability(Ability::CONTROLLED_BY_RED),
-            Player::Black => self.ability.has_ability(Ability::CONTROLLED_BY_BLACK),
+            Player::Red => self.ability.has(Ability::CONTROLLED_BY_RED),
+            Player::Black => self.ability.has(Ability::CONTROLLED_BY_BLACK),
         }
     }
 }

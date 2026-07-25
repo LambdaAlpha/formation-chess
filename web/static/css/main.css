@@ -65,6 +65,7 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 .intersection.hint-move::after,
 .intersection.hint-capture::after,
 .intersection.hint-push::after,
+.intersection.hint-draw::after,
 .intersection.hint-multi::after,
 .intersection.hint-white::after {
   content: ''; position: absolute; inset: 6%;
@@ -72,6 +73,7 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
   border: 3px solid;
 }
 .intersection.hint-move::after    { border-color: rgba(76,175,80,.7);  background: rgba(76,175,80,.15); }
+.intersection.hint-draw::after    { border-color: rgba(76,175,80,.7);  background: rgba(76,175,80,.15); }
 .intersection.hint-capture::after { border-color: rgba(244,67,54,.7);  background: rgba(244,67,54,.15); }
 .intersection.hint-push::after    { border-color: rgba(255,152,0,.7);  background: rgba(255,152,0,.15); }
 .intersection.hint-multi::after   { border-color: rgba(156,39,176,.7); background: rgba(156,39,176,.15); }
@@ -178,6 +180,7 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 .popup button:hover { background: #f0f0f0; }
 .popup button.capture-opt { color: #c62828; }
 .popup button.push-opt { color: #e65100; }
+.popup button.draw-opt { color: #2e7d32; }
 
 /* ---- game-over ---- */
 .game-over {

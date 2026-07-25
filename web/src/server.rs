@@ -131,8 +131,8 @@ async fn hints_handler(
 
 fn action_destination(action: &Action) -> (u8, u8) {
     match action {
-        Action::Move(m) | Action::Capture(m) | Action::Push(m) => m.to,
-        _ => unreachable!("valid_moves only returns move/capture/push"),
+        Action::Move(m) | Action::Capture(m) | Action::Push(m) | Action::Draw(m) => m.to,
+        _ => unreachable!("valid_moves only returns move/capture/push/draw"),
     }
 }
 

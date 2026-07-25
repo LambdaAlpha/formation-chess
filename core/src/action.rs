@@ -15,6 +15,8 @@ pub enum Action {
     /// Move onto an occupied point, shoving the piece there one step
     /// farther.
     Push(Move),
+    /// Move onto an opponent's vital piece to draw the game.
+    Draw(Move),
     /// Skip the turn without moving.
     Pass(Player),
     /// Concede: the opponent wins immediately.

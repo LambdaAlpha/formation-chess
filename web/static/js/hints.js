@@ -17,8 +17,10 @@ export function showMoveHints(moves) {
         if (!intn) continue;
 
         let cls = 'hint-multi';
-        if (types.includes('capture') && types.includes('push')) {
+        if (types.length > 1) {
             cls = 'hint-multi';
+        } else if (types.includes('draw')) {
+            cls = 'hint-draw';
         } else if (types.includes('capture')) {
             cls = 'hint-capture';
         } else if (types.includes('push')) {
@@ -48,7 +50,7 @@ export function showPlacementHints(placements) {
 
 export function clearHints() {
     for (const el of document.querySelectorAll('.intersection')) {
-        el.classList.remove('hint-move', 'hint-capture', 'hint-push', 'hint-multi', 'hint-white');
+        el.classList.remove('hint-move', 'hint-capture', 'hint-push', 'hint-draw', 'hint-multi', 'hint-white');
         delete el.dataset.hintType;
         delete el.dataset.hintTypes;
     }

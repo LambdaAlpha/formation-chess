@@ -100,6 +100,7 @@ These are not static — they can be altered by formations. The full list:
 | **Direction: L-shaped** | Can move in an L-shaped pattern (one step orthogonally plus one step diagonally, the knight's move). |
 | **Control White** | Can place white pieces from the pool onto empty points inside its own formation. Commanding the placed pieces is granted separately, by the wizard's formation effect. |
 | **Vital** | Losing this piece means losing the game. The general carries it. |
+| **Draw** | Can move onto an opponent's vital piece, removing it and ending the game in a draw. Granted to allies by the General's formation. |
 
 ## Formations
 
@@ -270,16 +271,16 @@ deal with **who controls what**.
 
 | Piece | Symbol | Default Abilities | Formation Effect |
 |---|---|---|---|
-| **General** | 将 | Cross, any distance, *Push Ally*, *Push Enemy*, *Vital* | Modifies no abilities — but see below |
+| **General** | 将 | Cross, any distance, *Push Ally*, *Push Enemy*, *Vital*, *Draw* | Allies gain *Draw*; enemies lose it |
 | **Wizard** | 巫 | Cross, any distance, *Push Ally*, *Push Enemy*, *Control White* | White pieces inside become controlled by the wizard's player |
 | **Agent** | 间 | Cross, any distance, *Push Ally*, *Push Enemy* | Enemies inside become **also** controlled by the agent's player (converts them); allies inside have the opponent's control disabled (purges foreign control) |
 | **Spy** | 谍 | Cross, any distance, *Push Ally*, *Push Enemy*, controlled by *both* players | Allies inside become **also** controlled by the opponent (double agent effect); enemies inside have the spy player's control disabled (strips own control from enemies) |
 
 The **General** is your vital piece — lose your general and you lose. It
 moves freely but cannot capture or pass through other pieces; protect it
-with formations. Its own formation modifies no abilities, but its pattern
-still matters: if the two generals ever stand inside each other's
-formation, the game is drawn (see
+with formations. Its formation grants *Draw* to allies and strips it from
+enemies, allowing allies to move onto the opponent's general to declare a
+draw. The general itself also carries this ability (see
 [How the Game Ends](#how-the-game-ends)).
 
 The **Wizard** brings captured pieces back into play: it places white
@@ -389,6 +390,9 @@ turn a player takes exactly one of these actions:
 - **Push:** move onto an occupied point, declaring the intent to shove it.
   If the shove is blocked, it becomes a capture automatically (the target
   is destroyed even if it is a friendly piece or lacks *Captured*).
+- **Draw:** move your own piece with *Draw* ability onto the opponent's
+  *Vital* piece, removing the opponent's piece and ending the game in a
+  draw.
 - **Place** a white piece through a wizard (this consumes the turn).
 - **Pass:** skip the turn without moving. Because passing is always
   available, having no legal move never forces a loss — there is no
@@ -397,8 +401,8 @@ turn a player takes exactly one of these actions:
 - **Resign:** concede the game, immediately ending it with a win for the
   opponent.
 
-Note that when moving onto an occupied point, the intent — capture or
-push — must always be declared as part of the action.
+Note that when moving onto an occupied point, the intent — capture, push,
+or draw — must always be declared as part of the action.
 
 ## How the Game Ends
 
@@ -406,26 +410,24 @@ The game carries a persistent **result**: unfinished, Red wins, Black
 wins, or draw. Once the result is anything other than unfinished, no
 further actions are accepted.
 
-After every successful action — placements included — the board is
-checked:
+After every movement action (move, capture, push) the board is checked:
 
 - If **neither** side has any piece with the *Vital* ability (both vital
   pieces perished in the same action, e.g. through mutual destruction)
   → **draw**.
 - If Red has **no** pieces with the *Vital* ability → Black wins.
 - If Black has **no** pieces with the *Vital* ability → Red wins.
-- If both sides still have their vital piece, and the two vital pieces
-  are standing inside each other's formation → **draw** (the two generals
-  acknowledge each other's position and agree to a truce).
 - Otherwise → play continues.
 
-A vital piece still waiting to be placed counts as alive. Because the
-check also runs during the placement phase, a draw can already arise from
-placements — for example, both generals placed inside each other's
-formation across the border.
+A vital piece still waiting to be placed counts as alive. The placement
+phase does not change the result — it stays unfinished until movement
+begins.
 
-Resigning sets the result directly to the opponent's win, bypassing the
-board check.
+The **draw** action lets a piece with the *Draw* ability move onto the
+opponent's vital piece, removing it and setting the result directly to a
+draw. The general carries this ability by default and grants it to
+allies via its formation. **Resigning** sets the result directly to the
+opponent's win. Both bypass the board check.
 
 ## Strategic Notes
 
@@ -451,9 +453,9 @@ board check.
 4. **Read the tide — play the position, not the score.** When ahead, stay
    disciplined: one reckless charge beyond friendly formation coverage can
    turn your strongest piece into dead weight. When behind, don't give up:
-   the double-general draw is always within reach. Use positioning and
-   pushing to stall the opponent and create complications. A draw is closer
-   than it looks in this game.
+   your general can move onto the opponent's general to force a draw. Use
+   positioning and pushing to stall the opponent and create complications.
+   A draw is closer than it looks in this game.
 
 ## Glossary
 

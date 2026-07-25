@@ -132,7 +132,8 @@ be a position of:
   outside its side's half;
 - the recorded result is `未分` but the position is already decided:
   a side no longer owns its vital piece (on the board or in its pool),
-  or the board already satisfies the draw condition.
+  or neither side owns a vital piece (both were destroyed, which is a
+  draw).
 
 
 ## Actions
@@ -197,6 +198,8 @@ already there:
 - `推` (push): shove the target one step further in the same direction.
 - `捉` (capture): remove the target from the board. A captured piece
   becomes a white piece added to the pool.
+- `和` (draw): move your vital piece onto the opponent's vital piece,
+  removing it and declaring a draw.
 
 The placement suffix targets an empty point instead:
 
@@ -506,7 +509,7 @@ piece        = ( color , name ) | coordinate ;
 coordinate   = numeral , numeral ;              (* column, then row *)
 position     = coordinate | relative ;
 relative     = ( "平" | "直" | "进" | "退" ) , numeral ;
-suffix       = "捉" | "推" | "占" ;
+suffix       = "捉" | "推" | "和" | "占" ;
 
 reaction     = success | error ;
 success      = "变化：[" , [ change , { " " , change } ] , "]" , newline ,
@@ -538,6 +541,6 @@ Constraints the grammar does not capture:
   name, and never apply to white pieces.
 - After a coordinate-identified piece, only `平`, `直`, or an absolute
   position may follow.
-- A change entry never carries `捉` or `推`; the `占` suffix appears
+- A change entry never carries `捉`, `推`, or `和`; the `占` suffix appears
   only on placements, whose position is absolute.
 - The final line of a text may omit the trailing newline.

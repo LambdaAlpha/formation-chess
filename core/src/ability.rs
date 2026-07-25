@@ -45,6 +45,7 @@ pub struct AbilityConfig {
     pub direction_shape_L: bool,
     pub control_white: bool,
     pub vital: bool,
+    pub draw: bool,
 }
 
 impl Ability {
@@ -126,14 +127,16 @@ impl Ability {
     pub const CONTROL_WHITE: Ability = Ability(1 << 19);
     /// A side with no vital piece left (on the board or in its pool)
     /// loses; when both sides lose theirs in the same action, the game is
-    /// a draw. Two vital pieces standing inside each other's formation
-    /// pattern also end the game in a draw.
+    /// a draw.
     pub const VITAL: Ability = Ability(1 << 20);
+    /// Can move onto an opponent's vital piece to end the game in a draw
+    /// (the `Draw` action). Granted to allies by the General's formation.
+    pub const DRAW: Ability = Ability(1 << 21);
 
     /// Whether **any** of the bits in `ability` is set. For single-bit
     /// queries this is a plain membership test; multi-bit queries are
     /// "has at least one", not "has all".
-    pub fn has_ability(&self, ability: Ability) -> bool {
+    pub fn has(&self, ability: Ability) -> bool {
         self.0 & ability.0 != 0
     }
 
@@ -206,6 +209,7 @@ impl AbilityConfig {
             .or(if self.direction_shape_L { Ability::DIRECTION_SHAPE_L } else { Ability::NONE })
             .or(if self.control_white { Ability::CONTROL_WHITE } else { Ability::NONE })
             .or(if self.vital { Ability::VITAL } else { Ability::NONE })
+            .or(if self.draw { Ability::DRAW } else { Ability::NONE })
     }
 }
 
@@ -255,7 +259,7 @@ impl Debug for Ability {
             if i > 0 {
                 f.write_str(" ")?;
             }
-            if !self.has_ability(*ability) {
+            if !self.has(*ability) {
                 f.write_str("-")?;
             }
             f.write_str(name)?;
@@ -286,4 +290,5 @@ const ABILITIES: &[(Ability, &str)] = &[
     (Ability::DIRECTION_SHAPE_L, "direction_shape_L"),
     (Ability::CONTROL_WHITE, "control_white"),
     (Ability::VITAL, "vital"),
+    (Ability::DRAW, "draw"),
 ];

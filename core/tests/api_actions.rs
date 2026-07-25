@@ -37,7 +37,7 @@ fn placement_uses_the_canonical_pool_piece() {
     let forged = Piece { ability: Piece::RED_ROOK.ability, ..Piece::RED_GENERAL };
     game.action(Action::Place(Place { piece: forged, to: (0, 5) })).expect("place");
     let placed = game.board()[(0, 5)].expect("piece placed");
-    assert!(placed.ability.has_ability(Ability::VITAL));
+    assert!(placed.ability.has(Ability::VITAL));
     assert_eq!(game.result(), GameResult::Unfinished);
 }
 

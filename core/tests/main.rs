@@ -68,6 +68,14 @@ fn test_pass_resign() {
 }
 
 #[test]
+fn test_draw() {
+    common::run_tests(
+        include_str!("draw.txt"),
+        concat!(env!("CARGO_MANIFEST_DIR"), "/tests/draw.txt"),
+    );
+}
+
+#[test]
 fn test_white() {
     common::run_tests(
         include_str!("white.txt"),
