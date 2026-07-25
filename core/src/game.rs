@@ -161,19 +161,36 @@ impl Game {
     }
 
     fn validate_alternation(config: &GameConfig) -> Result<(), String> {
-        let (current, opponent) = match config.player {
-            Player::Red => (config.red_pool.len(), config.black_pool.len()),
-            Player::Black => (config.black_pool.len(), config.red_pool.len()),
+        match config.result {
+            GameResult::RedWin if config.player != Player::Red => {
+                return Err(format!(
+                    "result is {} but {} is to move",
+                    config.result, config.player,
+                ));
+            },
+            GameResult::BlackWin if config.player != Player::Black => {
+                return Err(format!(
+                    "result is {} but {} is to move",
+                    config.result, config.player,
+                ));
+            },
+            _ => {},
+        }
+        let check_player = match config.result {
+            GameResult::RedWin => Player::Black,
+            GameResult::BlackWin => Player::Red,
+            _ => config.player,
         };
-        // With strict alternation the player to move either has as many
-        // pieces left to place as the opponent (about to start a round) or
-        // exactly one more (the opponent already placed this round); the
-        // player to move can never have fewer.
-        if current != opponent && current != opponent + 1 {
+        let alternate = match check_player {
+            Player::Red => config.red_pool.len() == config.black_pool.len(),
+            Player::Black => config.red_pool.len() + 1 == config.black_pool.len(),
+        };
+        if !alternate {
             return Err(format!(
-                "placement pools cannot alternate: player {} to move has {current} pieces \
-                 to place, opponent has {opponent}",
-                config.player
+                "pool sizes cannot alternate: 红 pool {} pieces, 黑 pool {} pieces, but {} is to move",
+                config.red_pool.len(),
+                config.black_pool.len(),
+                config.player,
             ));
         }
         Ok(())
@@ -195,10 +212,9 @@ impl Game {
     }
 
     /// Execute an action for the player to move. On success the turn
-    /// passes to the opponent and the result is recomputed from the board
-    /// (a resign keeps the resigner as the player to move). On error, self
-    /// is unchanged. Error messages must stay single-line: the notation
-    /// protocol renders them as one `错误：` line.
+    /// passes to the opponent and the result is recomputed from the board.
+    /// On error, self is unchanged. Error messages must stay single-line:
+    /// the notation protocol renders them as one `错误：` line.
     pub fn action(&mut self, action: Action) -> Result<Reaction, String> {
         if self.result != GameResult::Unfinished {
             return Err(format!("game is already decided: {}", self.result));
@@ -221,8 +237,7 @@ impl Game {
             Action::Resign(player) => {
                 let game_result = self.try_resign(player)?;
                 self.result = game_result;
-                // A resign has already decided the game; keep the resigner as the
-                // player to move and skip the board check.
+                self.switch_player();
                 Ok(Reaction { changes: vec![], game_result })
             },
         }

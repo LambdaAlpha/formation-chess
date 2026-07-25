@@ -70,7 +70,7 @@ pass during placement phase is rejected
 -----
 行棋方：红
 红方：[卒]
-黑方：[]
+黑方：[卒]
 白方：0
 胜负：未分
 棋盘：
@@ -85,7 +85,7 @@ pass during placement phase is rejected
 -----
 行棋方：红
 红方：[卒]
-黑方：[]
+黑方：[卒]
 白方：0
 胜负：未分
 棋盘：
@@ -115,7 +115,7 @@ red resigns black wins
 -----
 红认负
 -----
-行棋方：红
+行棋方：黑
 红方：[]
 黑方：[]
 白方：0
@@ -148,7 +148,7 @@ black resigns red wins
 -----
 黑认负
 -----
-行棋方：黑
+行棋方：红
 红方：[]
 黑方：[]
 白方：0
@@ -168,7 +168,7 @@ resign during placement phase is accepted
 -----
 行棋方：红
 红方：[卒]
-黑方：[]
+黑方：[卒]
 白方：0
 胜负：未分
 棋盘：
@@ -181,9 +181,9 @@ resign during placement phase is accepted
 -----
 红认负
 -----
-行棋方：红
+行棋方：黑
 红方：[卒]
-黑方：[]
+黑方：[卒]
 白方：0
 胜负：黑胜
 棋盘：
@@ -215,7 +215,7 @@ no actions accepted after the game is decided
 红认负
 黑将进一
 -----
-行棋方：红
+行棋方：黑
 红方：[]
 黑方：[]
 白方：0
@@ -301,7 +301,7 @@ white piece cannot be placed during placement phase
 -----
 行棋方：红
 红方：[卒]
-黑方：[]
+黑方：[卒]
 白方：1
 胜负：未分
 棋盘：
@@ -316,7 +316,7 @@ white piece cannot be placed during placement phase
 -----
 行棋方：红
 红方：[卒]
-黑方：[]
+黑方：[卒]
 白方：1
 胜负：未分
 棋盘：

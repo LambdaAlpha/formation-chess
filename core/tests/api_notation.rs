@@ -62,7 +62,7 @@ fn moving_to_own_point_is_rejected() {
 fn explicit_placement_suffix_parses_and_formats() {
     let state = "行棋方：红
 红方：[车]
-黑方：[]
+黑方：[卒]
 白方：0
 胜负：未分
 棋盘：

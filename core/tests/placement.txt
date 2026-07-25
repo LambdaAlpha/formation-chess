@@ -68,7 +68,7 @@ black places pawn in top half
 -----
 行棋方：黑
 红方：[车]
-黑方：[卒]
+黑方：[卒 卒]
 白方：0
 胜负：未分
 棋盘：
@@ -83,7 +83,7 @@ black places pawn in top half
 -----
 行棋方：红
 红方：[车]
-黑方：[]
+黑方：[卒]
 白方：0
 胜负：未分
 棋盘：
@@ -101,7 +101,7 @@ black cannot place in bottom half
 -----
 行棋方：黑
 红方：[车]
-黑方：[卒]
+黑方：[卒 卒]
 白方：0
 胜负：未分
 棋盘：
@@ -116,7 +116,7 @@ black cannot place in bottom half
 -----
 行棋方：黑
 红方：[车]
-黑方：[卒]
+黑方：[卒 卒]
 白方：0
 胜负：未分
 棋盘：
@@ -233,7 +233,7 @@ black cannot place on midline row for odd height
 -----
 行棋方：黑
 红方：[车]
-黑方：[卒]
+黑方：[卒 卒]
 白方：0
 胜负：未分
 棋盘：
@@ -250,7 +250,7 @@ black cannot place on midline row for odd height
 -----
 行棋方：黑
 红方：[车]
-黑方：[卒]
+黑方：[卒 卒]
 白方：0
 胜负：未分
 棋盘：

@@ -138,7 +138,7 @@ fn try_action_place_validates_without_mutating() {
         player: Player::Red,
         board,
         red_pool: vec![Piece::RED_ROOK],
-        black_pool: vec![],
+        black_pool: vec![Piece::BLACK_PAWN],
         white: Piece::WHITE,
         white_pool: 0,
         result: GameResult::Unfinished,

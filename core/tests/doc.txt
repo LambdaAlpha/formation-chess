@@ -244,7 +244,7 @@ notation.md example: black resigns and red wins (黑认负)
 -----
 黑认负
 -----
-行棋方：黑
+行棋方：红
 红方：[]
 黑方：[]
 白方：0
