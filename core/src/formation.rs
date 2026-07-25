@@ -70,23 +70,31 @@ impl Formation {
         }
     }
 
-    /// Enemy pieces become also controlled by the traitor's player.
+    /// Enemy pieces become also controlled by the traitor's player;
+    /// allies have the opponent's control disabled (purges foreign
+    /// control from the traitor's own side).
     pub fn traitor(owner: Color, object: Color) -> (Ability, Ability) {
         match (owner, object) {
+            (Color::Red, Color::Red) => (Ability::CONTROLLED_BY_BLACK, Ability::NONE),
+            (Color::Red, Color::Black) => (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED),
             (Color::Black, Color::Red) => {
                 (Ability::CONTROLLED_BY_BLACK, Ability::CONTROLLED_BY_BLACK)
             },
-            (Color::Red, Color::Black) => (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED),
+            (Color::Black, Color::Black) => (Ability::CONTROLLED_BY_RED, Ability::NONE),
             _ => (Ability::NONE, Ability::NONE),
         }
     }
 
-    /// Allied pieces become also controlled by the opponent.
+    /// Allied pieces become also controlled by the opponent;
+    /// enemy pieces have the spy player's control disabled (the spy
+    /// strips its own side's control from enemies).
     pub fn spy(owner: Color, object: Color) -> (Ability, Ability) {
         match (owner, object) {
             (Color::Red, Color::Red) => {
                 (Ability::CONTROLLED_BY_BLACK, Ability::CONTROLLED_BY_BLACK)
             },
+            (Color::Red, Color::Black) => (Ability::CONTROLLED_BY_RED, Ability::NONE),
+            (Color::Black, Color::Red) => (Ability::CONTROLLED_BY_BLACK, Ability::NONE),
             (Color::Black, Color::Black) => {
                 (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED)
             },

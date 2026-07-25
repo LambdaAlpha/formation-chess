@@ -272,8 +272,8 @@ deal with **who controls what**.
 |---|---|---|---|
 | **General** | 将 | Cross, any distance, *Push Ally*, *Push Enemy*, *Vital* | Modifies no abilities — but see below |
 | **Wizard** | 巫 | Cross, any distance, *Push Ally*, *Push Enemy*, *Control White* | White pieces inside become controlled by the wizard's player |
-| **Traitor** | 叛 | Cross, any distance, *Push Ally*, *Push Enemy* | Enemies inside become **also** controlled by the traitor's player (converts them) |
-| **Spy** | 谍 | Cross, any distance, *Push Ally*, *Push Enemy*, controlled by *both* players | Friends inside become **also** controlled by the opponent (double agent effect) |
+| **Traitor** | 叛 | Cross, any distance, *Push Ally*, *Push Enemy* | Enemies inside become **also** controlled by the traitor's player (converts them); allies inside have the opponent's control disabled (purges foreign control) |
+| **Spy** | 谍 | Cross, any distance, *Push Ally*, *Push Enemy*, controlled by *both* players | Allies inside become **also** controlled by the opponent (double agent effect); enemies inside have the spy player's control disabled (strips own control from enemies) |
 
 The **General** is your vital piece — lose your general and you lose. It
 moves freely but cannot capture or pass through other pieces; protect it
