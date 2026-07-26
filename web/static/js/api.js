@@ -40,3 +40,8 @@ export async function getRules() {
     const r = await fetch(`${BASE}/api/rules`);
     return r.json();
 }
+
+export async function postUndo() {
+    const r = await fetch(`${BASE}/api/undo`, { method: 'POST' });
+    return r.json();
+}

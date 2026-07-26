@@ -26,6 +26,7 @@ struct Assets;
 struct AppState {
     game: Mutex<Game>,
     rules_text: String,
+    prev_game: Mutex<Option<Game>>,
 }
 
 type SharedState = Arc<AppState>;
@@ -36,7 +37,8 @@ pub fn build_app() -> Router {
         Assets::get("rules.zh-Hans.md").expect("rules.zh-Hans.md not embedded").data.into_owned(),
     )
     .expect("rules.zh-Hans.md is not valid UTF-8");
-    let state = Arc::new(AppState { game: Mutex::new(game), rules_text });
+    let state =
+        Arc::new(AppState { game: Mutex::new(game), rules_text, prev_game: Mutex::new(None) });
 
     Router::new()
         .route("/", get(index_handler))
@@ -44,6 +46,7 @@ pub fn build_app() -> Router {
         .route("/api/action", post(action_handler))
         .route("/api/hints", post(hints_handler))
         .route("/api/new", post(new_handler))
+        .route("/api/undo", post(undo_handler))
         .route("/api/rules", get(rules_handler))
         .route("/{*path}", get(asset_handler))
         .with_state(state)
@@ -83,7 +86,8 @@ fn mime_type(path: &str) -> &'static str {
 
 async fn state_handler(State(state): State<SharedState>) -> Json<ApiState> {
     let game = state.game.lock().unwrap();
-    Json(ApiState::from_game(&game))
+    let can_undo = state.prev_game.lock().unwrap().is_some();
+    Json(ApiState::from_game(&game, can_undo))
 }
 
 async fn action_handler(
@@ -94,12 +98,23 @@ async fn action_handler(
     let action = match request.to_action(player) {
         Ok(a) => a,
         Err(e) => {
-            return Json(ApiActionResponse { state: ApiState::from_game(&game), error: Some(e) });
+            let can_undo = state.prev_game.lock().unwrap().is_some();
+            return Json(ApiActionResponse {
+                state: ApiState::from_game(&game, can_undo),
+                error: Some(e),
+            });
         },
     };
+    let snapshot = game.clone();
     match game.action(action) {
-        Ok(_) => Json(ApiActionResponse { state: ApiState::from_game(&game), error: None }),
-        Err(e) => Json(ApiActionResponse { state: ApiState::from_game(&game), error: Some(e) }),
+        Ok(_) => {
+            *state.prev_game.lock().unwrap() = Some(snapshot);
+            Json(ApiActionResponse { state: ApiState::from_game(&game, true), error: None })
+        },
+        Err(e) => {
+            let can_undo = state.prev_game.lock().unwrap().is_some();
+            Json(ApiActionResponse { state: ApiState::from_game(&game, can_undo), error: Some(e) })
+        },
     }
 }
 
@@ -146,9 +161,23 @@ async fn new_handler(
         Game::new(config).map_err(|e| (StatusCode::BAD_REQUEST, Json(ApiError { error: e })))?;
     let mut current = state.game.lock().unwrap();
     *current = game;
-    let api_state = ApiState::from_game(&current);
+    state.prev_game.lock().unwrap().take();
+    let api_state = ApiState::from_game(&current, false);
     drop(current);
     Ok(Json(api_state))
+}
+
+async fn undo_handler(State(state): State<SharedState>) -> Json<ApiActionResponse> {
+    let mut game = state.game.lock().unwrap();
+    let saved = state.prev_game.lock().unwrap().take();
+    let can_undo = saved.is_some();
+    if let Some(snapshot) = saved {
+        *game = snapshot;
+    }
+    let api_state = ApiState::from_game(&game, false);
+    drop(game);
+    let error = (!can_undo).then(|| "没有可悔棋的操作".to_string());
+    Json(ApiActionResponse { state: api_state, error })
 }
 
 async fn rules_handler(State(state): State<SharedState>) -> Json<ApiRulesResponse> {

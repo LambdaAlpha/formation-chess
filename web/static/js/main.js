@@ -1,5 +1,5 @@
 import { init, render, setStatus, hidePopup } from './ui.js';
-import { getState, postAction, postNew } from './api.js';
+import { getState, postAction, postNew, postUndo } from './api.js';
 
 async function main() {
     init(handleAction);
@@ -22,6 +22,21 @@ async function handleAction(actionReq) {
             render(state);
         } catch (e) {
             setStatus(e.message, true);
+        }
+        return;
+    }
+
+    if (actionReq.type === 'undo') {
+        try {
+            const response = await postUndo();
+            if (response.error) {
+                setStatus(response.error, true);
+            } else {
+                setStatus('已悔棋');
+            }
+            render(response);
+        } catch (e) {
+            setStatus('网络错误: ' + e.message, true);
         }
         return;
     }

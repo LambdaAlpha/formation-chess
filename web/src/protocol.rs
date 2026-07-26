@@ -57,10 +57,11 @@ pub struct ApiState {
     pub red_pool: Vec<ApiPiece>,
     pub black_pool: Vec<ApiPiece>,
     pub white_pool: u8,
+    pub can_undo: bool,
 }
 
 impl ApiState {
-    pub fn from_game(game: &Game) -> Self {
+    pub fn from_game(game: &Game, can_undo: bool) -> Self {
         let board = game.board();
         let cells: Vec<Vec<Option<ApiPiece>>> = (0 .. board.height())
             .map(|y| {
@@ -75,6 +76,7 @@ impl ApiState {
             red_pool: game.red_pool().iter().copied().map(ApiPiece::from_piece).collect(),
             black_pool: game.black_pool().iter().copied().map(ApiPiece::from_piece).collect(),
             white_pool: game.white_pool(),
+            can_undo,
         }
     }
 }

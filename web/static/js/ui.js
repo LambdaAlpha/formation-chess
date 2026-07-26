@@ -20,6 +20,9 @@ function bindToolbar() {
     document.getElementById('btn-new').addEventListener('click', () => {
         if (onAction) onAction({ type: 'new_game', board: { width: 9, height: 10 } });
     });
+    document.getElementById('btn-undo').addEventListener('click', () => {
+        if (onAction) onAction({ type: 'undo' });
+    });
     document.getElementById('btn-custom').addEventListener('click', openCustomPanel);
     document.getElementById('btn-rules').addEventListener('click', openRulesPanel);
     document.getElementById('btn-pass').addEventListener('click', () => {
@@ -113,6 +116,7 @@ export function render(state) {
     const playing = state.result === 'Unfinished' && p === 'movement';
     document.getElementById('btn-pass').style.display = playing ? '' : 'none';
     document.getElementById('btn-resign').style.display = state.result === 'Unfinished' ? '' : 'none';
+    document.getElementById('btn-undo').disabled = !state.can_undo;
     document.getElementById('white-indicator').disabled = (state.white_pool === 0 || !playing);
     document.getElementById('sidebar').style.display = p === 'placement' ? '' : 'none';
 
