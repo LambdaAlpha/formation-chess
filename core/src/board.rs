@@ -587,13 +587,7 @@ impl Board {
             if step_path.unpassable > 0 {
                 blocked = true;
             }
-
-            if self[to].is_none() {
-                if blocked {
-                    break;
-                }
-                actions.push(Action::Move(Move { from, to }));
-            } else if let Some(target) = self.effective(to) {
+            if let Some(target) = self.effective(to) {
                 let move_ = Move { from, to };
                 self.enumerate_action(player, mover, move_, target, blocked, path_pieces, actions);
                 path_pieces += 1;
@@ -603,8 +597,9 @@ impl Board {
                     }
                     blocked = true;
                 }
+            } else if !blocked {
+                actions.push(Action::Move(Move { from, to }));
             }
-
             origin = to;
         }
     }
