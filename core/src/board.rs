@@ -38,11 +38,8 @@ pub struct Neighbor {
     pub piece: Option<Piece>,
 }
 
-struct MoveInfo {
-    effective_mover: Piece,
-    original_mover: Piece,
-    from: (u8, u8),
-    to: (u8, u8),
+struct TryMove {
+    piece: Piece,
     path: MovePath,
 }
 
@@ -267,19 +264,16 @@ impl Board {
     /// Validate a simple move to an empty point without modifying the board.
     /// Checks movement ability, distance, and pass-through.
     pub fn try_move(&self, from: (u8, u8), to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
-        let info = self.try_move_to(from, to)?;
-        if self[info.to].is_some() {
-            return Err(format!(
-                "cannot move onto occupied destination ({},{})",
-                info.to.0, info.to.1
-            ));
+        let tm = self.try_move_to(from, to)?;
+        if self[to].is_some() {
+            return Err(format!("cannot move onto occupied destination ({},{})", to.0, to.1));
         }
-        if info.path.unpassable > 0 {
+        if tm.path.unpassable > 0 {
             return Err("path blocked, cannot reach empty destination".into());
         }
-        Ok(vec![PositionChange { at: info.from, piece: None }, PositionChange {
-            at: info.to,
-            piece: Some(info.original_mover),
+        Ok(vec![PositionChange { at: from, piece: None }, PositionChange {
+            at: to,
+            piece: self[from],
         }])
     }
 
@@ -294,19 +288,19 @@ impl Board {
     /// pass-through, capture/jump-capture ability, and mutual-destruction
     /// effects.
     pub fn try_capture(&self, from: (u8, u8), to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
-        let info = self.try_move_to(from, to)?;
-        let Some(target) = self.effective(info.to) else {
+        let tm = self.try_move_to(from, to)?;
+        let Some(target) = self.effective(to) else {
             return Err(format!(
                 "destination ({},{}) is empty, capture requires an occupied point",
-                info.to.0, info.to.1
+                to.0, to.1
             ));
         };
-        let normal_capture = info.path.unpassable == 0 && info.effective_mover.can_capture(target);
-        let jump_capture = info.effective_mover.can_jump_capture(target, info.path.pieces);
+        let normal_capture = tm.path.unpassable == 0 && tm.piece.can_capture(target);
+        let jump_capture = tm.piece.can_jump_capture(target, tm.path.pieces);
         if !normal_capture && !jump_capture {
-            return Err(format!("cannot capture {} at ({},{})", target, info.to.0, info.to.1));
+            return Err(format!("cannot capture {} at ({},{})", target, to.0, to.1));
         }
-        Ok(Self::capture_result(info, target))
+        Ok(self.capture_result(tm, from, to, target))
     }
 
     /// Execute a push (escalates to capture when blocked).
@@ -320,28 +314,27 @@ impl Board {
     /// pass-through, push ability, and the pushed piece's landing.
     /// A blocked push may escalate to capture.
     pub fn try_push(&self, from: (u8, u8), to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
-        let info = self.try_move_to(from, to)?;
-        let Some(target) = self.effective(info.to) else {
+        let tm = self.try_move_to(from, to)?;
+        let Some(target) = self.effective(to) else {
             return Err(format!(
                 "destination ({},{}) is empty, push requires an occupied point",
-                info.to.0, info.to.1
+                to.0, to.1
             ));
         };
-        let original_target = self[info.to].unwrap();
-        if info.path.unpassable > 0 {
+        if tm.path.unpassable > 0 {
             return Err("cannot push through blocking pieces on path".into());
         }
-        if !info.effective_mover.can_push(target) {
-            return Err(format!("cannot push {} at ({},{})", target, info.to.0, info.to.1));
+        if !tm.piece.can_push(target) {
+            return Err(format!("cannot push {} at ({},{})", target, to.0, to.1));
         }
-        if let Some(pt) = self.pushed_target(info.from, info.to, target) {
+        if let Some(pt) = self.pushed_target(from, to, target) {
             return Ok(vec![
-                PositionChange { at: info.from, piece: None },
-                PositionChange { at: info.to, piece: Some(info.original_mover) },
-                PositionChange { at: pt, piece: Some(original_target) },
+                PositionChange { at: from, piece: None },
+                PositionChange { at: to, piece: self[from] },
+                PositionChange { at: pt, piece: self[to] },
             ]);
         }
-        Ok(Self::capture_result(info, target))
+        Ok(self.capture_result(tm, from, to, target))
     }
 
     /// Validate a draw without modifying the board. Checks movement,
@@ -350,52 +343,48 @@ impl Board {
     /// piece to end the game in a draw without needing capture or push
     /// abilities.
     pub fn try_draw(&self, from: (u8, u8), to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
-        let info = self.try_move_to(from, to)?;
-        let Some(target) = self.get(info.to) else {
+        let tm = self.try_move_to(from, to)?;
+        let Some(target) = self.get(to) else {
             return Err(format!(
                 "destination ({},{}) is empty, draw requires an occupied point",
-                info.to.0, info.to.1
+                to.0, to.1
             ));
         };
-        if !info.effective_mover.ability.has(Ability::DRAW) {
+        if !tm.piece.ability.has(Ability::DRAW) {
             return Err("only pieces with DRAW ability can draw".into());
         }
         if !target.ability.has(Ability::VITAL) {
-            return Err(format!(
-                "{} at ({},{}) is not a vital piece",
-                target, info.to.0, info.to.1
-            ));
+            return Err(format!("{} at ({},{}) is not a vital piece", target, to.0, to.1));
         }
-        if info.path.unpassable > 0 {
+        if tm.path.unpassable > 0 {
             return Err("path blocked, cannot reach destination for draw".into());
         }
-        Ok(vec![PositionChange { at: info.from, piece: None }, PositionChange {
-            at: info.to,
-            piece: Some(info.original_mover),
+        Ok(vec![PositionChange { at: from, piece: None }, PositionChange {
+            at: to,
+            piece: self[from],
         }])
     }
 
     /// Shared pre-checks: bounds validation, piece lookup, movement ability,
     /// path computation.
-    fn try_move_to(&self, from: (u8, u8), to: (u8, u8)) -> Result<MoveInfo, String> {
+    fn try_move_to(&self, from: (u8, u8), to: (u8, u8)) -> Result<TryMove, String> {
         if !self.in_bounds(from) {
             return Err(format!("({},{}) is outside the board", from.0, from.1));
         }
         if !self.in_bounds(to) {
             return Err(format!("({},{}) is outside the board", to.0, to.1));
         }
-        let Some(mover) = self.effective(from) else {
+        let Some(piece) = self.effective(from) else {
             return Err(format!("no piece at ({},{})", from.0, from.1));
         };
-        let original_mover = self[from].unwrap();
-        if !Self::can_move(mover, from, to) {
+        if !Self::can_move(piece, from, to) {
             return Err(format!(
-                "piece {mover} at ({},{}) cannot move to ({},{})",
+                "piece {piece} at ({},{}) cannot move to ({},{})",
                 from.0, from.1, to.0, to.1
             ));
         }
-        let path = MovePath::new(self, mover, from, to);
-        Ok(MoveInfo { effective_mover: mover, original_mover, from, to, path })
+        let path = MovePath::new(self, piece, from, to);
+        Ok(TryMove { piece, path })
     }
 
     /// Whether from→to lies on a horizontal or vertical line. Note:
@@ -466,18 +455,17 @@ impl Board {
 
     /// Compute the changes of a successful capture, including
     /// mutual‑destruction effects.
-    fn capture_result(info: MoveInfo, target: Piece) -> Vec<PositionChange> {
-        if info.effective_mover.ability.has(Ability::CAPTURED_ON_CAPTURE)
+    fn capture_result(
+        &self, tm: TryMove, from: (u8, u8), to: (u8, u8), target: Piece,
+    ) -> Vec<PositionChange> {
+        if tm.piece.ability.has(Ability::CAPTURED_ON_CAPTURE)
             || target.ability.has(Ability::CAPTURE_ON_CAPTURED)
         {
-            vec![PositionChange { at: info.from, piece: None }, PositionChange {
-                at: info.to,
-                piece: None,
-            }]
+            vec![PositionChange { at: from, piece: None }, PositionChange { at: to, piece: None }]
         } else {
-            vec![PositionChange { at: info.from, piece: None }, PositionChange {
-                at: info.to,
-                piece: Some(info.original_mover),
+            vec![PositionChange { at: from, piece: None }, PositionChange {
+                at: to,
+                piece: self[from],
             }]
         }
     }
@@ -567,12 +555,12 @@ impl Board {
     /// that leg‑blocking and pass‑through rules stay in one place.
     #[expect(clippy::too_many_arguments)]
     fn enumerate_line(
-        &self, player: Player, mover: Piece, from: (u8, u8), dx: i8, dy: i8, max_steps: i8,
+        &self, player: Player, piece: Piece, from: (u8, u8), dx: i8, dy: i8, max_steps: i8,
         actions: &mut Vec<Action>,
     ) {
         let mut origin = from;
-        let mut blocked = false;
-        let mut path_pieces: u8 = 0;
+        let mut unpassable = 0;
+        let mut pieces: u8 = 0;
 
         for _ in 0 .. max_steps {
             let nx = origin.0 as i8 + dx;
@@ -582,22 +570,21 @@ impl Board {
             }
             let to = (nx as u8, ny as u8);
 
-            let step_path = MovePath::new(self, mover, origin, to);
-            path_pieces += step_path.pieces;
-            if step_path.unpassable > 0 {
-                blocked = true;
-            }
+            let step_path = MovePath::new(self, piece, origin, to);
+            pieces += step_path.pieces;
+            unpassable += step_path.unpassable;
             if let Some(target) = self.effective(to) {
+                let tm = TryMove { piece, path: MovePath { pieces, unpassable } };
                 let move_ = Move { from, to };
-                self.enumerate_action(player, mover, move_, target, blocked, path_pieces, actions);
-                path_pieces += 1;
-                if !mover.can_pass(target) {
-                    if blocked {
+                self.enumerate_action(player, tm, move_, target, actions);
+                pieces += 1;
+                if !piece.can_pass(target) {
+                    if unpassable > 0 {
                         break;
                     }
-                    blocked = true;
+                    unpassable += 1;
                 }
-            } else if !blocked {
+            } else if unpassable == 0 {
                 actions.push(Action::Move(Move { from, to }));
             }
             origin = to;
@@ -606,21 +593,20 @@ impl Board {
 
     /// Add every capture and push action legal against `target` at `move_.to`,
     /// given the accumulated `blocked` / `path_pieces` state for this cell.
-    #[expect(clippy::too_many_arguments)]
     fn enumerate_action(
-        &self, player: Player, mover: Piece, move_: Move, target: Piece, blocked: bool,
-        path_pieces: u8, actions: &mut Vec<Action>,
+        &self, player: Player, tm: TryMove, move_: Move, target: Piece, actions: &mut Vec<Action>,
     ) {
+        let blocked = tm.path.unpassable > 0;
         #[expect(clippy::useless_let_if_seq)]
         let mut captured = false;
-        if !blocked && mover.can_capture(target) {
+        if !blocked && tm.piece.can_capture(target) {
             actions.push(Action::Capture(move_));
             captured = true;
         }
-        if !captured && mover.can_jump_capture(target, path_pieces) {
+        if !captured && tm.piece.can_jump_capture(target, tm.path.pieces) {
             actions.push(Action::Capture(move_));
         }
-        if !blocked && mover.can_push(target) {
+        if !blocked && tm.piece.can_push(target) {
             actions.push(Action::Push(move_));
         }
         let opponent_color = match player {
@@ -628,7 +614,7 @@ impl Board {
             Player::Black => Color::Red,
         };
         if !blocked
-            && mover.ability.has(Ability::DRAW)
+            && tm.piece.ability.has(Ability::DRAW)
             && target.ability.has(Ability::VITAL)
             && target.color == opponent_color
         {
