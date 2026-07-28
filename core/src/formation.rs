@@ -24,15 +24,15 @@ impl Formation {
     pub const SPY: Self = Self { points: Self::CORNER, effect: Self::spy };
     pub const ROOK: Self = Self { points: Self::MIDDLE, effect: Self::rook };
     pub const PAWN: Self = Self { points: Self::MIDDLE, effect: Self::pawn };
-    pub const DOG: Self = Self { points: Self::MIDDLE, effect: Self::dog };
+    pub const SCHOLAR: Self = Self { points: Self::MIDDLE, effect: Self::scholar };
     pub const HORSE: Self = Self { points: Self::MIDDLE, effect: Self::horse };
-    pub const RIVER: Self = Self { points: Self::UPPER_TRIANGLE, effect: Self::river };
-    pub const MOUNTAIN: Self = Self { points: Self::UPPER_TRIANGLE, effect: Self::mountain };
     pub const WIND: Self = Self { points: Self::UPPER_TRIANGLE, effect: Self::wind };
+    pub const MOUNTAIN: Self = Self { points: Self::UPPER_TRIANGLE, effect: Self::mountain };
+    pub const FIRE: Self = Self { points: Self::UPPER_TRIANGLE, effect: Self::fire };
     pub const FOREST: Self = Self { points: Self::UPPER_TRIANGLE, effect: Self::forest };
     pub const SPEAR: Self = Self { points: Self::LOWER_TRIANGLE, effect: Self::spear };
     pub const SHIELD: Self = Self { points: Self::LOWER_TRIANGLE, effect: Self::shield };
-    pub const CANNON: Self = Self { points: Self::LOWER_TRIANGLE, effect: Self::cannon };
+    pub const SHELL: Self = Self { points: Self::LOWER_TRIANGLE, effect: Self::shell };
     pub const MINE: Self = Self { points: Self::LOWER_TRIANGLE, effect: Self::mine };
     pub const WHITE: Self = Self { points: Self::POINTS_NONE, effect: Self::white };
 
@@ -119,7 +119,7 @@ impl Formation {
     }
 
     /// Allies gain DIRECTION_DIAGONAL; enemies lose it.
-    pub fn dog(owner: Color, object: Color) -> (Ability, Ability) {
+    pub fn scholar(owner: Color, object: Color) -> (Ability, Ability) {
         let mask = Ability::DIRECTION_DIAGONAL;
         let update = if owner == object { Ability::DIRECTION_DIAGONAL } else { Ability::NONE };
         (mask, update)
@@ -133,7 +133,7 @@ impl Formation {
     }
 
     /// Allies gain both push abilities; enemies lose both.
-    pub fn river(owner: Color, object: Color) -> (Ability, Ability) {
+    pub fn wind(owner: Color, object: Color) -> (Ability, Ability) {
         let mask = Ability::PUSH_ALLY | Ability::PUSH_ENEMY;
         let update =
             if owner == object { Ability::PUSH_ALLY | Ability::PUSH_ENEMY } else { Ability::NONE };
@@ -149,20 +149,27 @@ impl Formation {
         (mask, update)
     }
 
-    /// Allies gain both pass abilities; enemies lose both.
-    pub fn wind(owner: Color, object: Color) -> (Ability, Ability) {
-        let mask = Ability::PASS_ALLY | Ability::PASS_ENEMY;
-        let update =
-            if owner == object { Ability::PASS_ALLY | Ability::PASS_ENEMY } else { Ability::NONE };
+    /// Allies gain active push escalation and lose passive; enemies gain
+    /// passive and lose active.
+    pub fn fire(owner: Color, object: Color) -> (Ability, Ability) {
+        let mask = Ability::CAPTURE_ON_PUSH_BLOCKED | Ability::CAPTURED_ON_PUSH_BLOCKED;
+        let update = if owner == object {
+            Ability::CAPTURE_ON_PUSH_BLOCKED
+        } else {
+            Ability::CAPTURED_ON_PUSH_BLOCKED
+        };
         (mask, update)
     }
 
-    /// Takes over both passed-by abilities: allies become passable by
-    /// allies only, enemies passable by the forest's side only.
+    /// Allies gain passive capture demotion and lose active; enemies gain
+    /// active and lose passive.
     pub fn forest(owner: Color, object: Color) -> (Ability, Ability) {
-        let mask = Ability::PASSED_BY_ALLY | Ability::PASSED_BY_ENEMY;
-        let update =
-            if owner == object { Ability::PASSED_BY_ALLY } else { Ability::PASSED_BY_ENEMY };
+        let mask = Ability::PUSH_ON_CAPTURE_UNBLOCKED | Ability::PUSHED_ON_CAPTURE_UNBLOCKED;
+        let update = if owner == object {
+            Ability::PUSHED_ON_CAPTURE_UNBLOCKED
+        } else {
+            Ability::PUSH_ON_CAPTURE_UNBLOCKED
+        };
         (mask, update)
     }
 
@@ -180,17 +187,17 @@ impl Formation {
         (mask, update)
     }
 
-    /// Allies gain JUMP_CAPTURE; enemies lose it.
-    pub fn cannon(owner: Color, object: Color) -> (Ability, Ability) {
-        let mask = Ability::JUMP_CAPTURE;
-        let update = if owner == object { Ability::JUMP_CAPTURE } else { Ability::NONE };
+    /// Allies gain CAPTURED_ON_CAPTURE; enemies lose it.
+    pub fn shell(owner: Color, object: Color) -> (Ability, Ability) {
+        let mask = Ability::CAPTURED_ON_CAPTURE;
+        let update = if owner == object { Ability::CAPTURED_ON_CAPTURE } else { Ability::NONE };
         (mask, update)
     }
 
-    /// Everyone in range gains both mutual-destruction abilities.
-    pub fn mine(_owner: Color, _object: Color) -> (Ability, Ability) {
-        let mask = Ability::CAPTURE_ON_CAPTURED | Ability::CAPTURED_ON_CAPTURE;
-        let update = Ability::CAPTURE_ON_CAPTURED | Ability::CAPTURED_ON_CAPTURE;
+    /// Allies gain CAPTURE_ON_CAPTURED; enemies lose it.
+    pub fn mine(owner: Color, object: Color) -> (Ability, Ability) {
+        let mask = Ability::CAPTURE_ON_CAPTURED;
+        let update = if owner == object { Ability::CAPTURE_ON_CAPTURED } else { Ability::NONE };
         (mask, update)
     }
 

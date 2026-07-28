@@ -30,15 +30,14 @@ pub struct AbilityConfig {
     pub push_enemy: bool,
     pub pushed_by_ally: bool,
     pub pushed_by_enemy: bool,
-    pub pass_ally: bool,
-    pub pass_enemy: bool,
-    pub passed_by_ally: bool,
-    pub passed_by_enemy: bool,
+    pub capture_on_push_blocked: bool,
+    pub captured_on_push_blocked: bool,
+    pub push_on_capture_unblocked: bool,
+    pub pushed_on_capture_unblocked: bool,
     pub capture: bool,
     pub captured: bool,
     pub capture_on_captured: bool,
     pub captured_on_capture: bool,
-    pub jump_capture: bool,
     pub any_distance: bool,
     pub direction_cross: bool,
     pub direction_diagonal: bool,
@@ -59,11 +58,7 @@ impl Ability {
     /// movement direction — for L-shaped moves, to the next knight point
     /// on the same line: a horse at (0,0) pushing the target on (1,2)
     /// sends it to (2,4). The shove is external force, so the target
-    /// needs no direction ability of its own. If the target cannot make
-    /// that step — landing occupied or off the board, or its own path
-    /// there blocked — the push escalates into a capture, destroying
-    /// the target regardless of its abilities or color. Unlike normal
-    /// capture, escalated push works against friendly pieces too.
+    /// needs no direction ability of its own.
     ///
     /// Pushing an ally requires mover PUSH_ALLY **or** target
     /// PUSHED_BY_ALLY; either side's consent suffices.
@@ -76,41 +71,43 @@ impl Ability {
     pub const PUSHED_BY_ALLY: Ability = Ability(1 << 4);
     /// Can be shoved by enemies; see [`Self::PUSH_ENEMY`].
     pub const PUSHED_BY_ENEMY: Ability = Ability(1 << 5);
-    /// Pass: step through an occupied point on the path as if it were
-    /// empty — stopping on it is still impossible. For L-shaped moves
-    /// this clears the leg-blocking point.
-    ///
-    /// Passing an ally requires mover PASS_ALLY **or** blocker
-    /// PASSED_BY_ALLY; either side's consent suffices.
-    pub const PASS_ALLY: Ability = Ability(1 << 6);
-    /// Passing an enemy requires mover PASS_ENEMY **and** blocker
-    /// PASSED_BY_ENEMY; both must agree. See [`Self::PASS_ALLY`] for how
-    /// passing works.
-    pub const PASS_ENEMY: Ability = Ability(1 << 7);
-    /// Can be passed through by allies; see [`Self::PASS_ALLY`].
-    pub const PASSED_BY_ALLY: Ability = Ability(1 << 8);
-    /// Can be passed through by enemies; see [`Self::PASS_ENEMY`].
-    pub const PASSED_BY_ENEMY: Ability = Ability(1 << 9);
+    /// Push escalation (active): when this piece pushes and the push is
+    /// blocked (target cannot land), the push becomes a capture —
+    /// destroying the target regardless of its abilities or color.
+    pub const CAPTURE_ON_PUSH_BLOCKED: Ability = Ability(1 << 6);
+    /// Push escalation (passive): when this piece is pushed and the push
+    /// is blocked, the pusher captures it. See
+    /// [`Self::CAPTURE_ON_PUSH_BLOCKED`].
+    pub const CAPTURED_ON_PUSH_BLOCKED: Ability = Ability(1 << 7);
+    /// Capture demotion (active): when this piece captures without blockers
+    /// on the path, the capture becomes a push — shoving the target one
+    /// step farther instead of capturing it.
+    pub const PUSH_ON_CAPTURE_UNBLOCKED: Ability = Ability(1 << 8);
+    /// Capture demotion (passive): when this piece would be captured
+    /// without blockers on the path, it is pushed instead. See
+    /// [`Self::PUSH_ON_CAPTURE_UNBLOCKED`].
+    pub const PUSHED_ON_CAPTURE_UNBLOCKED: Ability = Ability(1 << 9);
     /// Normal capture: move onto an enemy-occupied point and remove that
     /// piece. Requires attacker CAPTURE and target CAPTURED, and every
-    /// piece on the path must be passable.
+    /// piece on the path must not block the move. Also succeeds when
+    /// the attacker has CAPTURED_ON_CAPTURE (sacrifice, ignores target's
+    /// CAPTURED) or the target has CAPTURE_ON_CAPTURED (retaliation,
+    /// ignores attacker's CAPTURE).
     pub const CAPTURE: Ability = Ability(1 << 10);
-    /// Required for normal capture and jump capture. Escalated push
-    /// captures bypass both this ability and the color restriction —
-    /// a blocked push destroys the target regardless of CAPTURED or
-    /// whether it is friend or foe.
+    /// Required for normal capture. Escalated pushes and retaliation
+    /// (CAPTURE_ON_CAPTURED) bypass this bit — a blocked push destroys
+    /// the target regardless of CAPTURED, and a piece with
+    /// CAPTURE_ON_CAPTURED is capturable even without CAPTURED.
     pub const CAPTURED: Ability = Ability(1 << 11);
     /// Retaliation: when this piece is captured, the capturer is
-    /// destroyed as well.
+    /// destroyed as well. Also makes this piece capturable even by
+    /// pieces without CAPTURE — the capturer's CAPTURE requirement is
+    /// bypassed.
     pub const CAPTURE_ON_CAPTURED: Ability = Ability(1 << 12);
-    /// Sacrifice: when this piece captures, it is destroyed as well.
+    /// Sacrifice: when this piece captures another, it dies as well.
+    /// Also allows capturing targets even without CAPTURED — the
+    /// target's CAPTURED requirement is bypassed.
     pub const CAPTURED_ON_CAPTURE: Ability = Ability(1 << 13);
-    /// Jump capture: capture an enemy over exactly one screen piece on
-    /// the path; whether the screen is passable is irrelevant.
-    /// Independent of CAPTURE — a piece with JUMP_CAPTURE alone can still
-    /// jump-capture. Works along L-shaped paths too, with the leg blocker
-    /// as the screen.
-    pub const JUMP_CAPTURE: Ability = Ability(1 << 14);
     /// Slide any number of steps along one allowed direction instead of a
     /// single step. For L-shaped moves this chains knight moves along the
     /// same line: (0,0) → (1,2) → (2,4) → (3,6).
@@ -173,6 +170,10 @@ impl Ability {
         Self(self.0 | other.0)
     }
 
+    pub const fn add(&mut self, other: Self) {
+        self.0 |= other.0;
+    }
+
     /// Bitwise XOR; const counterpart of the `^` operator.
     pub const fn xor(self, other: Self) -> Self {
         Self(self.0 ^ other.0)
@@ -187,29 +188,38 @@ impl Ability {
 impl AbilityConfig {
     /// Collect the boolean fields into an [`Ability`] bit set.
     pub const fn build(self) -> Ability {
-        Ability::NONE
-            .or(if self.controlled_by_red { Ability::CONTROLLED_BY_RED } else { Ability::NONE })
-            .or(if self.controlled_by_black { Ability::CONTROLLED_BY_BLACK } else { Ability::NONE })
-            .or(if self.push_ally { Ability::PUSH_ALLY } else { Ability::NONE })
-            .or(if self.push_enemy { Ability::PUSH_ENEMY } else { Ability::NONE })
-            .or(if self.pushed_by_ally { Ability::PUSHED_BY_ALLY } else { Ability::NONE })
-            .or(if self.pushed_by_enemy { Ability::PUSHED_BY_ENEMY } else { Ability::NONE })
-            .or(if self.pass_ally { Ability::PASS_ALLY } else { Ability::NONE })
-            .or(if self.pass_enemy { Ability::PASS_ENEMY } else { Ability::NONE })
-            .or(if self.passed_by_ally { Ability::PASSED_BY_ALLY } else { Ability::NONE })
-            .or(if self.passed_by_enemy { Ability::PASSED_BY_ENEMY } else { Ability::NONE })
-            .or(if self.capture { Ability::CAPTURE } else { Ability::NONE })
-            .or(if self.captured { Ability::CAPTURED } else { Ability::NONE })
-            .or(if self.capture_on_captured { Ability::CAPTURE_ON_CAPTURED } else { Ability::NONE })
-            .or(if self.captured_on_capture { Ability::CAPTURED_ON_CAPTURE } else { Ability::NONE })
-            .or(if self.jump_capture { Ability::JUMP_CAPTURE } else { Ability::NONE })
-            .or(if self.any_distance { Ability::ANY_DISTANCE } else { Ability::NONE })
-            .or(if self.direction_cross { Ability::DIRECTION_CROSS } else { Ability::NONE })
-            .or(if self.direction_diagonal { Ability::DIRECTION_DIAGONAL } else { Ability::NONE })
-            .or(if self.direction_shape_L { Ability::DIRECTION_SHAPE_L } else { Ability::NONE })
-            .or(if self.control_white { Ability::CONTROL_WHITE } else { Ability::NONE })
-            .or(if self.vital { Ability::VITAL } else { Ability::NONE })
-            .or(if self.draw { Ability::DRAW } else { Ability::NONE })
+        const NONE: Ability = Ability::NONE;
+        let mut a = NONE;
+        a.add(if self.controlled_by_red { Ability::CONTROLLED_BY_RED } else { NONE });
+        a.add(if self.controlled_by_black { Ability::CONTROLLED_BY_BLACK } else { NONE });
+        a.add(if self.push_ally { Ability::PUSH_ALLY } else { NONE });
+        a.add(if self.push_enemy { Ability::PUSH_ENEMY } else { NONE });
+        a.add(if self.pushed_by_ally { Ability::PUSHED_BY_ALLY } else { NONE });
+        a.add(if self.pushed_by_enemy { Ability::PUSHED_BY_ENEMY } else { NONE });
+        a.add(if self.capture_on_push_blocked { Ability::CAPTURE_ON_PUSH_BLOCKED } else { NONE });
+        a.add(if self.captured_on_push_blocked { Ability::CAPTURED_ON_PUSH_BLOCKED } else { NONE });
+        a.add(if self.push_on_capture_unblocked {
+            Ability::PUSH_ON_CAPTURE_UNBLOCKED
+        } else {
+            NONE
+        });
+        a.add(if self.pushed_on_capture_unblocked {
+            Ability::PUSHED_ON_CAPTURE_UNBLOCKED
+        } else {
+            NONE
+        });
+        a.add(if self.capture { Ability::CAPTURE } else { NONE });
+        a.add(if self.captured { Ability::CAPTURED } else { NONE });
+        a.add(if self.capture_on_captured { Ability::CAPTURE_ON_CAPTURED } else { NONE });
+        a.add(if self.captured_on_capture { Ability::CAPTURED_ON_CAPTURE } else { NONE });
+        a.add(if self.any_distance { Ability::ANY_DISTANCE } else { NONE });
+        a.add(if self.direction_cross { Ability::DIRECTION_CROSS } else { NONE });
+        a.add(if self.direction_diagonal { Ability::DIRECTION_DIAGONAL } else { NONE });
+        a.add(if self.direction_shape_L { Ability::DIRECTION_SHAPE_L } else { NONE });
+        a.add(if self.control_white { Ability::CONTROL_WHITE } else { NONE });
+        a.add(if self.vital { Ability::VITAL } else { NONE });
+        a.add(if self.draw { Ability::DRAW } else { NONE });
+        a
     }
 }
 
@@ -275,15 +285,14 @@ const ABILITIES: &[(Ability, &str)] = &[
     (Ability::PUSH_ENEMY, "push_enemy"),
     (Ability::PUSHED_BY_ALLY, "pushed_by_ally"),
     (Ability::PUSHED_BY_ENEMY, "pushed_by_enemy"),
-    (Ability::PASS_ALLY, "pass_ally"),
-    (Ability::PASS_ENEMY, "pass_enemy"),
-    (Ability::PASSED_BY_ALLY, "passed_by_ally"),
-    (Ability::PASSED_BY_ENEMY, "passed_by_enemy"),
+    (Ability::CAPTURE_ON_PUSH_BLOCKED, "capture_on_push_blocked"),
+    (Ability::CAPTURED_ON_PUSH_BLOCKED, "captured_on_push_blocked"),
+    (Ability::PUSH_ON_CAPTURE_UNBLOCKED, "push_on_capture_unblocked"),
+    (Ability::PUSHED_ON_CAPTURE_UNBLOCKED, "pushed_on_capture_unblocked"),
     (Ability::CAPTURE, "capture"),
     (Ability::CAPTURED, "captured"),
     (Ability::CAPTURE_ON_CAPTURED, "capture_on_captured"),
     (Ability::CAPTURED_ON_CAPTURE, "captured_on_capture"),
-    (Ability::JUMP_CAPTURE, "jump_capture"),
     (Ability::ANY_DISTANCE, "any_distance"),
     (Ability::DIRECTION_CROSS, "direction_cross"),
     (Ability::DIRECTION_DIAGONAL, "direction_diagonal"),

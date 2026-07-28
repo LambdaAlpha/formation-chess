@@ -65,7 +65,7 @@ rook moves vertically to empty point
 变化：[红车进二]
 胜负：未分
 =====
-rook cannot push ally general without push abilities
+diagonal mover moves one step to empty
 -----
 行棋方：红
 红方：[]
@@ -75,44 +75,12 @@ rook cannot push ally general without push abilities
 棋盘：
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
-二[一一 一一 一一 一一 一一]
-三[红将 红车 一一 一一 一一]
-四[一一 一一 一一 一一 一一]
-五[一一 一一 一一 一一 黑将]
------
-红车平一推
------
-行棋方：红
-红方：[]
-黑方：[]
-白方：0
-胜负：未分
-棋盘：
-零[一路 二路 三路 四路 五路]
-一[一一 一一 一一 一一 一一]
-二[一一 一一 一一 一一 一一]
-三[红将 红车 一一 一一 一一]
-四[一一 一一 一一 一一 一一]
-五[一一 一一 一一 一一 黑将]
------
-错误：cannot push 红将 at (0,2)
-=====
-dog moves diagonal one step to empty
------
-行棋方：红
-红方：[]
-黑方：[]
-白方：0
-胜负：未分
-棋盘：
-零[一路 二路 三路 四路 五路]
-一[一一 一一 一一 一一 一一]
-二[红犬 一一 一一 一一 一一]
+二[红士 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 黑将]
 -----
-红犬二三
+红士二三
 -----
 行棋方：黑
 红方：[]
@@ -123,14 +91,14 @@ dog moves diagonal one step to empty
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
-三[一一 红犬 一一 一一 一一]
+三[一一 红士 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 黑将]
 -----
-变化：[红犬二三]
+变化：[红士二三]
 胜负：未分
 =====
-dog cannot move cross
+diagonal mover cannot move orthogonally
 -----
 行棋方：红
 红方：[]
@@ -140,12 +108,12 @@ dog cannot move cross
 棋盘：
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
-二[红犬 一一 一一 一一 一一]
+二[红士 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 黑将]
 -----
-红犬平二
+红士平二
 -----
 行棋方：红
 红方：[]
@@ -155,14 +123,14 @@ dog cannot move cross
 棋盘：
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
-二[红犬 一一 一一 一一 一一]
+二[红士 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 黑将]
 -----
-错误：piece 红犬 at (0,1) cannot move to (1,1)
+错误：piece 红士 at (0,1) cannot move to (1,1)
 =====
-dog captures enemy on diagonal
+formation grants unlimited range to diagonal mover
 -----
 行棋方：红
 红方：[]
@@ -172,45 +140,12 @@ dog captures enemy on diagonal
 棋盘：
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
-二[红犬 一一 一一 一一 一一]
-三[一一 黑车 一一 一一 一一]
-四[一一 一一 一一 一一 一一]
-五[红将 一一 一一 一一 黑将]
------
-红犬二三捉
------
-行棋方：黑
-红方：[]
-黑方：[]
-白方：1
-胜负：未分
-棋盘：
-零[一路 二路 三路 四路 五路]
-一[一一 一一 一一 一一 一一]
-二[一一 一一 一一 一一 一一]
-三[一一 红犬 一一 一一 一一]
-四[一一 一一 一一 一一 一一]
-五[红将 一一 一一 一一 黑将]
------
-变化：[红犬二三]
-胜负：未分
-=====
-dog near rook gains any_distance on diagonal
------
-行棋方：红
-红方：[]
-黑方：[]
-白方：0
-胜负：未分
-棋盘：
-零[一路 二路 三路 四路 五路]
-一[一一 一一 一一 一一 一一]
-二[红犬 红车 一一 一一 一一]
+二[红士 红车 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 黑将]
 -----
-红犬三四
+红士三四
 -----
 行棋方：黑
 红方：[]
@@ -222,13 +157,13 @@ dog near rook gains any_distance on diagonal
 一[一一 一一 一一 一一 一一]
 二[一一 红车 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
-四[一一 一一 红犬 一一 一一]
+四[一一 一一 红士 一一 一一]
 五[红将 一一 一一 一一 黑将]
 -----
-变化：[红犬三四]
+变化：[红士三四]
 胜负：未分
 =====
-dog cannot slide two diagonal steps without any_distance
+range-limited: cannot move beyond one step without unlimited range
 -----
 行棋方：红
 红方：[]
@@ -238,12 +173,12 @@ dog cannot slide two diagonal steps without any_distance
 棋盘：
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
-二[红犬 一一 一一 一一 一一]
+二[红士 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 黑将]
 -----
-红犬三四
+红士三四
 -----
 行棋方：红
 红方：[]
@@ -253,14 +188,14 @@ dog cannot slide two diagonal steps without any_distance
 棋盘：
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 一一]
-二[红犬 一一 一一 一一 一一]
+二[红士 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 黑将]
 -----
-错误：piece 红犬 at (0,1) cannot move to (2,3)
+错误：piece 红士 at (0,1) cannot move to (2,3)
 =====
-horse moves L-shape to empty
+L-shaped mover moves to empty
 -----
 行棋方：红
 红方：[]
@@ -293,7 +228,7 @@ horse moves L-shape to empty
 变化：[红马三五]
 胜负：未分
 =====
-horse leg blocked cannot move
+L-shaped path blocked by piece on intermediate point
 -----
 行棋方：红
 红方：[]
@@ -323,9 +258,9 @@ horse leg blocked cannot move
 四[一一 红车 一一 一一 一一]
 五[红将 一一 一一 一一 黑将]
 -----
-错误：path blocked, cannot reach empty destination
+错误：path blocked, cannot reach destination
 =====
-horse with any_distance from rook moves two L-steps
+formation grants unlimited L-shaped movement
 -----
 行棋方：红
 红方：[]
@@ -358,39 +293,6 @@ horse with any_distance from rook moves two L-steps
 六[红将 一一 一一 一一 一一 黑将]
 -----
 变化：[红马六五]
-胜负：未分
-=====
-horse captures enemy on L-shape
------
-行棋方：红
-红方：[]
-黑方：[]
-白方：0
-胜负：未分
-棋盘：
-零[一路 二路 三路 四路 五路]
-一[一一 一一 一一 一一 一一]
-二[一一 一一 一一 一一 一一]
-三[一一 红马 一一 一一 一一]
-四[一一 一一 一一 一一 一一]
-五[红将 一一 黑车 一一 黑将]
------
-红马三五捉
------
-行棋方：黑
-红方：[]
-黑方：[]
-白方：1
-胜负：未分
-棋盘：
-零[一路 二路 三路 四路 五路]
-一[一一 一一 一一 一一 一一]
-二[一一 一一 一一 一一 一一]
-三[一一 一一 一一 一一 一一]
-四[一一 一一 一一 一一 一一]
-五[红将 一一 红马 一一 黑将]
------
-变化：[红马三五]
 胜负：未分
 =====
 cannot move opponent's piece
@@ -488,3 +390,35 @@ rook cannot move vertically to occupied point without suffix
 五[一一 一一 一一 一一 黑将]
 -----
 错误：cannot move onto occupied destination (0,3)
+=====
+rook move blocked by intervening piece on path
+-----
+行棋方：红
+红方：[]
+黑方：[]
+白方：0
+胜负：未分
+棋盘：
+零[一路 二路 三路 四路 五路]
+一[黑将 一一 一一 一一 一一]
+二[一一 一一 一一 一一 一一]
+三[红车 一一 黑卒 一一 一一]
+四[一一 一一 一一 一一 一一]
+五[一一 一一 一一 一一 红将]
+-----
+红车平五
+-----
+行棋方：红
+红方：[]
+黑方：[]
+白方：0
+胜负：未分
+棋盘：
+零[一路 二路 三路 四路 五路]
+一[黑将 一一 一一 一一 一一]
+二[一一 一一 一一 一一 一一]
+三[红车 一一 黑卒 一一 一一]
+四[一一 一一 一一 一一 一一]
+五[一一 一一 一一 一一 红将]
+-----
+错误：path blocked, cannot reach destination

@@ -29,7 +29,7 @@ blocked path prevents draw
 四[一一 一一 一一 一一 一一]
 五[一一 一一 红将 一一 一一]
 -----
-错误：path blocked, cannot reach destination for draw
+错误：path blocked, cannot reach destination
 =====
 piece without draw ability cannot draw
 -----

@@ -54,8 +54,9 @@ impl Piece {
         }
     }
 
-    /// The white piece: one-step cross movement, capturable by anyone,
-    /// controlled by nobody until a wizard's formation covers it.
+    /// The white piece: cross + diagonal + L-shaped movement at any
+    /// distance, capturable by anyone, controlled by nobody until a
+    /// wizard's formation covers it.
     pub const WHITE: Piece = Piece {
         name: '子',
         color: Color::White,
@@ -67,19 +68,18 @@ impl Piece {
             push_enemy: false,
             pushed_by_ally: false,
             pushed_by_enemy: true,
-            pass_ally: false,
-            pass_enemy: false,
-            passed_by_ally: false,
-            passed_by_enemy: true,
+            capture_on_push_blocked: false,
+            captured_on_push_blocked: false,
+            push_on_capture_unblocked: false,
+            pushed_on_capture_unblocked: false,
             capture: false,
             captured: true,
             capture_on_captured: false,
             captured_on_capture: false,
-            jump_capture: false,
-            any_distance: false,
+            any_distance: true,
             direction_cross: true,
-            direction_diagonal: false,
-            direction_shape_L: false,
+            direction_diagonal: true,
+            direction_shape_L: true,
             control_white: false,
             vital: false,
             draw: false,
@@ -100,15 +100,14 @@ impl Piece {
                 push_enemy: true,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
-                pass_ally: false,
-                pass_enemy: false,
-                passed_by_ally: false,
-                passed_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
                 capture: false,
                 captured: true,
                 capture_on_captured: false,
                 captured_on_capture: false,
-                jump_capture: false,
                 any_distance: true,
                 direction_cross: true,
                 direction_diagonal: false,
@@ -134,15 +133,14 @@ impl Piece {
                 push_enemy: true,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
-                pass_ally: false,
-                pass_enemy: false,
-                passed_by_ally: false,
-                passed_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
                 capture: false,
                 captured: true,
                 capture_on_captured: false,
                 captured_on_capture: false,
-                jump_capture: false,
                 any_distance: true,
                 direction_cross: true,
                 direction_diagonal: false,
@@ -168,15 +166,14 @@ impl Piece {
                 push_enemy: true,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
-                pass_ally: false,
-                pass_enemy: false,
-                passed_by_ally: false,
-                passed_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
                 capture: false,
                 captured: true,
                 capture_on_captured: false,
                 captured_on_capture: false,
-                jump_capture: false,
                 any_distance: true,
                 direction_cross: true,
                 direction_diagonal: false,
@@ -201,15 +198,14 @@ impl Piece {
                 push_enemy: true,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
-                pass_ally: false,
-                pass_enemy: false,
-                passed_by_ally: false,
-                passed_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
                 capture: false,
                 captured: true,
                 capture_on_captured: false,
                 captured_on_capture: false,
-                jump_capture: false,
                 any_distance: true,
                 direction_cross: true,
                 direction_diagonal: false,
@@ -235,15 +231,14 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
-                pass_ally: false,
-                pass_enemy: false,
-                passed_by_ally: false,
-                passed_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
                 capture: true,
                 captured: true,
                 capture_on_captured: false,
                 captured_on_capture: false,
-                jump_capture: false,
                 any_distance: true,
                 direction_cross: true,
                 direction_diagonal: false,
@@ -269,15 +264,14 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
-                pass_ally: false,
-                pass_enemy: false,
-                passed_by_ally: false,
-                passed_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
                 capture: true,
                 captured: true,
                 capture_on_captured: false,
                 captured_on_capture: false,
-                jump_capture: false,
                 any_distance: false,
                 direction_cross: true,
                 direction_diagonal: false,
@@ -290,12 +284,12 @@ impl Piece {
         }
     }
 
-    const fn dog(color: Color) -> Piece {
+    const fn scholar(color: Color) -> Piece {
         let (controlled_by_red, controlled_by_black) = Self::controlled(color);
         Piece {
-            name: '犬',
+            name: '士',
             color,
-            formation: Self::orient(color, Formation::DOG),
+            formation: Self::orient(color, Formation::SCHOLAR),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -303,15 +297,14 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
-                pass_ally: false,
-                pass_enemy: false,
-                passed_by_ally: false,
-                passed_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
                 capture: true,
                 captured: true,
                 capture_on_captured: false,
                 captured_on_capture: false,
-                jump_capture: false,
                 any_distance: false,
                 direction_cross: false,
                 direction_diagonal: true,
@@ -337,15 +330,14 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
-                pass_ally: false,
-                pass_enemy: false,
-                passed_by_ally: false,
-                passed_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
                 capture: true,
                 captured: true,
                 capture_on_captured: false,
                 captured_on_capture: false,
-                jump_capture: false,
                 any_distance: false,
                 direction_cross: false,
                 direction_diagonal: false,
@@ -358,12 +350,12 @@ impl Piece {
         }
     }
 
-    const fn river(color: Color) -> Piece {
+    const fn wind(color: Color) -> Piece {
         let (controlled_by_red, controlled_by_black) = Self::controlled(color);
         Piece {
-            name: '河',
+            name: '风',
             color,
-            formation: Self::orient(color, Formation::RIVER),
+            formation: Self::orient(color, Formation::WIND),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -371,18 +363,17 @@ impl Piece {
                 push_enemy: true,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
-                pass_ally: false,
-                pass_enemy: false,
-                passed_by_ally: false,
-                passed_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
                 capture: false,
                 captured: true,
                 capture_on_captured: false,
                 captured_on_capture: false,
-                jump_capture: false,
                 any_distance: true,
-                direction_cross: true,
-                direction_diagonal: false,
+                direction_cross: false,
+                direction_diagonal: true,
                 direction_shape_L: false,
                 control_white: false,
                 vital: false,
@@ -405,18 +396,17 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: true,
                 pushed_by_enemy: false,
-                pass_ally: false,
-                pass_enemy: false,
-                passed_by_ally: false,
-                passed_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
                 capture: false,
                 captured: true,
                 capture_on_captured: false,
                 captured_on_capture: false,
-                jump_capture: false,
                 any_distance: true,
-                direction_cross: true,
-                direction_diagonal: false,
+                direction_cross: false,
+                direction_diagonal: true,
                 direction_shape_L: false,
                 control_white: false,
                 vital: false,
@@ -426,31 +416,30 @@ impl Piece {
         }
     }
 
-    const fn wind(color: Color) -> Piece {
+    const fn fire(color: Color) -> Piece {
         let (controlled_by_red, controlled_by_black) = Self::controlled(color);
         Piece {
-            name: '风',
+            name: '火',
             color,
-            formation: Self::orient(color, Formation::WIND),
+            formation: Self::orient(color, Formation::FIRE),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
-                push_ally: false,
-                push_enemy: false,
+                push_ally: true,
+                push_enemy: true,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
-                pass_ally: true,
-                pass_enemy: true,
-                passed_by_ally: false,
-                passed_by_enemy: true,
+                capture_on_push_blocked: true,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
                 capture: false,
                 captured: true,
                 capture_on_captured: false,
                 captured_on_capture: false,
-                jump_capture: false,
                 any_distance: true,
-                direction_cross: true,
-                direction_diagonal: false,
+                direction_cross: false,
+                direction_diagonal: true,
                 direction_shape_L: false,
                 control_white: false,
                 vital: false,
@@ -473,18 +462,17 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
-                pass_ally: false,
-                pass_enemy: false,
-                passed_by_ally: true,
-                passed_by_enemy: false,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: true,
                 capture: false,
                 captured: true,
                 capture_on_captured: false,
                 captured_on_capture: false,
-                jump_capture: false,
                 any_distance: true,
-                direction_cross: true,
-                direction_diagonal: false,
+                direction_cross: false,
+                direction_diagonal: true,
                 direction_shape_L: false,
                 control_white: false,
                 vital: false,
@@ -507,19 +495,18 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
-                pass_ally: false,
-                pass_enemy: false,
-                passed_by_ally: false,
-                passed_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
                 capture: true,
                 captured: true,
                 capture_on_captured: false,
                 captured_on_capture: false,
-                jump_capture: false,
                 any_distance: true,
-                direction_cross: true,
+                direction_cross: false,
                 direction_diagonal: false,
-                direction_shape_L: false,
+                direction_shape_L: true,
                 control_white: false,
                 vital: false,
                 draw: false,
@@ -541,19 +528,18 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
-                pass_ally: false,
-                pass_enemy: false,
-                passed_by_ally: false,
-                passed_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
                 capture: false,
                 captured: false,
                 capture_on_captured: false,
                 captured_on_capture: false,
-                jump_capture: false,
                 any_distance: true,
-                direction_cross: true,
+                direction_cross: false,
                 direction_diagonal: false,
-                direction_shape_L: false,
+                direction_shape_L: true,
                 control_white: false,
                 vital: false,
                 draw: false,
@@ -562,12 +548,12 @@ impl Piece {
         }
     }
 
-    const fn cannon(color: Color) -> Piece {
+    const fn shell(color: Color) -> Piece {
         let (controlled_by_red, controlled_by_black) = Self::controlled(color);
         Piece {
-            name: '炮',
+            name: '弹',
             color,
-            formation: Self::orient(color, Formation::CANNON),
+            formation: Self::orient(color, Formation::SHELL),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -575,19 +561,18 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
-                pass_ally: false,
-                pass_enemy: false,
-                passed_by_ally: false,
-                passed_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
                 capture: false,
                 captured: true,
                 capture_on_captured: false,
-                captured_on_capture: false,
-                jump_capture: true,
+                captured_on_capture: true,
                 any_distance: true,
-                direction_cross: true,
+                direction_cross: false,
                 direction_diagonal: false,
-                direction_shape_L: false,
+                direction_shape_L: true,
                 control_white: false,
                 vital: false,
                 draw: false,
@@ -609,19 +594,18 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
-                pass_ally: false,
-                pass_enemy: false,
-                passed_by_ally: false,
-                passed_by_enemy: true,
-                capture: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
+                capture: false,
                 captured: true,
                 capture_on_captured: true,
-                captured_on_capture: true,
-                jump_capture: false,
+                captured_on_capture: false,
                 any_distance: true,
-                direction_cross: true,
+                direction_cross: false,
                 direction_diagonal: false,
-                direction_shape_L: false,
+                direction_shape_L: true,
                 control_white: false,
                 vital: false,
                 draw: false,
@@ -643,24 +627,24 @@ impl Piece {
     pub const BLACK_ROOK: Piece = Self::rook(Color::Black);
     pub const RED_PAWN: Piece = Self::pawn(Color::Red);
     pub const BLACK_PAWN: Piece = Self::pawn(Color::Black);
-    pub const RED_DOG: Piece = Self::dog(Color::Red);
-    pub const BLACK_DOG: Piece = Self::dog(Color::Black);
+    pub const RED_SCHOLAR: Piece = Self::scholar(Color::Red);
+    pub const BLACK_SCHOLAR: Piece = Self::scholar(Color::Black);
     pub const RED_HORSE: Piece = Self::horse(Color::Red);
     pub const BLACK_HORSE: Piece = Self::horse(Color::Black);
-    pub const RED_RIVER: Piece = Self::river(Color::Red);
-    pub const BLACK_RIVER: Piece = Self::river(Color::Black);
-    pub const RED_MOUNTAIN: Piece = Self::mountain(Color::Red);
-    pub const BLACK_MOUNTAIN: Piece = Self::mountain(Color::Black);
     pub const RED_WIND: Piece = Self::wind(Color::Red);
     pub const BLACK_WIND: Piece = Self::wind(Color::Black);
+    pub const RED_MOUNTAIN: Piece = Self::mountain(Color::Red);
+    pub const BLACK_MOUNTAIN: Piece = Self::mountain(Color::Black);
+    pub const RED_FIRE: Piece = Self::fire(Color::Red);
+    pub const BLACK_FIRE: Piece = Self::fire(Color::Black);
     pub const RED_FOREST: Piece = Self::forest(Color::Red);
     pub const BLACK_FOREST: Piece = Self::forest(Color::Black);
     pub const RED_SPEAR: Piece = Self::spear(Color::Red);
     pub const BLACK_SPEAR: Piece = Self::spear(Color::Black);
     pub const RED_SHIELD: Piece = Self::shield(Color::Red);
     pub const BLACK_SHIELD: Piece = Self::shield(Color::Black);
-    pub const RED_CANNON: Piece = Self::cannon(Color::Red);
-    pub const BLACK_CANNON: Piece = Self::cannon(Color::Black);
+    pub const RED_SHELL: Piece = Self::shell(Color::Red);
+    pub const BLACK_SHELL: Piece = Self::shell(Color::Black);
     pub const RED_MINE: Piece = Self::mine(Color::Red);
     pub const BLACK_MINE: Piece = Self::mine(Color::Black);
 
@@ -672,15 +656,15 @@ impl Piece {
         Piece::RED_SPY,
         Piece::RED_ROOK,
         Piece::RED_PAWN,
-        Piece::RED_DOG,
+        Piece::RED_SCHOLAR,
         Piece::RED_HORSE,
-        Piece::RED_RIVER,
-        Piece::RED_MOUNTAIN,
         Piece::RED_WIND,
+        Piece::RED_MOUNTAIN,
+        Piece::RED_FIRE,
         Piece::RED_FOREST,
         Piece::RED_SPEAR,
         Piece::RED_SHIELD,
-        Piece::RED_CANNON,
+        Piece::RED_SHELL,
         Piece::RED_MINE,
     ];
 
@@ -692,15 +676,15 @@ impl Piece {
         Piece::BLACK_SPY,
         Piece::BLACK_ROOK,
         Piece::BLACK_PAWN,
-        Piece::BLACK_DOG,
+        Piece::BLACK_SCHOLAR,
         Piece::BLACK_HORSE,
-        Piece::BLACK_RIVER,
-        Piece::BLACK_MOUNTAIN,
         Piece::BLACK_WIND,
+        Piece::BLACK_MOUNTAIN,
+        Piece::BLACK_FIRE,
         Piece::BLACK_FOREST,
         Piece::BLACK_SPEAR,
         Piece::BLACK_SHIELD,
-        Piece::BLACK_CANNON,
+        Piece::BLACK_SHELL,
         Piece::BLACK_MINE,
     ];
 
@@ -721,24 +705,24 @@ impl Piece {
             ('车', Color::Black) => Piece::BLACK_ROOK,
             ('卒', Color::Red) => Piece::RED_PAWN,
             ('卒', Color::Black) => Piece::BLACK_PAWN,
-            ('犬', Color::Red) => Piece::RED_DOG,
-            ('犬', Color::Black) => Piece::BLACK_DOG,
+            ('士', Color::Red) => Piece::RED_SCHOLAR,
+            ('士', Color::Black) => Piece::BLACK_SCHOLAR,
             ('马', Color::Red) => Piece::RED_HORSE,
             ('马', Color::Black) => Piece::BLACK_HORSE,
-            ('河', Color::Red) => Piece::RED_RIVER,
-            ('河', Color::Black) => Piece::BLACK_RIVER,
-            ('山', Color::Red) => Piece::RED_MOUNTAIN,
-            ('山', Color::Black) => Piece::BLACK_MOUNTAIN,
             ('风', Color::Red) => Piece::RED_WIND,
             ('风', Color::Black) => Piece::BLACK_WIND,
+            ('山', Color::Red) => Piece::RED_MOUNTAIN,
+            ('山', Color::Black) => Piece::BLACK_MOUNTAIN,
+            ('火', Color::Red) => Piece::RED_FIRE,
+            ('火', Color::Black) => Piece::BLACK_FIRE,
             ('林', Color::Red) => Piece::RED_FOREST,
             ('林', Color::Black) => Piece::BLACK_FOREST,
             ('矛', Color::Red) => Piece::RED_SPEAR,
             ('矛', Color::Black) => Piece::BLACK_SPEAR,
             ('盾', Color::Red) => Piece::RED_SHIELD,
             ('盾', Color::Black) => Piece::BLACK_SHIELD,
-            ('炮', Color::Red) => Piece::RED_CANNON,
-            ('炮', Color::Black) => Piece::BLACK_CANNON,
+            ('弹', Color::Red) => Piece::RED_SHELL,
+            ('弹', Color::Black) => Piece::BLACK_SHELL,
             ('雷', Color::Red) => Piece::RED_MINE,
             ('雷', Color::Black) => Piece::BLACK_MINE,
             _ => return None,
@@ -767,17 +751,6 @@ impl Piece {
         self.ability = self.ability.masked_set(effect_mask, effect_update);
     }
 
-    /// Whether this piece can move through `blocker`: same color needs
-    /// mover PASS_ALLY **or** blocker PASSED_BY_ALLY; different colors need
-    /// mover PASS_ENEMY **and** blocker PASSED_BY_ENEMY.
-    pub fn can_pass(&self, blocker: Piece) -> bool {
-        if self.color == blocker.color {
-            self.ability.has(Ability::PASS_ALLY) || blocker.ability.has(Ability::PASSED_BY_ALLY)
-        } else {
-            self.ability.has(Ability::PASS_ENEMY) && blocker.ability.has(Ability::PASSED_BY_ENEMY)
-        }
-    }
-
     /// Whether this piece can shove `target`: same color needs mover
     /// PUSH_ALLY **or** target PUSHED_BY_ALLY; different colors need mover
     /// PUSH_ENEMY **and** target PUSHED_BY_ENEMY.
@@ -789,22 +762,22 @@ impl Piece {
         }
     }
 
-    /// Whether this piece can capture `target` normally: different colors,
-    /// mover CAPTURE, target CAPTURED. Path rules are the caller's concern.
+    /// Whether this piece can capture `target` normally or through
+    /// mutual-destruction bypass: different colors, and either
+    /// (i) attacker has CAPTURED_ON_CAPTURE (sacrifice, bypasses target's
+    /// CAPTURED), (ii) target has CAPTURE_ON_CAPTURED (retaliation, bypasses
+    /// attacker's CAPTURE), or (iii) attacker has CAPTURE and target has
+    /// CAPTURED. Path rules are the caller's concern.
     pub fn can_capture(&self, target: Piece) -> bool {
-        self.color != target.color
-            && self.ability.has(Ability::CAPTURE)
-            && target.ability.has(Ability::CAPTURED)
-    }
-
-    /// Whether this piece can jump-capture `target` over `piece_count`
-    /// screen pieces: different colors, mover JUMP_CAPTURE, target
-    /// CAPTURED, and exactly one piece on the path (passable or not).
-    pub fn can_jump_capture(&self, target: Piece, piece_count: u8) -> bool {
-        self.color != target.color
-            && self.ability.has(Ability::JUMP_CAPTURE)
-            && target.ability.has(Ability::CAPTURED)
-            && piece_count == 1
+        if self.color == target.color {
+            return false;
+        }
+        if self.ability.has(Ability::CAPTURED_ON_CAPTURE)
+            || target.ability.has(Ability::CAPTURE_ON_CAPTURED)
+        {
+            return true;
+        }
+        self.ability.has(Ability::CAPTURE) && target.ability.has(Ability::CAPTURED)
     }
 
     /// Whether `player` may command this piece, per its CONTROLLED_BY_*

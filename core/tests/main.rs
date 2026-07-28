@@ -28,14 +28,6 @@ fn test_push() {
 }
 
 #[test]
-fn test_pass_through() {
-    common::run_tests(
-        include_str!("pass_through.txt"),
-        concat!(env!("CARGO_MANIFEST_DIR"), "/tests/pass_through.txt"),
-    );
-}
-
-#[test]
 fn test_placement() {
     common::run_tests(
         include_str!("placement.txt"),

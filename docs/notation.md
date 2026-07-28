@@ -53,8 +53,8 @@ A complete game snapshot consists of six lines followed by a board grid:
 
 ```
 行棋方：黑
-红方：[炮 马]
-黑方：[将 犬 盾]
+红方：[弹 马]
+黑方：[将 士 盾]
 白方：0
 胜负：未分
 棋盘：
@@ -238,10 +238,10 @@ actions produce an empty change list.
 
 ### Examples
 
-A Red Dog on column 2, row 3 moves diagonally to column 3, row 4:
+A Red Scholar on column 2, row 3 moves diagonally to column 3, row 4:
 
 ```
-红犬三四
+红士三四
 ```
 
 A Black General advances two steps:
@@ -385,7 +385,7 @@ A push: the pusher moves onto the target's point, the pushed piece
 lands one step further:
 
 ```
-变化：[红河平二 红车平三]
+变化：[红风平二 红车平三]
 胜负：未分
 ```
 
@@ -475,7 +475,7 @@ Black is to move:
 
 ```
 1. …… 黑将一一
-2. 红炮二四 黑犬四一
+2. 红弹二四 黑士四一
 ```
 
 (The engine currently parses states, actions, and results; reading and
@@ -525,8 +525,8 @@ half-move    = action | "……" ;
 side         = "红" | "黑" ;
 color        = "红" | "黑" | "白" ;
 result       = "未分" | "红胜" | "黑胜" | "和棋" ;
-name         = "将" | "巫" | "间" | "谍" | "车" | "卒" | "犬" | "马"
-             | "河" | "山" | "风" | "林" | "矛" | "盾" | "炮" | "雷"
+name         = "将" | "巫" | "间" | "谍" | "车" | "卒" | "士" | "马"
+             | "风" | "山" | "火" | "林" | "矛" | "盾" | "弹" | "雷"
              | "子" ;
 numeral      = "一" | "二" | "三" | "四" | "五" | "六" | "七" | "八"
              | "九" | "十" | "甲" | "乙" | "丙" | "丁" | "戊" | "己" ;

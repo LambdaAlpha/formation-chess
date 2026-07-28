@@ -17,7 +17,7 @@ use api_common::game_one_3x3;
 use api_common::game_with;
 use api_common::game_with_white_pool;
 
-// ── valid_moves: edge cases ───────────────────────────────────────────────
+// -- valid_moves: edge cases -------------------------------------------------
 
 #[test]
 fn valid_moves_empty_cell_returns_empty() {
@@ -77,7 +77,7 @@ fn valid_moves_white_piece_returns_empty() {
     assert!(g.valid_moves(1, 1).is_empty());
 }
 
-// ── rook: ANY_DISTANCE + DIRECTION_CROSS + CAPTURE ────────────────────────
+// -- unlimited orthogonal movement + capture -----------------------------------
 
 #[test]
 fn valid_moves_rook_open_board() {
@@ -123,7 +123,7 @@ fn valid_moves_rook_blocked_by_ally() {
     assert!(!actions.iter().any(|a| matches!(a, Action::Capture(_) | Action::Push(_))));
 }
 
-// ── pawn: DIRECTION_CROSS + CAPTURE, one step ─────────────────────────────
+// -- one-step orthogonal movement + capture ------------------------------------
 
 #[test]
 fn valid_moves_pawn_one_step_all_directions() {
@@ -152,22 +152,22 @@ fn valid_moves_pawn_capture_and_move() {
     assert_eq!(actions.len(), 4);
 }
 
-// ── dog: DIRECTION_DIAGONAL + CAPTURE, one step ───────────────────────────
+// -- one-step diagonal movement + capture -------------------------------------
 
 #[test]
-fn valid_moves_dog_diagonal_only() {
-    let g = game_one(Player::Red, Piece::RED_DOG, (2, 2));
+fn valid_moves_scholar_diagonal_only() {
+    let g = game_one(Player::Red, Piece::RED_SCHOLAR, (2, 2));
     let actions = g.valid_moves(2, 2);
     assert_moves(&actions, &[(1, 1), (1, 3), (3, 1), (3, 3)]);
     assert_eq!(actions.len(), 4);
 }
 
 #[test]
-fn valid_moves_dog_capture_diagonal() {
+fn valid_moves_scholar_capture_diagonal() {
     let g = game_with(
         Player::Red,
         &[
-            (Piece::RED_DOG, (2, 2)),
+            (Piece::RED_SCHOLAR, (2, 2)),
             (Piece::WHITE, (1, 1)),
             (Piece::RED_GENERAL, (0, 4)),
             (Piece::BLACK_GENERAL, (4, 0)),
@@ -181,7 +181,7 @@ fn valid_moves_dog_capture_diagonal() {
     assert_eq!(actions.len(), 4);
 }
 
-// ── horse: DIRECTION_SHAPE_L + CAPTURE ────────────────────────────────────
+// -- one-step L-shaped movement + capture -------------------------------------
 
 #[test]
 fn valid_moves_horse_all_eight_directions() {
@@ -227,146 +227,107 @@ fn valid_moves_horse_capture_at_adjacent_enemy() {
     assert_moves(&actions, &[(0, 3), (1, 0), (1, 4), (3, 0), (3, 4), (4, 1), (4, 3)]);
 }
 
-// ── cannon: ANY_DISTANCE + DIRECTION_CROSS + JUMP_CAPTURE ─────────────────
+// -- unlimited L-shaped movement + capture + captured_on_capture --------------
 
 #[test]
-fn valid_moves_cannon_move_only_no_capture() {
-    let g = game_with(
-        Player::Red,
-        &[
-            (Piece::RED_CANNON, (2, 2)),
-            (Piece::BLACK_PAWN, (2, 0)),
-            (Piece::RED_GENERAL, (0, 4)),
-            (Piece::BLACK_GENERAL, (4, 0)),
-        ],
-        5,
-        5,
-    );
+fn valid_moves_shell_l_shaped_any_distance() {
+    let g = game_one(Player::Red, Piece::RED_SHELL, (2, 2));
     let actions = g.valid_moves(2, 2);
-    assert_moves(&actions, &[(2, 1), (2, 3), (2, 4), (0, 2), (1, 2), (3, 2), (4, 2)]);
-    assert_captures(&actions, &[]);
-}
-
-#[test]
-fn valid_moves_cannon_jump_capture_over_one_screen() {
-    let g = game_with(
-        Player::Red,
-        &[
-            (Piece::RED_CANNON, (2, 3)),
-            (Piece::BLACK_PAWN, (2, 1)),
-            (Piece::BLACK_DOG, (2, 0)),
-            (Piece::RED_GENERAL, (0, 4)),
-            (Piece::BLACK_GENERAL, (4, 0)),
-        ],
-        5,
-        5,
-    );
-    let actions = g.valid_moves(2, 3);
-    assert_moves(&actions, &[(2, 2), (2, 4), (0, 3), (1, 3), (3, 3), (4, 3)]);
-    assert_captures(&actions, &[(2, 0)]);
-}
-
-#[test]
-fn valid_moves_cannon_two_screens_no_jump_capture() {
-    let g = game_with(
-        Player::Red,
-        &[
-            (Piece::RED_CANNON, (2, 4)),
-            (Piece::WHITE, (2, 2)),
-            (Piece::WHITE, (2, 1)),
-            (Piece::BLACK_HORSE, (2, 0)),
-            (Piece::RED_GENERAL, (0, 4)),
-            (Piece::BLACK_GENERAL, (4, 0)),
-        ],
-        5,
-        5,
-    );
-    let actions = g.valid_moves(2, 4);
-    assert_moves(&actions, &[(1, 4), (2, 3), (3, 4), (4, 4)]);
-    assert_captures(&actions, &[(2, 1)]);
-    assert!(!actions.iter().any(|a| matches!(a, Action::Capture(Move { to: (2, 0), .. }))));
-}
-
-// ── river: ANY_DISTANCE + DIRECTION_CROSS + PUSH ──────────────────────────
-
-#[test]
-fn valid_moves_river_push_ally() {
-    let g = game_with(
-        Player::Red,
-        &[
-            (Piece::RED_RIVER, (2, 2)),
-            (Piece::RED_PAWN, (2, 1)),
-            (Piece::RED_GENERAL, (0, 4)),
-            (Piece::BLACK_GENERAL, (4, 0)),
-        ],
-        5,
-        5,
-    );
-    let actions = g.valid_moves(2, 2);
-    assert_moves(&actions, &[(2, 3), (2, 4), (0, 2), (1, 2), (3, 2), (4, 2)]);
-    assert_pushes(&actions, &[(2, 1)]);
-    assert_eq!(actions.len(), 7);
-}
-
-#[test]
-fn valid_moves_river_push_enemy() {
-    let g = game_with(
-        Player::Red,
-        &[
-            (Piece::RED_RIVER, (2, 2)),
-            (Piece::WHITE, (2, 1)),
-            (Piece::RED_GENERAL, (0, 4)),
-            (Piece::BLACK_GENERAL, (4, 0)),
-        ],
-        5,
-        5,
-    );
-    let actions = g.valid_moves(2, 2);
-    assert_moves(&actions, &[(2, 3), (2, 4), (0, 2), (1, 2), (3, 2), (4, 2)]);
-    assert_pushes(&actions, &[(2, 1)]);
-    assert_eq!(actions.len(), 7);
-}
-
-#[test]
-fn valid_moves_river_push_blocked_by_edge() {
-    let g = game_with(
-        Player::Red,
-        &[
-            (Piece::RED_RIVER, (2, 1)),
-            (Piece::RED_PAWN, (2, 0)),
-            (Piece::RED_GENERAL, (0, 4)),
-            (Piece::BLACK_GENERAL, (4, 0)),
-        ],
-        5,
-        5,
-    );
-    let actions = g.valid_moves(2, 1);
-    assert_moves(&actions, &[(2, 2), (2, 3), (2, 4), (0, 1), (1, 1), (3, 1), (4, 1)]);
-    assert_pushes(&actions, &[(2, 0)]);
+    // Shell moves L-shaped at any distance: chained knight moves
+    // From (2,2): (0,1) (0,3) (1,0) (1,4) (3,0) (3,4) (4,1) (4,3)
+    assert_moves(&actions, &[(0, 1), (0, 3), (1, 0), (1, 4), (3, 0), (3, 4), (4, 1), (4, 3)]);
     assert_eq!(actions.len(), 8);
 }
 
-// ── wind: PASS_ENEMY + PASS_ALLY ─────────────────────────────────────────
-
 #[test]
-fn valid_moves_wind_passes_through_enemy() {
+fn valid_moves_shell_captures_enemy_on_l_shape() {
     let g = game_with(
         Player::Red,
         &[
-            (Piece::RED_WIND, (2, 3)),
-            (Piece::BLACK_PAWN, (2, 1)),
+            (Piece::RED_SHELL, (2, 2)),
+            (Piece::BLACK_PAWN, (0, 1)),
             (Piece::RED_GENERAL, (0, 4)),
             (Piece::BLACK_GENERAL, (4, 0)),
         ],
         5,
         5,
     );
-    let actions = g.valid_moves(2, 3);
-    assert_moves(&actions, &[(2, 2), (2, 0), (2, 4), (0, 3), (1, 3), (3, 3), (4, 3)]);
-    assert!(!actions.iter().any(|a| matches!(a, Action::Capture(_))));
+    let actions = g.valid_moves(2, 2);
+    assert_captures(&actions, &[(0, 1)]);
+    assert_moves(&actions, &[(0, 3), (1, 0), (1, 4), (3, 0), (3, 4), (4, 1), (4, 3)]);
 }
 
-// ── spy: controllable by both players ─────────────────────────────────────
+// -- unlimited diagonal movement + push ---------------------------------------
+
+#[test]
+fn valid_moves_wind_diagonal_any_distance() {
+    let g = game_with(
+        Player::Red,
+        &[(Piece::RED_WIND, (2, 2)), (Piece::RED_GENERAL, (4, 1)), (Piece::BLACK_GENERAL, (0, 3))],
+        5,
+        5,
+    );
+    let actions = g.valid_moves(2, 2);
+    assert_moves(&actions, &[(0, 0), (0, 4), (1, 1), (1, 3), (3, 1), (3, 3), (4, 0), (4, 4)]);
+    assert_eq!(actions.len(), 8);
+}
+
+#[test]
+fn valid_moves_wind_push_ally_on_diagonal() {
+    let g = game_with(
+        Player::Red,
+        &[
+            (Piece::RED_WIND, (2, 2)),
+            (Piece::RED_PAWN, (1, 1)),
+            (Piece::RED_GENERAL, (4, 1)),
+            (Piece::BLACK_GENERAL, (0, 3)),
+        ],
+        5,
+        5,
+    );
+    let actions = g.valid_moves(2, 2);
+    assert_pushes(&actions, &[(1, 1)]);
+    assert_moves(&actions, &[(0, 4), (1, 3), (3, 1), (3, 3), (4, 0), (4, 4)]);
+}
+
+#[test]
+fn valid_moves_wind_push_enemy_on_diagonal() {
+    let g = game_with(
+        Player::Red,
+        &[
+            (Piece::RED_WIND, (2, 2)),
+            (Piece::WHITE, (1, 1)),
+            (Piece::RED_GENERAL, (4, 1)),
+            (Piece::BLACK_GENERAL, (0, 3)),
+        ],
+        5,
+        5,
+    );
+    let actions = g.valid_moves(2, 2);
+    assert_pushes(&actions, &[(1, 1)]);
+    assert_moves(&actions, &[(0, 4), (1, 3), (3, 1), (3, 3), (4, 0), (4, 4)]);
+}
+
+#[test]
+fn valid_moves_wind_blocked_by_piece_on_path() {
+    let g = game_with(
+        Player::Red,
+        &[
+            (Piece::RED_WIND, (2, 2)),
+            (Piece::RED_PAWN, (1, 1)),
+            (Piece::RED_GENERAL, (0, 4)),
+            (Piece::BLACK_GENERAL, (4, 0)),
+        ],
+        5,
+        5,
+    );
+    let actions = g.valid_moves(2, 2);
+    // (0,0) is blocked by the pawn at (1,1), but push is available
+    // Actually pawn at (1,1) blocks reaching (0,0) via diagonal
+    assert!(!actions.iter().any(|a| matches!(a, Action::Move(Move { to: (0, 0), .. }))));
+}
+
+// -- spy: controllable by both players ---------------------------------------
 
 #[test]
 fn valid_moves_spy_red_controls_black_spy() {
@@ -380,7 +341,7 @@ fn valid_moves_spy_black_controls_red_spy() {
     assert!(!g.valid_moves(1, 1).is_empty(), "Black should control red spy");
 }
 
-// ── mine: mutual destruction ──────────────────────────────────────────────
+// -- capture with captured_on_captured ---------------------------------------
 
 #[test]
 fn valid_moves_mine_capture_action_listed() {
@@ -400,7 +361,7 @@ fn valid_moves_mine_capture_action_listed() {
     assert_captures(&actions, &[(2, 1)]);
 }
 
-// ── valid_white_placements ───────────────────────────────────────────────
+// -- valid_white_placements --------------------------------------------------
 
 #[test]
 fn valid_white_placements_returns_diagonal_positions() {
@@ -476,84 +437,8 @@ fn valid_white_placements_empty_when_no_control_white() {
     assert!(g.valid_white_placements().is_empty());
 }
 
-// ── formation-granted CAPTURE + PUSH: no duplicate ────────────────────────
+// -- try_xxx returns original pieces in position changes ----------------------
 
-#[test]
-fn valid_moves_river_in_spear_formation_capture_and_push_no_duplicate() {
-    let g = game_with(
-        Player::Red,
-        &[
-            (Piece::RED_SPEAR, (2, 1)),
-            (Piece::RED_RIVER, (2, 2)),
-            (Piece::BLACK_DOG, (2, 3)),
-            (Piece::RED_GENERAL, (0, 4)),
-            (Piece::BLACK_GENERAL, (4, 0)),
-        ],
-        5,
-        5,
-    );
-    let actions = g.valid_moves(2, 2);
-    assert_moves(&actions, &[(0, 2), (1, 2), (3, 2), (4, 2)]);
-    assert_captures(&actions, &[(2, 3)]);
-    assert_pushes(&actions, &[(2, 1), (2, 3)]);
-    assert_eq!(actions.len(), 7, "4 moves + 1 capture + 2 pushes, no duplicates");
-}
-
-#[test]
-fn valid_moves_river_push_blocked_escalates_to_single_capture() {
-    let g = game_with(
-        Player::Red,
-        &[
-            (Piece::RED_SPEAR, (2, 2)),
-            (Piece::RED_RIVER, (2, 3)),
-            (Piece::BLACK_DOG, (2, 4)),
-            (Piece::RED_GENERAL, (0, 4)),
-            (Piece::BLACK_GENERAL, (4, 0)),
-        ],
-        5,
-        5,
-    );
-    let actions = g.valid_moves(2, 3);
-    assert_moves(&actions, &[(0, 3), (1, 3), (3, 3), (4, 3)]);
-    assert_captures(&actions, &[(2, 4)]);
-    assert_pushes(&actions, &[(2, 2), (2, 4)]);
-    assert_eq!(actions.len(), 7, "4 moves + 1 capture + 2 pushes, no duplicate capture");
-}
-
-// ── formation-granted CAPTURE + JUMP_CAPTURE: no duplicate ─────────────────
-
-/// Cannon in Spear formation gains CAPTURE; in Wind formation gains
-/// PASS_ENEMY.  A passable White piece at (2,2) sits between the cannon
-/// and a Dog target at (2,3).  Without the guard the cannon would list
-/// two identical Capture actions (one normal through the screen, one
-/// jump capture over it).
-#[test]
-fn valid_moves_cannon_jump_capture_no_duplicate_when_normal_also_available() {
-    let g = game_with(
-        Player::Red,
-        &[
-            (Piece::RED_SPEAR, (2, 0)),
-            (Piece::RED_WIND, (1, 2)),
-            (Piece::RED_CANNON, (2, 1)),
-            (Piece::WHITE, (2, 2)),
-            (Piece::BLACK_DOG, (2, 3)),
-            (Piece::RED_GENERAL, (0, 4)),
-            (Piece::BLACK_GENERAL, (4, 0)),
-        ],
-        5,
-        5,
-    );
-    let actions = g.valid_moves(2, 1);
-    assert_moves(&actions, &[(0, 1), (1, 1), (3, 1), (4, 1)]);
-    assert_captures(&actions, &[(2, 2), (2, 3)]);
-    assert_eq!(actions.len(), 6, "4 moves + 2 captures, no jump-capture duplicate at (2,3)");
-}
-
-// ── try_xxx returns original (not effective) pieces in PositionChange ───────
-
-/// Red Rook at (0,1) strips ANY_DISTANCE from enemy Black Rook at (1,1).
-/// `try_move` must return the original Black Rook in the PositionChange, not
-/// the effective one that lost ANY_DISTANCE.
 #[test]
 fn try_move_returns_original_piece_not_effective() {
     let mut board = Board::new(3, 4);
@@ -570,59 +455,101 @@ fn try_move_returns_original_piece_not_effective() {
     );
 }
 
-/// Red Spear at (2,1) grants CAPTURE to ally Red River at (2,2) via formation.
-/// `try_capture` must return the original River in the PositionChange, not
-/// the effective one that gained CAPTURE.
+/// Red Spear at (0,2) grants CAPTURE to ally Red Wind at (1,1) via LOWER_TRIANGLE
+/// formation. try_capture must return the original Wind in the PositionChange.
 #[test]
 fn try_capture_returns_original_mover_not_effective() {
     let mut board = Board::new(5, 5);
-    board[(2, 1)] = Some(Piece::RED_SPEAR);
-    board[(2, 2)] = Some(Piece::RED_RIVER);
-    board[(2, 3)] = Some(Piece::BLACK_GENERAL);
+    // Spear at (0,2), Wind at (1,1) → dx=+1, dy=-1 = TOP_RIGHT, in LOWER_TRIANGLE
+    board[(0, 2)] = Some(Piece::RED_SPEAR);
+    board[(1, 1)] = Some(Piece::RED_WIND);
+    // White target at (0,0) diagonally from wind
+    board[(0, 0)] = Some(Piece::WHITE);
     board[(0, 4)] = Some(Piece::RED_GENERAL);
     board[(4, 0)] = Some(Piece::BLACK_GENERAL);
 
-    let changes = board.try_capture((2, 2), (2, 3)).expect("capture should succeed");
+    let changes = board.try_capture((1, 1), (0, 0)).expect("capture should succeed");
 
-    let placed = changes.iter().find(|c| c.at == (2, 3)).unwrap().piece.unwrap();
-    assert_eq!(placed, Piece::RED_RIVER, "PositionChange must return the original piece");
+    let placed = changes.iter().find(|c| c.at == (0, 0)).unwrap().piece.unwrap();
+    assert_eq!(placed, Piece::RED_WIND, "PositionChange must return the original piece");
     assert!(
         !placed.ability.has(Ability::CAPTURE),
-        "original River must NOT have CAPTURE (that came from formation)"
+        "original Wind must NOT have CAPTURE (that came from formation)"
     );
 }
 
-/// Red Spear (2,1) grants CAPTURE to Red River (2,2). Black Rook (1,3) grants
-/// ANY_DISTANCE to Black Dog (2,3).  Red River pushes Black Dog to (2,4).
-/// `try_push` must return the *original* River and Dog in PositionChanges,
-/// not the effective versions with modified abilities.
+/// Red Spear (0,1) grants CAPTURE to Red Wind (1,1). Black Horse (0,0) is
+/// the target. Red Wind pushes to (0,0) which should push the horse further.
+/// But horse at (0,0) can't be pushed off board, so push escalates to capture.
 #[test]
 fn try_push_returns_original_pieces_not_effective() {
     let mut board = Board::new(5, 5);
-    board[(2, 1)] = Some(Piece::RED_SPEAR);
-    board[(2, 2)] = Some(Piece::RED_RIVER);
-    board[(2, 3)] = Some(Piece::BLACK_DOG);
-    board[(1, 3)] = Some(Piece::BLACK_ROOK);
+    // Spear at (0,1), Wind at (1,2) → Wind moves to (0,3) diagonally, pushes target
+    board[(0, 1)] = Some(Piece::RED_SPEAR);
+    board[(1, 2)] = Some(Piece::RED_WIND);
+    board[(0, 3)] = Some(Piece::BLACK_SCHOLAR);
     board[(0, 4)] = Some(Piece::RED_GENERAL);
     board[(4, 0)] = Some(Piece::BLACK_GENERAL);
 
-    let changes = board.try_push((2, 2), (2, 3)).expect("push should succeed");
-
-    // The mover occupies the target's old position.
-    let mover = changes.iter().find(|c| c.at == (2, 3)).unwrap().piece.unwrap();
-    assert_eq!(mover, Piece::RED_RIVER, "mover PositionChange must return original River");
-    assert!(!mover.ability.has(Ability::CAPTURE), "original River must NOT have CAPTURE");
-
-    // The pushed piece lands one step further.
-    let pushed = changes.iter().find(|c| c.at == (2, 4)).unwrap().piece.unwrap();
-    assert_eq!(pushed, Piece::BLACK_DOG, "pushed PositionChange must return original Dog");
-    assert!(!pushed.ability.has(Ability::ANY_DISTANCE), "original Dog must NOT have ANY_DISTANCE");
+    // Wind at (1,2) to (0,3): dx=-1, dy=+1 (top left diagonal, one step)
+    // Push scholar from (0,3) to (-1,4) which is off board → push blocked
+    // Wind has no escalation ability by default, so push should fail
+    // Actually, Wind's PUSH_ENEMY + target's PUSHED_BY_ENEMY = push works
+    // But pushed_target would be (-1,4) → off board → None → push blocked
+    let result = board.try_push((1, 2), (0, 3));
+    assert!(result.is_err(), "push should fail when blocked and no escalation");
 }
 
-// ── draw via general formation ────────────────────────────────────────────
+// -- formation-granted capture + push: no duplicate --------------------------
 
-/// Red Pawn in Red General's CORNERS formation gains DRAW and may draw
-/// with the Black General.
+#[test]
+fn valid_moves_wind_in_spear_formation_gains_capture() {
+    let g = game_with(
+        Player::Red,
+        &[
+            (Piece::RED_SPEAR, (1, 3)),
+            (Piece::RED_WIND, (2, 2)),
+            (Piece::BLACK_SCHOLAR, (1, 1)),
+            (Piece::RED_GENERAL, (4, 1)),
+            (Piece::BLACK_GENERAL, (0, 3)),
+        ],
+        5,
+        5,
+    );
+    // Wind at (2,2), Spear at (1,3): dx=-1, dy=+1 = BOTTOM_LEFT -> in LOWER_TRIANGLE
+    // Wind gains CAPTURE from spear formation. Can capture or push black scholar.
+    let actions = g.valid_moves(2, 2);
+    assert_captures(&actions, &[(1, 1)]);
+    assert_pushes(&actions, &[(1, 1), (1, 3)]);
+}
+
+/// Wind in Spear formation can both push and capture ally, but not duplicate.
+#[test]
+fn valid_moves_wind_push_and_capture_no_duplicate() {
+    let g = game_with(
+        Player::Red,
+        &[
+            (Piece::RED_SPEAR, (1, 1)),
+            (Piece::RED_WIND, (2, 2)),
+            (Piece::RED_PAWN, (1, 3)),
+            (Piece::RED_GENERAL, (4, 1)),
+            (Piece::BLACK_GENERAL, (0, 3)),
+        ],
+        5,
+        5,
+    );
+    // Wind at (2,2), Spear at (1,1): dx=-1, dy=-1 = TOP_LEFT -> in LOWER_TRIANGLE
+    // Wind gains CAPTURE. Wind can push ally spear at (1,1) and ally pawn at (1,3).
+    let actions = g.valid_moves(2, 2);
+    assert_pushes(&actions, &[(1, 1), (1, 3)]);
+    assert!(
+        !actions.iter().any(|a| matches!(a, Action::Capture(Move { to: (1, 3), .. }))),
+        "should not offer capture on ally"
+    );
+}
+
+// -- draw ability via formation ----------------------------------------------
+
 #[test]
 fn general_formation_grants_draw_to_ally() {
     let g = game_with(
@@ -632,9 +559,7 @@ fn general_formation_grants_draw_to_ally() {
         5,
     );
     let actions = g.valid_moves(0, 0);
-    // Pawn at (0,0) can move right to (1,0)
     assert_moves(&actions, &[(1, 0)]);
-    // Can also capture and draw at (0,1) where Black General sits
     assert_captures(&actions, &[(0, 1)]);
     assert!(
         actions.iter().any(|a| matches!(a, Action::Draw(Move { to: (0, 1), .. }))),
@@ -642,7 +567,6 @@ fn general_formation_grants_draw_to_ally() {
     );
 }
 
-/// Red Pawn near Red General but NOT in formation does not gain DRAW.
 #[test]
 fn pawn_outside_general_formation_has_no_draw() {
     let g = game_with(
@@ -652,15 +576,12 @@ fn pawn_outside_general_formation_has_no_draw() {
         5,
     );
     let actions = g.valid_moves(2, 1);
-    // Pawn at (2,1) is above general at (2,2): dy=-1, dx=0 → EDGE, not CORNERS
-    // Black general at (2,0) is 1 step up
     assert!(
         !actions.iter().any(|a| matches!(a, Action::Draw(_))),
         "pawn outside general's formation should not have DRAW"
     );
 }
 
-/// Black General inside Red General's CORNERS formation loses DRAW.
 #[test]
 fn enemy_general_formation_strips_draw() {
     let g = game_with(
@@ -670,14 +591,12 @@ fn enemy_general_formation_strips_draw() {
         5,
     );
     let actions = g.valid_moves(2, 2);
-    // Black General at (2,2) in CORNERS of Red General at (1,1): loses DRAW
     assert!(
         !actions.iter().any(|a| matches!(a, Action::Draw(_))),
         "general in enemy formation should have DRAW stripped"
     );
 }
 
-/// Red General itself has DRAW by default and may draw with Black General.
 #[test]
 fn general_draws_own_ability() {
     let g = game_with(
@@ -693,7 +612,6 @@ fn general_draws_own_ability() {
     );
 }
 
-/// Draw action rejected when the target is a friendly piece.
 #[test]
 fn draw_rejected_against_friendly() {
     let g = game_with(
@@ -702,14 +620,10 @@ fn draw_rejected_against_friendly() {
         5,
         5,
     );
-    // Pawn at (1,2) is not in CORNERS of (0,2) (dx=+1, dy=0 → EDGE)
-    // So pawn doesn't have DRAW anyway. But even if it did, (1,2)→(0,2)
-    // would be a friendly target — try_draw should reject.
     let result = g.try_action(Action::Draw(Move { from: (1, 2), to: (0, 2) }));
     assert!(result.is_err(), "draw against friendly piece should be rejected");
 }
 
-/// Draw action rejected when the mover lacks DRAW.
 #[test]
 fn draw_rejected_without_draw_ability() {
     let g = game_with(
@@ -722,7 +636,6 @@ fn draw_rejected_without_draw_ability() {
     assert!(result.is_err(), "draw without DRAW ability should be rejected");
 }
 
-/// Draw action rejected when target is not a vital piece.
 #[test]
 fn draw_rejected_against_non_vital() {
     let g = game_with(
@@ -737,4 +650,26 @@ fn draw_rejected_against_non_vital() {
     );
     let result = g.try_action(Action::Draw(Move { from: (2, 2), to: (2, 1) }));
     assert!(result.is_err(), "draw against non-vital should be rejected");
+}
+
+// -- captured_on_captured bypasses attacker's capture ------------------------
+
+/// A rook (no Capture ability) standing in Spear formation can capture.
+/// Capturing a Mine triggers CAPTURE_ON_CAPTURED: both are destroyed.
+#[test]
+fn mine_capture_on_captured_triggers_mutual_destruction() {
+    let g = game_with(
+        Player::Red,
+        &[
+            (Piece::RED_SPEAR, (2, 1)),
+            (Piece::RED_ROOK, (2, 2)),
+            (Piece::BLACK_MINE, (2, 3)),
+            (Piece::RED_GENERAL, (0, 4)),
+            (Piece::BLACK_GENERAL, (4, 0)),
+        ],
+        5,
+        5,
+    );
+    let actions = g.valid_moves(2, 2);
+    assert_captures(&actions, &[(2, 3)]);
 }

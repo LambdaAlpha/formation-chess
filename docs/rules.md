@@ -10,7 +10,7 @@ This is the complete rulebook for the standard game of Formation Chess.
 - [Abilities](#abilities)
 - [Formations](#formations)
 - [Moving a Piece](#moving-a-piece)
-- [Push, Pass-Through, and Capture](#push-pass-through-and-capture)
+- [Push and Capture](#push-and-capture)
 - [The Pieces](#the-pieces)
 - [White Pieces](#white-pieces)
 - [How a Game Unfolds](#how-a-game-unfolds)
@@ -36,18 +36,15 @@ power.
 
 There are no rules tied to piece names. Instead, every mechanic is an
 **ability**. The horse does not "move in an L-shape because it is a
-horse" — it merely carries the L-shaped movement ability by default, and
-the cannon carries jump capture. Any piece standing in a horse's formation
-can be granted that same L-shaped movement, and a cannon that strays into
-an enemy cannon's formation loses its jump capture. The rules only care
-about abilities, not names.
+horse" — it merely carries the L-shaped movement ability by default. Any
+piece standing in a horse's formation can be granted that same L-shaped
+movement. The rules only care about abilities, not names.
 
 ## If You Know Xiangqi
 
 Formation Chess borrows the 9×10 board of Xiangqi and many familiar piece
-names — the rook, horse, cannon, pawn, and general — along with two
-signature mechanics: the horse's leg can be blocked, and the cannon
-captures by jumping over a screen piece.
+names — the rook, horse, pawn, general, and scholar — along with one
+signature mechanic: the horse's leg can be blocked.
 
 Everything else is different. There is no palace, no river, and no fixed
 starting position — you place your army yourself. Pieces have no fixed
@@ -85,15 +82,14 @@ These are not static — they can be altered by formations. The full list:
 | **Push Enemy** | Can shove an enemy piece one step farther along the movement direction. |
 | **Pushed by Ally** | Can be shoved by friendly pieces. |
 | **Pushed by Enemy** | Can be shoved by enemy pieces. |
-| **Pass Ally** | Can move through points occupied by friendly pieces. |
-| **Pass Enemy** | Can move through points occupied by enemy pieces. |
-| **Passed by Ally** | Can be moved through by friendly pieces. |
-| **Passed by Enemy** | Can be moved through by enemy pieces. |
+| **Push to Capture** | When this piece pushes a target and the target cannot be shoved to its landing point (the point is occupied, off the board, or the path from the target's current point to the landing point is blocked), the push becomes a capture instead — the target is destroyed regardless of its abilities or color. |
+| **Pushed to Captured** | When this piece is pushed and the push is blocked (the pushed landing point is invalid), the pusher captures this piece. |
+| **Capture to Push** | When this piece captures a target and the path from the mover to the target is clear of intervening pieces, the capture becomes a push instead — the target is shoved one step farther along the movement direction rather than removed. |
+| **Captured to Pushed** | When this piece is captured and the path from the attacker to this piece is clear, this piece is shoved instead of captured. |
 | **Capture** | Can capture (remove) an enemy piece by moving onto its point. |
 | **Captured** | Can be captured by an enemy piece. |
-| **Capture on Captured** | When this piece is captured, the capturer also dies. A mutual destruction effect (retaliation). |
-| **Captured on Capture** | When this piece captures another, it dies as well. A mutual destruction effect (sacrifice). |
-| **Jump Capture** | Can capture an enemy piece by jumping over exactly one intervening piece (the cannon mechanic). |
+| **Capture on Captured** | When this piece is captured, the capturer is removed as well. Also makes this piece capturable even by pieces without CAPTURE. |
+| **Captured on Capture** | When this piece captures another, it is removed as well. Also allows capturing targets even without CAPTURED. |
 | **Any Distance** | Can slide any number of steps along an allowed direction instead of just one. |
 | **Direction: Cross** | Can move horizontally or vertically. |
 | **Direction: Diagonal** | Can move diagonally. |
@@ -141,9 +137,9 @@ downward, its lower-triangle pattern points upward.
 Each pattern belongs to one group of four pieces:
 
 - **Corners** — Control group: General, Wizard, Agent, Spy
-- **Edges** — Movement group: Rook, Pawn, Dog, Horse
-- **Upper Triangle** — Push & pass group: River, Mountain, Wind, Forest
-- **Lower Triangle** — Capture group: Spear, Shield, Cannon, Mine
+- **Edges** — Movement group: Rook, Pawn, Scholar, Horse
+- **Upper Triangle** — Push group: Wind, Mountain, Fire, Forest
+- **Lower Triangle** — Capture group: Spear, Shield, Shell, Mine
 
 Think of it this way: a piece's influence reaches out in a specific
 **shape**. A corners piece influences diagonally — like a general
@@ -180,49 +176,50 @@ formations can strip direction abilities — stray into hostile territory
 without friendly support and you may find yourself immobilized. **Keep
 your formation network intact** so allies cover each other.
 
-## Push, Pass-Through, and Capture
+## Push and Capture
 
-These three interactions are governed by matched pairs of abilities.
+These interactions are governed by matched pairs of abilities.
 
 **Push** means shoving the target piece one step farther along the
 direction of your movement. The shove is external force: the pushed piece
 is treated as if it had the required direction ability, so its own
-movement abilities are irrelevant. The push fails only when the pushed
-piece cannot physically make that step — the landing point is occupied or
-off the board, or its path there is blocked by a piece it cannot pass
-through — in which case the push escalates into a capture, destroying the
-target regardless of its abilities or color (unlike normal capture, push
-escalation works against friendly pieces as well).
+movement abilities are irrelevant.
 
 - To push a **friendly** piece: you need *Push Ally* **or** the target
   needs *Pushed by Ally*. Either side's consent is enough.
 - To push an **enemy** piece: you need *Push Enemy* **and** the target
   needs *Pushed by Enemy*. Both must agree.
 
-**Pass-through** means treating an intervening piece as if it weren't
-there while moving past it. You cannot stop on an occupied point, however.
-
-- To pass through a **friendly** piece: you need *Pass Ally* **or** the
-  blocker needs *Passed by Ally*.
-- To pass through an **enemy** piece: you need *Pass Enemy* **and** the
-  blocker needs *Passed by Enemy*.
+**When a push is blocked.** The push is blocked when the pushed piece
+cannot land — its landing point is occupied, off the board, or the path
+from the target's current point to the landing point contains a blocking
+piece. Normally a blocked push fails with an error. However, if the pusher
+has *Push to Capture* **or** the target has *Pushed to Captured*,
+the push becomes a capture: the pusher takes the target's point and
+destroys the target, regardless of the target's abilities or color.
+This is the Fire formation's domain.
 
 **Normal capture** means moving onto an enemy-occupied point and removing
 that piece. You need *Capture*, the target needs *Captured*, and your
-colors must differ. The path must be clear (all intervening pieces must be
-passable). Note that this color restriction only applies to normal capture;
-a push that escalates into a capture (see above) works against any piece.
+colors must differ. The path from the mover to the target must be clear of
+intervening pieces.
 
-**Jump capture** (the cannon) allows capturing by jumping over exactly one
-intervening piece. You need *Jump Capture*, the target needs *Captured*,
-and there must be exactly one piece on the path. The intervening piece's
-pass-through status is irrelevant — it acts as a screen, not something you
-pass.
+**When a capture becomes a push.** If the path from the mover to the
+target is clear (no intervening pieces) and the attacker has *Capture to
+Push* **or** the target has *Captured to Pushed*,
+the capture becomes a push instead: the attacker shoves the target one
+step farther rather than removing it. If the shove itself is blocked (the
+pushed landing point is invalid), the action falls back to a normal
+capture — the push attempt does not cause an error. This is the Forest
+formation's domain.
 
-**Mutual destruction:** after any capture, two effects may trigger:
+**Mutual destruction:** after a capture, two effects may trigger:
 
 - If the target had *Capture on Captured*, the capturer is removed as well.
-- If the capturer had *Captured on Capture*, the capturer is removed as well.
+  This effect also makes the target capturable even by pieces without
+  CAPTURE.
+- If the capturer had *Captured on Capture*, the capturer is removed as
+  well. This effect also allows capturing targets even without CAPTURED.
 
 Both effects apply to any piece standing inside a formation that grants
 them, not just the piece that carries them by default.
@@ -230,58 +227,66 @@ them, not just the piece that carries them by default.
 ### L-Shaped Movement: Special Cases
 
 Because an L-shaped move jumps through an intermediate point rather than
-sliding across the board, three mechanics work slightly differently:
+sliding across the board, two mechanics work slightly differently:
 
 **Blocking (hobbling the horse's leg).** An L-shaped move passes through
 an intermediate point on its way to the destination. For instance, moving
-from (1,1) to (2,3) passes through (1,2). If that point is occupied by a
-piece you cannot pass through, the move is blocked — the horse's leg is
-hobbled. The pass-through rules described above determine whether you can
-clear the blocking piece.
+from (1,1) to (2,3) passes through (1,2). If that point is occupied, the
+move is blocked — the horse's leg is hobbled. Any piece on the leg blocks
+the move.
 
 **Pushing with an L-shaped move.** When you shove a target via an
 L-shaped move, the target is pushed one knight step further in the same
 direction — from (1,1) via (2,3) to (3,5). The pushed piece makes this
 step as though moving on its own: no L-shaped ability is required, but
-its own leg-blocking rules apply. If the leg is blocked by a piece the
-pushed piece cannot pass through, or the destination is occupied, the
-push escalates to a capture as usual.
-
-**Jump capture with an L-shaped move.** A cannon can use its jump capture
-through an L-shaped path: it jumps over the leg-blocking piece to reach
-the target beyond. The blocking piece serves as the screen, just as it
-would for a straight-line jump capture.
+its own leg-blocking rules apply. If the leg is blocked or the landing
+point is occupied, the push is blocked and may become a capture if either
+piece has the relevant push-blocked ability (see above).
 
 ## The Pieces
 
 Each side has 16 distinct pieces organized into four groups by formation
 pattern.
 
-By default every Red and Black piece has *Pushed by Enemy*, *Passed by
-Enemy*, and *Captured*; the only exceptions are the **Mountain** (not
-pushable by enemies), the **Forest** (not passable by enemies), and the
-**Shield** (not capturable). In other words, most pieces can be pushed,
-passed through, and captured by the enemy unless a formation changes
-those settings.
+By default every Red and Black piece has *Pushed by Enemy* and *Captured*;
+the exceptions are the **Mountain** (not pushable by enemies), and the
+**Shield** (not capturable). Unless a formation
+changes these settings, most pieces can be pushed and captured by the
+enemy.
+
+### Group Commonalities
+
+Each group shares a set of core abilities. The table below lists the
+common defaults for each group; individual pieces may add to or override
+them.
+
+| Group | Formation | Common abilities |
+|---|---|---|
+| Control | Corners | Cross, Any Distance, Push Ally, Push Enemy |
+| Movement | Edges | Capture |
+| Push | Upper Triangle | Diagonal, Any Distance |
+| Capture | Lower Triangle | L-shaped, Any Distance |
+
+In the sections below, each piece's individual table lists only its
+**distinguishing** traits — what differs from the group commonality above
+— plus its formation effect.
 
 ### Control Group — Corners Pattern
 
-These pieces move in cross directions at any distance. Their formations
-deal with **who controls what**.
+These pieces influence **who controls what**.
 
-| Piece | Symbol | Default Abilities | Formation Effect |
+| Piece | Symbol | Distinguishing traits | Formation Effect |
 |---|---|---|---|
-| **General** | 将 | Cross, any distance, *Push Ally*, *Push Enemy*, *Vital*, *Draw* | Allies gain *Draw*; enemies lose it |
-| **Wizard** | 巫 | Cross, any distance, *Push Ally*, *Push Enemy*, *Control White* | White pieces inside become controlled by the wizard's player |
-| **Agent** | 间 | Cross, any distance, *Push Ally*, *Push Enemy* | Enemies inside become **also** controlled by the agent's player (converts them); allies inside have the opponent's control disabled (purges foreign control) |
-| **Spy** | 谍 | Cross, any distance, *Push Ally*, *Push Enemy*, controlled by *both* players | Allies inside become **also** controlled by the opponent (double agent effect); enemies inside have the spy player's control disabled (strips own control from enemies) |
+| **General** | 将 | *Vital*, *Draw* | Allies gain *Draw*; enemies lose it |
+| **Wizard** | 巫 | *Control White* | White pieces inside become controlled by the wizard's player |
+| **Agent** | 间 | — | Enemies inside become **also** controlled by the agent's player (converts them); allies inside have the opponent's control disabled (purges foreign control) |
+| **Spy** | 谍 | Controlled by *both* players | Allies inside become **also** controlled by the opponent (double agent effect); enemies inside have the spy player's control disabled (strips own control from enemies) |
 
 The **General** is your vital piece — lose your general and you lose. It
-moves freely but cannot capture or pass through other pieces; protect it
-with formations. Its formation grants *Draw* to allies and strips it from
-enemies, allowing allies to move onto the opponent's general to declare a
-draw. The general itself also carries this ability (see
-[How the Game Ends](#how-the-game-ends)).
+moves freely but cannot capture; protect it with formations. Its formation
+grants *Draw* to allies and strips it from enemies, allowing allies to move
+onto the opponent's general to declare a draw. The general itself also
+carries this ability (see [How the Game Ends](#how-the-game-ends)).
 
 The **Wizard** brings captured pieces back into play: it places white
 pieces onto empty points inside its formation, and white pieces standing
@@ -290,68 +295,73 @@ inside its formation obey the wizard's player. See
 
 ### Movement Group — Edges Pattern
 
-These pieces have their named movement direction plus the ability to
-capture. Their formations **grant movement abilities to allies and strip
-them from enemies**.
+These pieces carry their namesake movement direction and **grant it to
+allies while stripping it from enemies**.
 
-| Piece | Symbol | Default Abilities | Formation Effect |
+| Piece | Symbol | Distinguishing traits | Formation Effect |
 |---|---|---|---|
-| **Rook** | 车 | Cross, any distance, capture | Allies gain any distance; enemies lose it (stuck at one step) |
-| **Pawn** | 卒 | Cross, capture | Allies gain cross movement; enemies lose it |
-| **Dog** | 犬 | Diagonal, capture | Allies gain diagonal movement; enemies lose it |
-| **Horse** | 马 | L-shaped, capture | Allies gain L-shaped movement; enemies lose it |
+| **Rook** | 车 | Cross, Any Distance | Allies gain any distance; enemies lose it |
+| **Pawn** | 卒 | Cross | Allies gain cross movement; enemies lose it |
+| **Scholar** | 士 | Diagonal | Allies gain diagonal movement; enemies lose it |
+| **Horse** | 马 | L-shaped | Allies gain L-shaped movement; enemies lose it |
 
 These pieces form the backbone of your army's mobility, and they support
 each other: except for the Rook they move one step at a time, but standing
 next to a friendly Rook they gain unlimited range. The Rook's formation
 also pins: any enemy piece inside it loses the ability to slide.
 
-### Push & Pass Group — Upper Triangle Pattern
+### Push Group — Upper Triangle Pattern
 
-These pieces move in cross directions at any distance and specialize in
-**push and pass-through mechanics**.
+These pieces specialize in **push mechanics**. They all move diagonally at
+any distance.
 
-| Piece | Symbol | Default Abilities | Formation Effect |
+| Piece | Symbol | Distinguishing traits | Formation Effect |
 |---|---|---|---|
-| **River** | 河 | Cross, any distance, *Push Ally*, *Push Enemy* | Allies gain both push abilities; enemies lose both |
-| **Mountain** | 山 | Cross, any distance, *Pushed by Ally*, **not** *Pushed by Enemy* | Allies become pushable by allies only; enemies become pushable by the mountain's side only |
-| **Wind** | 风 | Cross, any distance, *Pass Ally*, *Pass Enemy* | Allies gain both pass abilities; enemies lose both |
-| **Forest** | 林 | Cross, any distance, *Passed by Ally*, **not** *Passed by Enemy* | Allies become passable by allies only; enemies become passable by the forest's side only |
+| **Wind** | 风 | *Push Ally*, *Push Enemy* | Allies gain both push abilities; enemies lose both |
+| **Mountain** | 山 | *Pushed by Ally*, **no** *Pushed by Enemy* | Allies become pushable by allies only; enemies become pushable by the mountain's side only |
+| **Fire** | 火 | *Push Ally*, *Push Enemy*, *Push to Capture* | Allies gain *Push to Capture*, lose *Pushed to Captured*; enemies gain *Pushed to Captured*, lose *Push to Capture* |
+| **Forest** | 林 | *Captured to Pushed* | Allies gain *Captured to Pushed*, lose *Capture to Push*; enemies gain *Capture to Push*, lose *Captured to Pushed* |
 
-River and Wind empower the pieces around them to act — to shove and to
-move through; Mountain and Forest instead take full control of how the
-pieces around them can be acted upon, rewriting both "pushed by" (or
-"passed by") abilities at once, for allies and enemies alike.
+Wind empowers the pieces around it to shove; Mountain takes full control
+of how the pieces around it can be acted upon, rewriting both "pushed by"
+abilities at once, for allies and enemies alike. Fire and Forest control
+the push-blocked and capture-clear behaviors — Fire makes pushes
+become captures when blocked, while Forest makes captures become pushes
+when the path is clear.
 
 ### Capture Group — Lower Triangle Pattern
 
-These pieces move in cross directions at any distance and specialize in
-**capture and combat**.
+These pieces specialize in **capture and combat**. They all move in
+L-shaped directions at any distance. Only the Spear can capture on its
+own; the Shield, Shell, and Mine lack *Capture* and rely on formations or
+mutual destruction to interact. The Shield lacks *Captured* — it is the
+only piece immune to normal capture across the whole board and can only be
+removed through mutual destruction or push-blocked effects.
 
-| Piece | Symbol | Default Abilities | Formation Effect |
+| Piece | Symbol | Distinguishing traits | Formation Effect |
 |---|---|---|---|
-| **Spear** | 矛 | Cross, any distance, capture | Allies gain capture; enemies lose it |
-| **Shield** | 盾 | Cross, any distance, **not** captured | Allies become uncapturable (immune); enemies become capturable |
-| **Cannon** | 炮 | Cross, any distance, *jump capture* | Allies gain jump capture; enemies lose it |
-| **Mine** | 雷 | Cross, any distance, capture, *capture-on-captured*, *captured-on-capture* | Everyone inside gains both effects — any capture becomes mutual destruction |
+| **Spear** | 矛 | *Capture*, *Captured* | Allies gain capture; enemies lose it |
+| **Shield** | 盾 | No *Captured* | Allies lose *Captured* (become immune); enemies gain *Captured* |
+| **Shell** | 弹 | *Captured on Capture* | Allies gain *Captured on Capture*; enemies lose it |
+| **Mine** | 雷 | *Capture on Captured* | Allies gain *Capture on Captured*; enemies lose it |
 
-The **Spear** can capture on its own, and its formation further grants
-capture to allies while stripping it from enemies. The **Shield** is itself
-uncapturable and protects everyone around it — stack immunity on your
-general by keeping a Shield nearby. The **Cannon** can only take pieces by
-jump capture, so it always needs a screen piece between itself and the
-target. The **Mine** can capture directly, and when it does (or is
-captured), both pieces are destroyed — its formation extends this mutual
-destruction to every piece nearby, turning its surroundings into a no-go
-zone where nobody wants to initiate an attack.
+The **Spear** is the only piece in this group with *Capture*. Its
+formation grants capture to allies while stripping it from enemies. The
+**Shield** is itself uncapturable and makes everyone around it immune —
+stack protection on your general by keeping a Shield nearby. The **Shell**
+carries *Captured on Capture*: if it gains *Capture* (e.g., through a
+friendly Spear's formation) and captures a piece, it self-destructs in
+the process. This effect bypasses the target's *Captured* requirement —
+it can take the Shield. The **Mine** carries *Capture on Captured*: anyone
+that captures it is destroyed with it. Even pieces without *Capture* can
+trigger this by moving onto the Mine — turning it into a trap.
 
 ## White Pieces
 
-When any piece is taken off the board by combat — captured normally, or
-destroyed by the mutual-destruction effects — it becomes a **white piece**
-in a shared pool of available dead. White pieces have only cross movement
-(one step) and can be captured by anyone. They cannot capture on their
-own.
+When any piece is taken off the board by combat — captured, or destroyed
+by mutual-destruction — it becomes a **white piece** in a shared pool.
+White pieces have cross, diagonal, and L-shaped movement at any distance
+and can be captured by anyone. They cannot capture on their own.
 
 A piece with the **Control White** ability (the Wizard) can place white
 pieces from the pool onto any empty point within its formation. White
@@ -373,12 +383,12 @@ occupying space and blocking paths.
 **Placement phase.** The game begins with an empty board. Starting with
 Red, the players alternate placing one of their own pieces per turn onto
 any empty point in their half of the board: Red places on rows 6–10,
-Black on rows 1–5. Passing is not allowed, and white
-pieces cannot be placed — every turn must place one of the player's 16
-pieces. Resigning is permitted at any time. No piece may move until both
-players have placed all their pieces. This is your one chance to design
-the initial formation web —
-position your pieces so they support each other's abilities.
+Black on rows 1–5. Passing is not allowed, and white pieces cannot be
+placed — every turn must place one of the player's 16 pieces. Resigning
+is permitted at any time. No piece may move until both players have
+placed all their pieces. This is your one chance to design the initial
+formation web — position your pieces so they support each other's
+abilities.
 
 **Movement phase.** Once all 32 pieces stand on the board, the players
 keep alternating turns (Red first again, since Black placed last). On each
@@ -388,8 +398,10 @@ turn a player takes exactly one of these actions:
 - **Capture:** move onto an occupied point, declaring the intent to take
   the piece there.
 - **Push:** move onto an occupied point, declaring the intent to shove it.
-  If the shove is blocked, it becomes a capture automatically (the target
-  is destroyed even if it is a friendly piece or lacks *Captured*).
+  If the push is blocked and either piece has *Push to Capture* or
+  *Pushed to Captured*, it becomes a capture (the target is
+  destroyed even if it is a friendly piece or lacks *Captured*). Without
+  these abilities, a blocked push fails.
 - **Draw:** move your own piece with *Draw* ability onto the opponent's
   *Vital* piece, removing the opponent's piece and ending the game in a
   draw.
@@ -437,11 +449,9 @@ opponent's win. Both bypass the board check.
    advance together, and critical positions have rotating backup coverage.
    Positioning determines who covers whom, and where the weak spots are.
 
-2. **Position and pass through — control the battlefield.** Position
-   pieces to block key routes and divide the enemy; use pass-through to
-   bridge gaps and connect allies. The two are complementary: who can
-   pass through a chokepoint depends on positioning; whether a position
-   matters depends on what can pass through.
+2. **Blocking — control the battlefield.** Position pieces to block key
+   routes and divide the enemy. Every piece on the path blocks movement —
+   use this to your advantage. Occupying space is a form of control.
 
 3. **Pushing breaks formations.** Pushing and capturing serve different
    purposes: capturing removes the enemy; pushing displaces them. A
@@ -477,6 +487,5 @@ opponent's win. Both bypass the board check.
 - **Vital piece** — a piece whose ability *Vital* makes it a win
   condition: a player with no vital pieces left has lost. Normally the
   general.
-- **Screen** — the single intervening piece a jump capture leaps over.
 - **Placement phase / Movement phase** — the two stages of a game: first
   all pieces are placed, then they move.

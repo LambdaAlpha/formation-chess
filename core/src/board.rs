@@ -38,19 +38,6 @@ pub struct Neighbor {
     pub piece: Option<Piece>,
 }
 
-struct TryMove {
-    piece: Piece,
-    path: MovePath,
-}
-
-/// Piece counts on the open interval between a move's endpoints.
-struct MovePath {
-    /// Pieces on the path, passable or not.
-    pieces: u8,
-    /// The subset of `pieces` the mover cannot pass through.
-    unpassable: u8,
-}
-
 impl Board {
     /// An empty board. Panics when a dimension exceeds 16.
     pub fn new(width: u8, height: u8) -> Self {
@@ -262,14 +249,11 @@ impl Board {
     }
 
     /// Validate a simple move to an empty point without modifying the board.
-    /// Checks movement ability, distance, and pass-through.
+    /// Checks movement ability, distance, and path blocking.
     pub fn try_move(&self, from: (u8, u8), to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
-        let tm = self.try_move_to(from, to)?;
+        let _ = self.try_move_to(from, to)?;
         if self[to].is_some() {
             return Err(format!("cannot move onto occupied destination ({},{})", to.0, to.1));
-        }
-        if tm.path.unpassable > 0 {
-            return Err("path blocked, cannot reach empty destination".into());
         }
         Ok(vec![PositionChange { at: from, piece: None }, PositionChange {
             at: to,
@@ -285,22 +269,32 @@ impl Board {
     }
 
     /// Validate a capture without modifying the board. Checks movement,
-    /// pass-through, capture/jump-capture ability, and mutual-destruction
-    /// effects.
+    /// path blocking, capture ability, mutual-destruction effects,
+    /// and capture demotion.
     pub fn try_capture(&self, from: (u8, u8), to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
-        let tm = self.try_move_to(from, to)?;
+        let piece = self.try_move_to(from, to)?;
         let Some(target) = self.effective(to) else {
             return Err(format!(
                 "destination ({},{}) is empty, capture requires an occupied point",
                 to.0, to.1
             ));
         };
-        let normal_capture = tm.path.unpassable == 0 && tm.piece.can_capture(target);
-        let jump_capture = tm.piece.can_jump_capture(target, tm.path.pieces);
-        if !normal_capture && !jump_capture {
+        if !piece.can_capture(target) {
             return Err(format!("cannot capture {} at ({},{})", target, to.0, to.1));
         }
-        Ok(self.capture_result(tm, from, to, target))
+        // Capture demotion: if either piece has demotion ability and the
+        // pushed target is valid, demote to push instead.
+        if (piece.ability.has(Ability::PUSH_ON_CAPTURE_UNBLOCKED)
+            || target.ability.has(Ability::PUSHED_ON_CAPTURE_UNBLOCKED))
+            && let Some(pt) = self.pushed_target(from, to)
+        {
+            return Ok(vec![
+                PositionChange { at: from, piece: None },
+                PositionChange { at: to, piece: self[from] },
+                PositionChange { at: pt, piece: self[to] },
+            ]);
+        }
+        Ok(self.capture_result(piece, from, to, target))
     }
 
     /// Execute a push (escalates to capture when blocked).
@@ -311,53 +305,56 @@ impl Board {
     }
 
     /// Validate a push without modifying the board. Checks movement,
-    /// pass-through, push ability, and the pushed piece's landing.
-    /// A blocked push may escalate to capture.
+    /// path blocking, push ability, and the pushed piece's landing.
+    /// A blocked push may escalate to capture if either piece has the
+    /// escalation ability.
     pub fn try_push(&self, from: (u8, u8), to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
-        let tm = self.try_move_to(from, to)?;
+        let piece = self.try_move_to(from, to)?;
         let Some(target) = self.effective(to) else {
             return Err(format!(
                 "destination ({},{}) is empty, push requires an occupied point",
                 to.0, to.1
             ));
         };
-        if tm.path.unpassable > 0 {
-            return Err("cannot push through blocking pieces on path".into());
-        }
-        if !tm.piece.can_push(target) {
+        if !piece.can_push(target) {
             return Err(format!("cannot push {} at ({},{})", target, to.0, to.1));
         }
-        if let Some(pt) = self.pushed_target(from, to, target) {
+        if let Some(pt) = self.pushed_target(from, to) {
             return Ok(vec![
                 PositionChange { at: from, piece: None },
                 PositionChange { at: to, piece: self[from] },
                 PositionChange { at: pt, piece: self[to] },
             ]);
         }
-        Ok(self.capture_result(tm, from, to, target))
+        // Push is blocked. Escalate to capture if either piece has
+        // escalation ability; otherwise fail.
+        if piece.ability.has(Ability::CAPTURE_ON_PUSH_BLOCKED)
+            || target.ability.has(Ability::CAPTURED_ON_PUSH_BLOCKED)
+        {
+            Ok(self.capture_result(piece, from, to, target))
+        } else {
+            Err(format!("push blocked at ({},{}) and no escalation ability", to.0, to.1))
+        }
     }
 
     /// Validate a draw without modifying the board. Checks movement,
-    /// pass-through, that the mover has DRAW ability, and that the target
+    /// path blocking, that the mover has DRAW ability, and that the target
     /// is a vital piece. A piece with DRAW may move onto an opponent's vital
     /// piece to end the game in a draw without needing capture or push
     /// abilities.
     pub fn try_draw(&self, from: (u8, u8), to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
-        let tm = self.try_move_to(from, to)?;
+        let piece = self.try_move_to(from, to)?;
         let Some(target) = self.get(to) else {
             return Err(format!(
                 "destination ({},{}) is empty, draw requires an occupied point",
                 to.0, to.1
             ));
         };
-        if !tm.piece.ability.has(Ability::DRAW) {
+        if !piece.ability.has(Ability::DRAW) {
             return Err("only pieces with DRAW ability can draw".into());
         }
         if !target.ability.has(Ability::VITAL) {
             return Err(format!("{} at ({},{}) is not a vital piece", target, to.0, to.1));
-        }
-        if tm.path.unpassable > 0 {
-            return Err("path blocked, cannot reach destination for draw".into());
         }
         Ok(vec![PositionChange { at: from, piece: None }, PositionChange {
             at: to,
@@ -366,8 +363,8 @@ impl Board {
     }
 
     /// Shared pre-checks: bounds validation, piece lookup, movement ability,
-    /// path computation.
-    fn try_move_to(&self, from: (u8, u8), to: (u8, u8)) -> Result<TryMove, String> {
+    /// path check. Returns the effective piece at `from` on success.
+    fn try_move_to(&self, from: (u8, u8), to: (u8, u8)) -> Result<Piece, String> {
         if !self.in_bounds(from) {
             return Err(format!("({},{}) is outside the board", from.0, from.1));
         }
@@ -383,8 +380,138 @@ impl Board {
                 from.0, from.1, to.0, to.1
             ));
         }
-        let path = MovePath::new(self, piece, from, to);
-        Ok(TryMove { piece, path })
+        if !Self::path_passable(self, from, to) {
+            return Err("path blocked, cannot reach destination".into());
+        }
+        Ok(piece)
+    }
+
+    /// Whether the single step from `from` to `to` is clear. For
+    /// cross/diagonal steps there are no intermediate points — always true.
+    /// For L-shaped (knight) steps, checks that the leg-blocking point is
+    /// empty.
+    fn step_passable(&self, from: (u8, u8), to: (u8, u8)) -> bool {
+        let dx = from.0.abs_diff(to.0);
+        let dy = from.1.abs_diff(to.1);
+        if dx <= 1 && dy <= 1 {
+            return true;
+        }
+        if dx == 1 && dy == 2 {
+            let sy: i8 = (to.1 as i8 - from.1 as i8).signum();
+            self[(from.0, (from.1 as i8 + sy) as u8)].is_none()
+        } else if dx == 2 && dy == 1 {
+            let sx: i8 = (to.0 as i8 - from.0 as i8).signum();
+            self[((from.0 as i8 + sx) as u8, from.1)].is_none()
+        } else {
+            panic!("unsupported direction for single step")
+        }
+    }
+
+    /// Whether the path between `from` and `to` is free of pieces. Returns
+    /// true for adjacent points and points connected by a clean line.
+    fn path_passable(&self, from: (u8, u8), to: (u8, u8)) -> bool {
+        let dx = from.0.abs_diff(to.0);
+        let dy = from.1.abs_diff(to.1);
+        let sx: i8 = (to.0 as i8 - from.0 as i8).signum();
+        let sy: i8 = (to.1 as i8 - from.1 as i8).signum();
+        if dx == 0 {
+            let (a, b) = if from.1 < to.1 { (from.1 + 1, to.1) } else { (to.1 + 1, from.1) };
+            for y in a .. b {
+                if self[(from.0, y)].is_some() {
+                    return false;
+                }
+            }
+        } else if dy == 0 {
+            let (a, b) = if from.0 < to.0 { (from.0 + 1, to.0) } else { (to.0 + 1, from.0) };
+            for x in a .. b {
+                if self[(x, from.1)].is_some() {
+                    return false;
+                }
+            }
+        } else if dx == dy {
+            let (mut x, mut y) = (from.0 as i8 + sx, from.1 as i8 + sy);
+            for _ in 1 .. dx {
+                if self[(x as u8, y as u8)].is_some() {
+                    return false;
+                }
+                x += sx;
+                y += sy;
+            }
+        } else if dx * 2 == dy {
+            let (mut px, mut py) = (from.0 as i8, from.1 as i8);
+            let steps = dx.min(dy) as i8;
+            for i in 0 .. steps {
+                if i > 0 && self[(px as u8, py as u8)].is_some() {
+                    return false;
+                }
+                let lx = px;
+                let ly = py + sy;
+                if self[(lx as u8, ly as u8)].is_some() {
+                    return false;
+                }
+                px += sx;
+                py += sy * 2;
+            }
+        } else if dx == dy * 2 {
+            let (mut px, mut py) = (from.0 as i8, from.1 as i8);
+            let steps = dx.min(dy) as i8;
+            for i in 0 .. steps {
+                if i > 0 && self[(px as u8, py as u8)].is_some() {
+                    return false;
+                }
+                let lx = px + sx;
+                let ly = py;
+                if self[(lx as u8, ly as u8)].is_some() {
+                    return false;
+                }
+                px += sx * 2;
+                py += sy;
+            }
+        } else {
+            panic!("unsupported direction");
+        }
+        true
+    }
+
+    /// Where the pushed piece would land, continuing one step along the push
+    /// direction. The pushed piece's own direction abilities are irrelevant:
+    /// the shove supplies the movement. Returns None if the pushed piece
+    /// cannot make that step: the landing point is off the board or occupied,
+    /// or the pushed piece's path there is blocked (for L-shaped pushes this
+    /// is the pushed piece's leg).
+    fn pushed_target(&self, from: (u8, u8), to: (u8, u8)) -> Option<(u8, u8)> {
+        let dx: i8 = to.0 as i8 - from.0 as i8;
+        let dy: i8 = to.1 as i8 - from.1 as i8;
+        let sx = dx.signum();
+        let sy = dy.signum();
+        let adx = dx.unsigned_abs();
+        let ady = dy.unsigned_abs();
+        let (tsx, tsy) = if adx == 0 || ady == 0 || adx == ady {
+            (sx, sy)
+        } else if adx * 2 == ady {
+            (sx, sy * 2)
+        } else if adx == ady * 2 {
+            (sx * 2, sy)
+        } else {
+            panic!("push_target called with invalid move vector ({dx},{dy})");
+        };
+        let tx = to.0 as i8 + tsx;
+        let ty = to.1 as i8 + tsy;
+        if tx < 0 || ty < 0 || tx as u8 >= self.width || ty as u8 >= self.height {
+            return None;
+        }
+        let pt = (tx as u8, ty as u8);
+        if self[pt].is_some() {
+            return None;
+        }
+        // The push always moves the target a single step: adjacent for
+        // cross/diagonal, one knight-step for L-shaped. `step_passable`
+        // suffices — cross/diagonal steps have no intermediate points,
+        // and L-shaped steps only need the leg checked.
+        if !self.step_passable(to, pt) {
+            return None;
+        }
+        Some(pt)
     }
 
     /// Whether from→to lies on a horizontal or vertical line. Note:
@@ -415,8 +542,8 @@ impl Board {
     }
 
     /// Whether a piece can move from→to, checking direction ability and
-    /// distance only. Pieces on the path are ignored; pass-through rules
-    /// are handled by the `move_*` methods.
+    /// distance only. Path blocking is checked separately by
+    /// [`Self::path_passable`].
     fn can_move(piece: Piece, from: (u8, u8), to: (u8, u8)) -> bool {
         if from == to {
             return false;
@@ -456,9 +583,9 @@ impl Board {
     /// Compute the changes of a successful capture, including
     /// mutual‑destruction effects.
     fn capture_result(
-        &self, tm: TryMove, from: (u8, u8), to: (u8, u8), target: Piece,
+        &self, piece: Piece, from: (u8, u8), to: (u8, u8), target: Piece,
     ) -> Vec<PositionChange> {
-        if tm.piece.ability.has(Ability::CAPTURED_ON_CAPTURE)
+        if piece.ability.has(Ability::CAPTURED_ON_CAPTURE)
             || target.ability.has(Ability::CAPTURE_ON_CAPTURED)
         {
             vec![PositionChange { at: from, piece: None }, PositionChange { at: to, piece: None }]
@@ -551,17 +678,13 @@ impl Board {
     }
 
     /// Scan from `from` along `(dx, dy)`, adding legal [`Action`]s for each
-    /// reachable cell.  Uses [`MovePath`] for per‑step path validation so
-    /// that leg‑blocking and pass‑through rules stay in one place.
+    /// reachable cell. Path blocking is checked per step segment.
     #[expect(clippy::too_many_arguments)]
     fn enumerate_line(
         &self, player: Player, piece: Piece, from: (u8, u8), dx: i8, dy: i8, max_steps: i8,
         actions: &mut Vec<Action>,
     ) {
         let mut origin = from;
-        let mut unpassable = 0;
-        let mut pieces: u8 = 0;
-
         for _ in 0 .. max_steps {
             let nx = origin.0 as i8 + dx;
             let ny = origin.1 as i8 + dy;
@@ -569,97 +692,47 @@ impl Board {
                 break;
             }
             let to = (nx as u8, ny as u8);
-
-            let step_path = MovePath::new(self, piece, origin, to);
-            pieces += step_path.pieces;
-            unpassable += step_path.unpassable;
-            if let Some(target) = self.effective(to) {
-                let tm = TryMove { piece, path: MovePath { pieces, unpassable } };
-                let move_ = Move { from, to };
-                self.enumerate_action(player, tm, move_, target, actions);
-                pieces += 1;
-                if !piece.can_pass(target) {
-                    if unpassable > 0 {
-                        break;
-                    }
-                    unpassable += 1;
-                }
-            } else if unpassable == 0 {
-                actions.push(Action::Move(Move { from, to }));
+            if !self.step_passable(origin, to) {
+                break;
             }
+            if let Some(target) = self.effective(to) {
+                self.enumerate_action(player, piece, from, to, target, actions);
+                break;
+            }
+            actions.push(Action::Move(Move { from, to }));
             origin = to;
         }
     }
 
-    /// Add every capture and push action legal against `target` at `move_.to`,
-    /// given the accumulated `blocked` / `path_pieces` state for this cell.
+    /// Add every capture, push, and draw action legal against `target`.
+    /// Path blocking is already handled by [`Self::enumerate_line`].
     fn enumerate_action(
-        &self, player: Player, tm: TryMove, move_: Move, target: Piece, actions: &mut Vec<Action>,
+        &self, player: Player, piece: Piece, from: (u8, u8), to: (u8, u8), target: Piece,
+        actions: &mut Vec<Action>,
     ) {
-        let blocked = tm.path.unpassable > 0;
-        #[expect(clippy::useless_let_if_seq)]
-        let mut captured = false;
-        if !blocked && tm.piece.can_capture(target) {
-            actions.push(Action::Capture(move_));
-            captured = true;
-        }
-        if !captured && tm.piece.can_jump_capture(target, tm.path.pieces) {
+        let move_ = Move { from, to };
+        if piece.can_capture(target) {
             actions.push(Action::Capture(move_));
         }
-        if !blocked && tm.piece.can_push(target) {
-            actions.push(Action::Push(move_));
+        if piece.can_push(target) {
+            let push_blocked = self.pushed_target(from, to).is_none();
+            if !push_blocked
+                || piece.ability.has(Ability::CAPTURE_ON_PUSH_BLOCKED)
+                || target.ability.has(Ability::CAPTURED_ON_PUSH_BLOCKED)
+            {
+                actions.push(Action::Push(move_));
+            }
         }
         let opponent_color = match player {
             Player::Red => Color::Black,
             Player::Black => Color::Red,
         };
-        if !blocked
-            && tm.piece.ability.has(Ability::DRAW)
+        if piece.ability.has(Ability::DRAW)
             && target.ability.has(Ability::VITAL)
             && target.color == opponent_color
         {
             actions.push(Action::Draw(move_));
         }
-    }
-
-    /// Where the pushed piece would land, continuing one step along the push
-    /// direction. The pushed piece's own direction abilities are irrelevant:
-    /// the shove supplies the movement. Returns None if the pushed piece
-    /// cannot make that step: the landing point is off the board or occupied,
-    /// or the pushed piece cannot traverse its own path there (the same
-    /// pass-through rules as a normal move; for L-shaped pushes this is the
-    /// pushed piece's leg).
-    fn pushed_target(&self, from: (u8, u8), to: (u8, u8), pushed: Piece) -> Option<(u8, u8)> {
-        let dx: i8 = to.0 as i8 - from.0 as i8;
-        let dy: i8 = to.1 as i8 - from.1 as i8;
-        let sx = dx.signum();
-        let sy = dy.signum();
-        let adx = dx.unsigned_abs();
-        let ady = dy.unsigned_abs();
-        let (tsx, tsy) = if adx == 0 || ady == 0 || adx == ady {
-            (sx, sy)
-        } else if adx * 2 == ady {
-            (sx, sy * 2)
-        } else if adx == ady * 2 {
-            (sx * 2, sy)
-        } else {
-            panic!("push_target called with invalid move vector ({dx},{dy})");
-        };
-        let tx = to.0 as i8 + tsx;
-        let ty = to.1 as i8 + tsy;
-        if tx < 0 || ty < 0 || tx as u8 >= self.width || ty as u8 >= self.height {
-            return None;
-        }
-        let pt = (tx as u8, ty as u8);
-        if self[pt].is_some() {
-            return None;
-        }
-        // The pushed piece makes a regular one-step move from `to` to `pt`:
-        // its path (the leg, for L-shaped pushes) must be passable by it.
-        if MovePath::new(self, pushed, to, pt).unpassable > 0 {
-            return None;
-        }
-        Some(pt)
     }
 
     /// Write position-based changes onto the board. Panics when a change
@@ -705,79 +778,6 @@ impl IndexMut<(u8, u8)> for Board {
     fn index_mut(&mut self, (x, y): (u8, u8)) -> &mut Self::Output {
         let i = self.index(x, y);
         &mut self.pieces[i]
-    }
-}
-
-impl MovePath {
-    fn new(board: &Board, mover: Piece, from: (u8, u8), to: (u8, u8)) -> Self {
-        let mut pieces: u8 = 0;
-        let mut unpassable: u8 = 0;
-        for pos in Self::path_positions(from, to) {
-            if let Some(blocker) = board.effective(pos) {
-                pieces += 1;
-                if !mover.can_pass(blocker) {
-                    unpassable += 1;
-                }
-            }
-        }
-        Self { pieces, unpassable }
-    }
-
-    /// All positions between from and to (exclusive). For horse moves, includes
-    /// leg-blocking corner positions and intermediate landing positions.
-    fn path_positions(from: (u8, u8), to: (u8, u8)) -> Vec<(u8, u8)> {
-        let mut positions = Vec::new();
-        let dx = from.0.abs_diff(to.0);
-        let dy = from.1.abs_diff(to.1);
-        let sx: i8 = (to.0 as i8 - from.0 as i8).signum();
-        let sy: i8 = (to.1 as i8 - from.1 as i8).signum();
-        if dx == 0 {
-            let (a, b) = if from.1 < to.1 { (from.1 + 1, to.1) } else { (to.1 + 1, from.1) };
-            for y in a .. b {
-                positions.push((from.0, y));
-            }
-        } else if dy == 0 {
-            let (a, b) = if from.0 < to.0 { (from.0 + 1, to.0) } else { (to.0 + 1, from.0) };
-            for x in a .. b {
-                positions.push((x, from.1));
-            }
-        } else if dx == dy {
-            let (mut x, mut y) = (from.0 as i8 + sx, from.1 as i8 + sy);
-            for _ in 1 .. dx {
-                positions.push((x as u8, y as u8));
-                x += sx;
-                y += sy;
-            }
-        } else if dx * 2 == dy {
-            let (mut px, mut py) = (from.0 as i8, from.1 as i8);
-            let steps = dx.min(dy) as i8;
-            for i in 0 .. steps {
-                if i > 0 {
-                    positions.push((px as u8, py as u8));
-                }
-                let lx = px;
-                let ly = py + sy;
-                positions.push((lx as u8, ly as u8));
-                px += sx;
-                py += sy * 2;
-            }
-        } else if dx == dy * 2 {
-            let (mut px, mut py) = (from.0 as i8, from.1 as i8);
-            let steps = dx.min(dy) as i8;
-            for i in 0 .. steps {
-                if i > 0 {
-                    positions.push((px as u8, py as u8));
-                }
-                let lx = px + sx;
-                let ly = py;
-                positions.push((lx as u8, ly as u8));
-                px += sx * 2;
-                py += sy;
-            }
-        } else {
-            panic!("unsupported direction");
-        }
-        positions
     }
 }
 

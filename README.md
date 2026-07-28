@@ -9,8 +9,8 @@ influence around itself, called a **formation**, which rewrites what nearby
 pieces — friend and foe alike — are able to do.
 
 No piece is ever just itself. A pawn standing beside a rook can suddenly
-sweep across the whole board; a cannon that strays into an enemy cannon's
-formation loses the ability to fire. And there is no fixed starting
+sweep across the whole board; a rook that strays into an enemy rook's
+formation loses unlimited range, reduced to a single step. And there is no fixed starting
 position: each player freely places all 16 of their pieces on their own
 half of the board before the first move, so every game begins with a
 design of your own making.

@@ -8,8 +8,8 @@ called a **formation**, which rewrites what nearby pieces — friend and
 foe alike — are able to do.
 
 No piece is ever just itself. A pawn standing beside a rook can suddenly
-sweep across the whole board; a cannon that strays into an enemy cannon's
-formation loses the ability to fire. And there is no fixed starting
+sweep across the whole board; a rook standing in an enemy rook's formation sees
+its range collapse to a single step. And there is no fixed starting
 position: each player freely places all 16 of their pieces on their own
 half of the board before the first move, so every game begins with a
 design of your own making.
@@ -28,7 +28,7 @@ for building frontends, servers, and engines.
   placed.
 - **Abilities.** Every piece carries a set of boolean abilities: its
   movement directions and range, whether it can capture or be captured,
-  push or be pushed, pass through or be passed through, whether its
+  push or be pushed, whether its
   loss loses the game (*vital*), and more.
 - **Formations.** Every piece projects a fixed pattern over some of its
   eight neighboring points. Pieces standing on covered points have
@@ -38,7 +38,8 @@ for building frontends, servers, and engines.
   and a denial always beats a grant.
 - **Turns.** After placement, a turn is one of: move to an empty point,
   **capture** an occupied one, **push** its occupant one point onward
-  (a blocked push escalates into a capture), place a white piece
+  (a blocked push may escalate into a capture if either piece has the
+  escalation ability), place a white piece
   through a wizard, pass, or resign.
 - **White pieces.** Captured pieces are recycled into a shared neutral
   pool. A wizard can drop them back onto the board as weak, colorless
@@ -52,9 +53,9 @@ Each side fields 16 distinct pieces in four groups:
 | Group | Pieces | Formation theme |
 |---|---|---|
 | Control | 将 General (vital), 巫 Wizard, 间 Agent, 谍 Spy | who commands whom |
-| Movement | 车 Rook, 卒 Pawn, 犬 Dog, 马 Horse | grant allies their movement, strip it from enemies |
-| Push & pass | 河 River, 山 Mountain, 风 Wind, 林 Forest | shoving pieces and moving through them |
-| Capture | 矛 Spear, 盾 Shield, 炮 Cannon, 雷 Mine | capture, immunity, jump capture, mutual destruction |
+| Movement | 车 Rook, 卒 Pawn, 士 Scholar, 马 Horse | grant allies their movement, strip it from enemies |
+| Push | 风 Wind, 山 Mountain, 火 Fire, 林 Forest | shoving, push escalation, and capture demotion |
+| Capture | 矛 Spear, 盾 Shield, 弹 Shell, 雷 Mine | capture, immunity, sacrifice, and retaliation |
 
 ## Quick start
 
@@ -87,8 +88,8 @@ of the text protocol:
 红将五十 → 未分
 黑将五一 → 未分
 行棋方：红
-红方：[雷 巫 间 谍 车 卒 犬 马 河 山 风 林 矛 盾 炮]
-黑方：[雷 巫 间 谍 车 卒 犬 马 河 山 风 林 矛 盾 炮]
+红方：[雷 巫 间 谍 车 卒 士 马 风 山 火 林 矛 盾 弹]
+黑方：[雷 巫 间 谍 车 卒 士 马 风 山 火 林 矛 盾 弹]
 白方：0
 胜负：未分
 棋盘：
@@ -125,7 +126,7 @@ Actions:
 | `黑将进二` | the Black General advances two steps |
 | `一二三二` | the piece standing on (1,2) moves to (3,2) |
 | `红马四五捉` | the Red Horse moves to (4,5) and **captures** the piece there |
-| `红河五四推` | the Red River moves to (5,4) and **pushes** its occupant one point onward |
+| `红风五四推` | the Red Wind moves to (5,4) and **pushes** its occupant one point onward |
 | `白子二四占` | a white piece from the pool is **placed** on (2,4) |
 | `红按兵` / `黑认负` | Red passes / Black resigns |
 
@@ -134,7 +135,7 @@ plus the game result — or a single error line. The push above, for
 example, answers:
 
 ```text
-变化：[红河进一 黑马退一]
+变化：[红风进一 黑马退一]
 胜负：未分
 ```
 
@@ -161,8 +162,8 @@ use formation_chess_core::game::Game;
 
 fn main() -> Result<(), String> {
     let game: Game = "行棋方：黑
-红方：[炮 马]
-黑方：[将 犬 盾]
+红方：[弹 马]
+黑方：[将 士 盾]
 白方：0
 胜负：未分
 棋盘：

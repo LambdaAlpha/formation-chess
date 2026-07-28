@@ -15,8 +15,8 @@ mod common;
 /// The game state snapshot shared by notation.md (game state example) and
 /// README.md (custom positions example, examples/readme_custom.rs).
 const GAME_STATE_SNAPSHOT: &str = "行棋方：黑
-红方：[炮 马]
-黑方：[将 犬 盾]
+红方：[弹 马]
+黑方：[将 士 盾]
 白方：0
 胜负：未分
 棋盘：
@@ -58,8 +58,8 @@ fn readme_quick_start_example() {
         assert_eq!(reaction.game_result.to_string(), "未分");
     }
     let expected = "行棋方：红
-红方：[雷 巫 间 谍 车 卒 犬 马 河 山 风 林 矛 盾 炮]
-黑方：[雷 巫 间 谍 车 卒 犬 马 河 山 风 林 矛 盾 炮]
+红方：[雷 巫 间 谍 车 卒 士 马 风 山 火 林 矛 盾 弹]
+黑方：[雷 巫 间 谍 车 卒 士 马 风 山 火 林 矛 盾 弹]
 白方：0
 胜负：未分
 棋盘：

@@ -5,8 +5,8 @@ use formation_chess_core::game::Game;
 
 fn main() -> Result<(), String> {
     let game: Game = "行棋方：黑
-红方：[炮 马]
-黑方：[将 犬 盾]
+红方：[弹 马]
+黑方：[将 士 盾]
 白方：0
 胜负：未分
 棋盘：
