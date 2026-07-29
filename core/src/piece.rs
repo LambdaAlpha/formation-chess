@@ -218,12 +218,12 @@ impl Piece {
         }
     }
 
-    const fn rook(color: Color) -> Piece {
+    const fn scholar(color: Color) -> Piece {
         let (controlled_by_red, controlled_by_black) = Self::controlled(color);
         Piece {
-            name: '车',
+            name: '士',
             color,
-            formation: Self::orient(color, Formation::ROOK),
+            formation: Self::orient(color, Formation::SCHOLAR),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -239,9 +239,9 @@ impl Piece {
                 captured: true,
                 capture_on_captured: false,
                 captured_on_capture: false,
-                any_distance: true,
-                direction_cross: true,
-                direction_diagonal: false,
+                any_distance: false,
+                direction_cross: false,
+                direction_diagonal: true,
                 direction_shape_L: false,
                 control_white: false,
                 vital: false,
@@ -284,12 +284,12 @@ impl Piece {
         }
     }
 
-    const fn scholar(color: Color) -> Piece {
+    const fn rook(color: Color) -> Piece {
         let (controlled_by_red, controlled_by_black) = Self::controlled(color);
         Piece {
-            name: '士',
+            name: '车',
             color,
-            formation: Self::orient(color, Formation::SCHOLAR),
+            formation: Self::orient(color, Formation::ROOK),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -305,9 +305,9 @@ impl Piece {
                 captured: true,
                 capture_on_captured: false,
                 captured_on_capture: false,
-                any_distance: false,
-                direction_cross: false,
-                direction_diagonal: true,
+                any_distance: true,
+                direction_cross: true,
+                direction_diagonal: false,
                 direction_shape_L: false,
                 control_white: false,
                 vital: false,
@@ -623,12 +623,12 @@ impl Piece {
     pub const BLACK_AGENT: Piece = Self::agent(Color::Black);
     pub const RED_SPY: Piece = Self::spy(Color::Red);
     pub const BLACK_SPY: Piece = Self::spy(Color::Black);
-    pub const RED_ROOK: Piece = Self::rook(Color::Red);
-    pub const BLACK_ROOK: Piece = Self::rook(Color::Black);
-    pub const RED_PAWN: Piece = Self::pawn(Color::Red);
-    pub const BLACK_PAWN: Piece = Self::pawn(Color::Black);
     pub const RED_SCHOLAR: Piece = Self::scholar(Color::Red);
     pub const BLACK_SCHOLAR: Piece = Self::scholar(Color::Black);
+    pub const RED_PAWN: Piece = Self::pawn(Color::Red);
+    pub const BLACK_PAWN: Piece = Self::pawn(Color::Black);
+    pub const RED_ROOK: Piece = Self::rook(Color::Red);
+    pub const BLACK_ROOK: Piece = Self::rook(Color::Black);
     pub const RED_HORSE: Piece = Self::horse(Color::Red);
     pub const BLACK_HORSE: Piece = Self::horse(Color::Black);
     pub const RED_WIND: Piece = Self::wind(Color::Red);
@@ -654,9 +654,9 @@ impl Piece {
         Piece::RED_WIZARD,
         Piece::RED_AGENT,
         Piece::RED_SPY,
-        Piece::RED_ROOK,
-        Piece::RED_PAWN,
         Piece::RED_SCHOLAR,
+        Piece::RED_PAWN,
+        Piece::RED_ROOK,
         Piece::RED_HORSE,
         Piece::RED_WIND,
         Piece::RED_MOUNTAIN,
@@ -674,9 +674,9 @@ impl Piece {
         Piece::BLACK_WIZARD,
         Piece::BLACK_AGENT,
         Piece::BLACK_SPY,
-        Piece::BLACK_ROOK,
-        Piece::BLACK_PAWN,
         Piece::BLACK_SCHOLAR,
+        Piece::BLACK_PAWN,
+        Piece::BLACK_ROOK,
         Piece::BLACK_HORSE,
         Piece::BLACK_WIND,
         Piece::BLACK_MOUNTAIN,
@@ -701,12 +701,12 @@ impl Piece {
             ('间', Color::Black) => Piece::BLACK_AGENT,
             ('谍', Color::Red) => Piece::RED_SPY,
             ('谍', Color::Black) => Piece::BLACK_SPY,
-            ('车', Color::Red) => Piece::RED_ROOK,
-            ('车', Color::Black) => Piece::BLACK_ROOK,
-            ('卒', Color::Red) => Piece::RED_PAWN,
-            ('卒', Color::Black) => Piece::BLACK_PAWN,
             ('士', Color::Red) => Piece::RED_SCHOLAR,
             ('士', Color::Black) => Piece::BLACK_SCHOLAR,
+            ('卒', Color::Red) => Piece::RED_PAWN,
+            ('卒', Color::Black) => Piece::BLACK_PAWN,
+            ('车', Color::Red) => Piece::RED_ROOK,
+            ('车', Color::Black) => Piece::BLACK_ROOK,
             ('马', Color::Red) => Piece::RED_HORSE,
             ('马', Color::Black) => Piece::BLACK_HORSE,
             ('风', Color::Red) => Piece::RED_WIND,

@@ -22,9 +22,9 @@ impl Formation {
     pub const WIZARD: Self = Self { points: Self::CORNER, effect: Self::wizard };
     pub const AGENT: Self = Self { points: Self::CORNER, effect: Self::agent };
     pub const SPY: Self = Self { points: Self::CORNER, effect: Self::spy };
-    pub const ROOK: Self = Self { points: Self::MIDDLE, effect: Self::rook };
-    pub const PAWN: Self = Self { points: Self::MIDDLE, effect: Self::pawn };
     pub const SCHOLAR: Self = Self { points: Self::MIDDLE, effect: Self::scholar };
+    pub const PAWN: Self = Self { points: Self::MIDDLE, effect: Self::pawn };
+    pub const ROOK: Self = Self { points: Self::MIDDLE, effect: Self::rook };
     pub const HORSE: Self = Self { points: Self::MIDDLE, effect: Self::horse };
     pub const WIND: Self = Self { points: Self::UPPER_TRIANGLE, effect: Self::wind };
     pub const MOUNTAIN: Self = Self { points: Self::UPPER_TRIANGLE, effect: Self::mountain };
@@ -104,10 +104,10 @@ impl Formation {
         }
     }
 
-    /// Allies gain ANY_DISTANCE; enemies lose it.
-    pub fn rook(owner: Color, object: Color) -> (Ability, Ability) {
-        let mask = Ability::ANY_DISTANCE;
-        let update = if owner == object { Ability::ANY_DISTANCE } else { Ability::NONE };
+    /// Allies gain DIRECTION_DIAGONAL; enemies lose it.
+    pub fn scholar(owner: Color, object: Color) -> (Ability, Ability) {
+        let mask = Ability::DIRECTION_DIAGONAL;
+        let update = if owner == object { Ability::DIRECTION_DIAGONAL } else { Ability::NONE };
         (mask, update)
     }
 
@@ -118,10 +118,10 @@ impl Formation {
         (mask, update)
     }
 
-    /// Allies gain DIRECTION_DIAGONAL; enemies lose it.
-    pub fn scholar(owner: Color, object: Color) -> (Ability, Ability) {
-        let mask = Ability::DIRECTION_DIAGONAL;
-        let update = if owner == object { Ability::DIRECTION_DIAGONAL } else { Ability::NONE };
+    /// Allies gain ANY_DISTANCE; enemies lose it.
+    pub fn rook(owner: Color, object: Color) -> (Ability, Ability) {
+        let mask = Ability::ANY_DISTANCE;
+        let update = if owner == object { Ability::ANY_DISTANCE } else { Ability::NONE };
         (mask, update)
     }
 

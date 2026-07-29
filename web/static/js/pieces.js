@@ -30,5 +30,14 @@ export function createPieceElement(piece, pool = false) {
     return el;
 }
 
-export const PIECE_NAMES_RED = ['将', '巫', '间', '谍', '车', '卒', '士', '马', '风', '山', '火', '林', '矛', '盾', '弹', '雷'];
-export const PIECE_NAMES_BLACK = PIECE_NAMES_RED;
+let cachedPieceNames = null;
+
+export function cachePieceListFromState(state) {
+    if (state.red_pool && state.red_pool.length > 0) {
+        cachedPieceNames = state.red_pool.map(p => p.name);
+    }
+}
+
+export function getCachedPieceNames() {
+    return cachedPieceNames || [];
+}

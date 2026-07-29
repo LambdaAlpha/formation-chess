@@ -1,11 +1,13 @@
 import { init, render, setStatus, hidePopup } from './ui.js';
 import { getState, postAction, postNew, postUndo } from './api.js';
+import { cachePieceListFromState } from './pieces.js';
 
 async function main() {
     init(handleAction);
 
     try {
         const state = await getState();
+        cachePieceListFromState(state);
         render(state);
     } catch (e) {
         setStatus('无法连接到服务器', true);
@@ -19,6 +21,7 @@ async function handleAction(actionReq) {
         const { type, ...config } = actionReq;
         try {
             const state = await postNew(config);
+            cachePieceListFromState(state);
             render(state);
         } catch (e) {
             setStatus(e.message, true);

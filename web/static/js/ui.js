@@ -1,5 +1,5 @@
 import { renderBoard, getIntersection } from './board.js';
-import { createPieceElement, PIECE_NAMES_RED, PIECE_NAMES_BLACK } from './pieces.js';
+import { createPieceElement, getCachedPieceNames } from './pieces.js';
 import { showMoveHints, showPlacementHints, clearHints, setSelected } from './hints.js';
 import { postHints, getRules } from './api.js';
 
@@ -139,13 +139,10 @@ function renderPools(state) {
     redItems.innerHTML = '';
     blackItems.innerHTML = '';
 
-    const rank = Object.fromEntries(PIECE_NAMES_RED.map((n, i) => [n, i]));
-    const sortPool = (pieces) => [...pieces].sort((a, b) => (rank[a.name] ?? 99) - (rank[b.name] ?? 99));
-
-    for (const piece of sortPool(state.red_pool)) {
+    for (const piece of state.red_pool) {
         redItems.appendChild(createPieceElement(piece, true));
     }
-    for (const piece of sortPool(state.black_pool)) {
+    for (const piece of state.black_pool) {
         blackItems.appendChild(createPieceElement(piece, true));
     }
 }
@@ -424,13 +421,14 @@ function buildRandomConfig(width, height) {
 
     const cells = Array.from({ length: height }, () => Array.from({ length: width }, () => null));
 
-    for (let i = 0; i < PIECE_NAMES_RED.length; i++) {
+    const pieceNames = getCachedPieceNames();
+    for (let i = 0; i < pieceNames.length; i++) {
         const [rx, ry] = redPositions[i];
-        cells[ry][rx] = { name: PIECE_NAMES_RED[i], color: 'Red' };
+        cells[ry][rx] = { name: pieceNames[i], color: 'Red' };
     }
-    for (let i = 0; i < PIECE_NAMES_BLACK.length; i++) {
+    for (let i = 0; i < pieceNames.length; i++) {
         const [bx, by] = blackPositions[i];
-        cells[by][bx] = { name: PIECE_NAMES_BLACK[i], color: 'Black' };
+        cells[by][bx] = { name: pieceNames[i], color: 'Black' };
     }
 
     return {

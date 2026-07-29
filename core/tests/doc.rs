@@ -58,8 +58,8 @@ fn readme_quick_start_example() {
         assert_eq!(reaction.game_result.to_string(), "未分");
     }
     let expected = "行棋方：红
-红方：[雷 巫 间 谍 车 卒 士 马 风 山 火 林 矛 盾 弹]
-黑方：[雷 巫 间 谍 车 卒 士 马 风 山 火 林 矛 盾 弹]
+红方：[巫 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹 雷]
+黑方：[巫 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹 雷]
 白方：0
 胜负：未分
 棋盘：

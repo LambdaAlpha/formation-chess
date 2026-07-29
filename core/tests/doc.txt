@@ -660,8 +660,8 @@ rules.md example: placement does not trigger draw
 README.md quick start: the first two placement moves
 -----
 行棋方：红
-红方：[将 巫 间 谍 车 卒 士 马 风 山 火 林 矛 盾 弹 雷]
-黑方：[将 巫 间 谍 车 卒 士 马 风 山 火 林 矛 盾 弹 雷]
+红方：[将 巫 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹 雷]
+黑方：[将 巫 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹 雷]
 白方：0
 胜负：未分
 棋盘：
@@ -681,8 +681,8 @@ README.md quick start: the first two placement moves
 黑将五一
 -----
 行棋方：红
-红方：[雷 巫 间 谍 车 卒 士 马 风 山 火 林 矛 盾 弹]
-黑方：[雷 巫 间 谍 车 卒 士 马 风 山 火 林 矛 盾 弹]
+红方：[雷 巫 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹]
+黑方：[雷 巫 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹]
 白方：0
 胜负：未分
 棋盘：

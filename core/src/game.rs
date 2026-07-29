@@ -386,10 +386,10 @@ impl Game {
         self.board.apply(&changes);
         match piece.color {
             Color::Red => {
-                let _ = self.red_pool.swap_remove(index);
+                self.red_pool.remove(index);
             },
             Color::Black => {
-                let _ = self.black_pool.swap_remove(index);
+                self.black_pool.remove(index);
             },
             Color::White => self.white_pool -= 1,
         }
