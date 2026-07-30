@@ -6,7 +6,7 @@ async function main() {
     init(handleAction);
 
     try {
-        const state = await getState();
+        const state = await postNew({ board: { width: 9, height: 10 } });
         cachePieceListFromState(state);
         render(state);
     } catch (e) {
