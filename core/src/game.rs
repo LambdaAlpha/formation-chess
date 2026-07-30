@@ -37,11 +37,17 @@ pub struct GameConfig {
     pub board: Board,
     pub red_pool: Vec<Piece>,
     pub black_pool: Vec<Piece>,
-    /// The piece placed by CONTROL_WHITE placements.
+    /// The white piece definition.
     pub white: Piece,
-    /// Number of white pieces available for placement.
+    /// Number of white pieces available.
     pub white_pool: u8,
     pub result: GameResult,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Phase {
+    Place,
+    Move,
 }
 
 /// The standard initial setup: an empty 9×10 board, both 16-piece armies
@@ -103,7 +109,7 @@ impl Game {
         &self.black_pool
     }
 
-    /// Number of white pieces available for placement.
+    /// Number of white pieces available for the `Leave` action.
     pub fn white_pool(&self) -> u8 {
         self.white_pool
     }
@@ -112,10 +118,12 @@ impl Game {
         self.result
     }
 
-    /// True while either player still has pieces to place. During this
-    /// phase only placement actions are accepted.
-    pub fn is_placement_phase(&self) -> bool {
-        !self.red_pool.is_empty() || !self.black_pool.is_empty()
+    pub fn phase(&self) -> Phase {
+        if self.red_pool.is_empty() && self.black_pool.is_empty() {
+            Phase::Move
+        } else {
+            Phase::Place
+        }
     }
 
     fn validate_config(config: &GameConfig) -> Result<(), String> {
@@ -242,6 +250,10 @@ impl Game {
                 let changes = self.try_draw(move_)?;
                 self.apply_draw(changes)
             },
+            Action::Leave(move_) => {
+                let changes = self.try_leave(move_)?;
+                self.apply_leave(changes)
+            },
             Action::Pass(player) => {
                 self.try_pass(player)?;
                 self.switch_player();
@@ -286,6 +298,11 @@ impl Game {
                 let changes = self.try_draw(move_)?;
                 Ok(Reaction { changes, game_result: GameResult::Draw })
             },
+            Action::Leave(move_) => {
+                let changes = self.try_leave(move_)?;
+                let game_result = self.move_result(&changes);
+                Ok(Reaction { changes, game_result })
+            },
             Action::Pass(player) => {
                 self.try_pass(player)?;
                 let result = self.move_result(&[]);
@@ -303,7 +320,7 @@ impl Game {
     /// when the position is empty, or when the piece is not controlled by
     /// the player to move.
     pub fn valid_moves(&self, x: u8, y: u8) -> Vec<Action> {
-        if self.is_placement_phase() || self.result != GameResult::Unfinished {
+        if self.phase() != Phase::Move || self.result != GameResult::Unfinished {
             return vec![];
         }
         let Some(piece) = self.board.effective((x, y)) else {
@@ -312,55 +329,25 @@ impl Game {
         if !piece.can_controlled_by(self.player) {
             return vec![];
         }
-        self.board.valid_moves(self.player, (x, y))
+        let has_white = self.white_pool > 0;
+        self.board.valid_moves(self.player, (x, y), has_white)
     }
 
-    /// Positions where the current player may place a white piece.
-    /// Returns empty when in placement phase or when `white_pool` is zero.
-    /// Only the first CONTROL_WHITE piece is consulted — each side fields a
-    /// single Wizard and no formation can grant CONTROL_WHITE, so there is
-    /// at most one eligible piece per player.
-    pub fn valid_white_placements(&self) -> Vec<(u8, u8)> {
-        if self.is_placement_phase()
-            || self.result != GameResult::Unfinished
-            || self.white_pool == 0
-        {
-            return vec![];
-        }
-        self.board.valid_white_placements(self.player)
-    }
-
-    /// Non‑mutating placement validation (handles both colored and white).
+    /// Non‑mutating placement validation (handles colored pieces only).
     fn try_place(&self, place: Place) -> Result<PlaceResult, String> {
-        let (piece, index) = self.find_in_pool(place.piece)?;
-        if piece.color == Color::White {
-            if self.is_placement_phase() {
-                return Err("cannot place white pieces during the placement phase".into());
-            }
-            let changes = self.board.try_place_white(piece, place.to, self.player)?;
-            return Ok(PlaceResult { piece, index, changes });
-        }
-        if piece.color != self.player.color() {
+        if place.piece.color != self.player.color() {
             return Err(format!(
                 "player {} cannot place piece of color {}",
                 self.player, place.piece.color
             ));
         }
+        let (piece, index) = self.find_in_pool(place.piece)?;
         let changes = self.board.try_place(piece, place.to)?;
         Ok(PlaceResult { piece, index, changes })
     }
 
     fn find_in_pool(&self, piece: Piece) -> Result<(Piece, usize), String> {
         match piece.color {
-            Color::White => {
-                if piece != self.white {
-                    return Err(format!("white piece {piece} does not match this game's"));
-                }
-                if self.white_pool == 0 {
-                    return Err("no white pieces available to place".into());
-                }
-                Ok((self.white, 0))
-            },
             Color::Red => {
                 for (i, p) in self.red_pool.iter().enumerate() {
                     if *p == piece {
@@ -377,6 +364,7 @@ impl Game {
                 }
                 Err(format!("piece {piece} not in pool"))
             },
+            Color::White => Err("white pieces cannot be placed".into()),
         }
     }
 
@@ -437,8 +425,25 @@ impl Game {
         Ok(Reaction { changes, game_result })
     }
 
+    fn try_leave(&self, move_: Move) -> Result<Vec<PositionChange>, String> {
+        self.check_move(move_.from)?;
+        if self.white_pool == 0 {
+            return Err("no white pieces available".into());
+        }
+        self.board.try_leave(move_.from, move_.to, self.white)
+    }
+
+    fn apply_leave(&mut self, changes: Vec<PositionChange>) -> Result<Reaction, String> {
+        let game_result = self.move_result(&changes);
+        self.board.apply(&changes);
+        self.white_pool -= 1;
+        self.switch_player();
+        self.result = game_result;
+        Ok(Reaction { changes, game_result })
+    }
+
     fn check_move(&self, from: (u8, u8)) -> Result<(), String> {
-        if self.is_placement_phase() {
+        if self.phase() != Phase::Move {
             return Err("cannot move pieces during the placement phase".into());
         }
         let Some(piece) = self.board.effective(from) else {
@@ -513,7 +518,7 @@ impl Game {
     }
 
     fn try_pass(&self, player: Player) -> Result<(), String> {
-        if self.is_placement_phase() {
+        if self.phase() == Phase::Place {
             return Err("cannot pass during the placement phase".into());
         }
         self.check_player(player)

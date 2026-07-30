@@ -239,7 +239,7 @@ push escalation captures target with captured_on_captured
 五[一一 红火 一一 一一 一一 一一]
 六[一一 一一 一一 一一 一一 红将]
 -----
-变化：[红风提 黑雷提]
+变化：[红风失 黑雷失]
 胜负：未分
 =====
 L-shaped push with leg blocked fails

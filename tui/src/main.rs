@@ -66,7 +66,7 @@ fn run_game(mut game: Game) {
             continue;
         }
         let pre_board = game.board().clone();
-        let resolver = NotationResolver::new(&pre_board);
+        let resolver = NotationResolver::new(&pre_board, game.phase());
         match resolver.parse_action(&input) {
             Ok(action) => {
                 if let Err(e) = game.action(action) {

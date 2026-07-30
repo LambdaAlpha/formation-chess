@@ -122,32 +122,27 @@ async fn hints_handler(
     State(state): State<SharedState>, Json(request): Json<ApiHintsRequest>,
 ) -> Json<ApiHintsResponse> {
     let game = state.game.lock().unwrap();
-    let response = match request {
-        ApiHintsRequest::Piece { x, y } => {
-            let moves = game.valid_moves(x, y);
-            let hints: Vec<ApiMoveHint> = moves
-                .iter()
-                .map(|a| {
-                    let to = action_destination(a);
-                    ApiMoveHint { action_type: action_type_str(a).into(), to: [to.0, to.1] }
-                })
-                .collect();
-            ApiHintsResponse { moves: Some(hints), placements: None }
-        },
-        ApiHintsRequest::White { .. } => {
-            let placements: Vec<[u8; 2]> =
-                game.valid_white_placements().iter().map(|&(x, y)| [x, y]).collect();
-            ApiHintsResponse { moves: None, placements: Some(placements) }
-        },
-    };
+    let moves = game.valid_moves(request.x, request.y);
+    let hints: Vec<ApiMoveHint> = moves
+        .iter()
+        .map(|a| {
+            let to = action_destination(a);
+            ApiMoveHint { action_type: action_type_str(a).into(), to: [to.0, to.1] }
+        })
+        .collect();
+    let response = ApiHintsResponse { moves: Some(hints), placements: None };
     drop(game);
     Json(response)
 }
 
 fn action_destination(action: &Action) -> (u8, u8) {
     match action {
-        Action::Move(m) | Action::Capture(m) | Action::Push(m) | Action::Draw(m) => m.to,
-        _ => unreachable!("valid_moves only returns move/capture/push/draw"),
+        Action::Move(m)
+        | Action::Capture(m)
+        | Action::Push(m)
+        | Action::Draw(m)
+        | Action::Leave(m) => m.to,
+        _ => unreachable!("valid_moves only returns move/capture/push/draw/leave"),
     }
 }
 

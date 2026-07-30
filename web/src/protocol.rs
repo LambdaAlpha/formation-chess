@@ -96,6 +96,7 @@ pub enum ApiActionRequest {
     Capture { from: [u8; 2], to: [u8; 2] },
     Push { from: [u8; 2], to: [u8; 2] },
     Draw { from: [u8; 2], to: [u8; 2] },
+    Leave { from: [u8; 2], to: [u8; 2] },
     Pass,
     Resign,
 }
@@ -118,6 +119,9 @@ impl ApiActionRequest {
             ApiActionRequest::Draw { from, to } => {
                 Ok(Action::Draw(Move { from: (from[0], from[1]), to: (to[0], to[1]) }))
             },
+            ApiActionRequest::Leave { from, to } => {
+                Ok(Action::Leave(Move { from: (from[0], from[1]), to: (to[0], to[1]) }))
+            },
             ApiActionRequest::Pass => Ok(Action::Pass(current_player)),
             ApiActionRequest::Resign => Ok(Action::Resign(current_player)),
         }
@@ -138,16 +142,9 @@ pub struct ApiHintsResponse {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(untagged, deny_unknown_fields)]
-pub enum ApiHintsRequest {
-    Piece {
-        x: u8,
-        y: u8,
-    },
-    White {
-        #[expect(dead_code)]
-        white: bool,
-    },
+pub struct ApiHintsRequest {
+    pub x: u8,
+    pub y: u8,
 }
 
 #[derive(Debug, Deserialize)]
@@ -309,6 +306,7 @@ pub fn action_type_str(action: &Action) -> &'static str {
         Action::Capture(_) => "capture",
         Action::Push(_) => "push",
         Action::Draw(_) => "draw",
-        _ => "move", // valid_moves never returns other variants; safe fallback
+        Action::Leave(_) => "leave",
+        _ => "move",
     }
 }

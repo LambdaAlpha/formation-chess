@@ -10,12 +10,12 @@ use formation_chess_core::piece::Player;
 
 mod api_common;
 use api_common::assert_captures;
+use api_common::assert_leaves;
 use api_common::assert_moves;
 use api_common::assert_pushes;
 use api_common::game_one;
 use api_common::game_one_3x3;
 use api_common::game_with;
-use api_common::game_with_white_pool;
 
 // -- valid_moves: edge cases -------------------------------------------------
 
@@ -361,82 +361,6 @@ fn valid_moves_mine_capture_action_listed() {
     assert_captures(&actions, &[(2, 1)]);
 }
 
-// -- valid_white_placements --------------------------------------------------
-
-#[test]
-fn valid_white_placements_returns_diagonal_positions() {
-    let g = game_with_white_pool(
-        Player::Red,
-        &[
-            (Piece::RED_WIZARD, (2, 2)),
-            (Piece::RED_GENERAL, (0, 4)),
-            (Piece::BLACK_GENERAL, (4, 0)),
-        ],
-        1,
-    );
-    let mut got = g.valid_white_placements();
-    got.sort_unstable();
-    assert_eq!(got, vec![(1, 1), (1, 3), (3, 1), (3, 3)]);
-}
-
-#[test]
-fn valid_white_placements_empty_when_placement_phase() {
-    let mut board = Board::new(9, 10);
-    board[(4, 7)] = Some(Piece::RED_WIZARD);
-    board[(0, 9)] = Some(Piece::RED_GENERAL);
-    board[(8, 0)] = Some(Piece::BLACK_GENERAL);
-    let g = Game::new(GameConfig {
-        player: Player::Red,
-        board,
-        red_pool: vec![Piece::RED_ROOK],
-        black_pool: vec![Piece::BLACK_PAWN],
-        white: Piece::WHITE,
-        white_pool: 2,
-        result: GameResult::Unfinished,
-    })
-    .expect("valid");
-    assert!(g.valid_white_placements().is_empty());
-}
-
-#[test]
-fn valid_white_placements_empty_when_white_pool_zero() {
-    let g = game_with_white_pool(
-        Player::Red,
-        &[
-            (Piece::RED_WIZARD, (2, 2)),
-            (Piece::RED_GENERAL, (0, 4)),
-            (Piece::BLACK_GENERAL, (4, 0)),
-        ],
-        0,
-    );
-    assert!(g.valid_white_placements().is_empty());
-}
-
-#[test]
-fn valid_white_placements_empty_when_decided() {
-    let mut g = game_with_white_pool(
-        Player::Red,
-        &[
-            (Piece::RED_WIZARD, (2, 2)),
-            (Piece::RED_GENERAL, (0, 4)),
-            (Piece::BLACK_GENERAL, (4, 0)),
-        ],
-        1,
-    );
-    g.action(Action::Resign(Player::Red)).expect("resign");
-    assert!(g.valid_white_placements().is_empty());
-}
-
-#[test]
-fn valid_white_placements_empty_when_no_control_white() {
-    let g = game_with_white_pool(
-        Player::Red,
-        &[(Piece::RED_ROOK, (2, 2)), (Piece::RED_GENERAL, (0, 4)), (Piece::BLACK_GENERAL, (4, 0))],
-        1,
-    );
-    assert!(g.valid_white_placements().is_empty());
-}
-
 // -- try_xxx returns original pieces in position changes ----------------------
 
 #[test]
@@ -672,4 +596,95 @@ fn mine_capture_on_captured_triggers_mutual_destruction() {
     );
     let actions = g.valid_moves(2, 2);
     assert_captures(&actions, &[(2, 3)]);
+}
+
+// -- Leave actions -----------------------------------------------------------
+
+/// Wizard has both Move and Leave for empty cross-direction destinations
+/// when white_pool > 0.
+#[test]
+fn leave_alongside_move_for_wizard() {
+    let mut board = Board::new(5, 5);
+    board[(2, 2)] = Some(Piece::RED_WIZARD);
+    board[(0, 4)] = Some(Piece::RED_GENERAL);
+    board[(4, 0)] = Some(Piece::BLACK_GENERAL);
+    let g = Game::new(GameConfig {
+        player: Player::Red,
+        board,
+        red_pool: vec![],
+        black_pool: vec![],
+        white: Piece::WHITE,
+        white_pool: 1,
+        result: GameResult::Unfinished,
+    })
+    .expect("valid");
+    let actions = g.valid_moves(2, 2);
+    let targets = &[(0, 2), (1, 2), (3, 2), (4, 2), (2, 0), (2, 1), (2, 3), (2, 4)];
+    assert_moves(&actions, targets);
+    assert_leaves(&actions, targets);
+}
+
+/// Leave not available when white_pool == 0.
+#[test]
+fn leave_absent_when_no_white_pool() {
+    let mut board = Board::new(5, 5);
+    board[(2, 2)] = Some(Piece::RED_WIZARD);
+    board[(0, 4)] = Some(Piece::RED_GENERAL);
+    board[(4, 0)] = Some(Piece::BLACK_GENERAL);
+    let g = Game::new(GameConfig {
+        player: Player::Red,
+        board,
+        red_pool: vec![],
+        black_pool: vec![],
+        white: Piece::WHITE,
+        white_pool: 0,
+        result: GameResult::Unfinished,
+    })
+    .expect("valid");
+    let actions = g.valid_moves(2, 2);
+    assert_leaves(&actions, &[]);
+}
+
+/// Leave not available for pieces without CONTROL_WHITE.
+#[test]
+fn leave_absent_without_control_white() {
+    let mut board = Board::new(5, 5);
+    board[(2, 2)] = Some(Piece::RED_ROOK);
+    board[(0, 4)] = Some(Piece::RED_GENERAL);
+    board[(4, 0)] = Some(Piece::BLACK_GENERAL);
+    let g = Game::new(GameConfig {
+        player: Player::Red,
+        board,
+        red_pool: vec![],
+        black_pool: vec![],
+        white: Piece::WHITE,
+        white_pool: 1,
+        result: GameResult::Unfinished,
+    })
+    .expect("valid");
+    let actions = g.valid_moves(2, 2);
+    assert_leaves(&actions, &[]);
+}
+
+/// Leave targets only empty points, not occupied ones.
+#[test]
+fn leave_only_empty_destinations() {
+    let mut board = Board::new(5, 5);
+    board[(2, 2)] = Some(Piece::RED_WIZARD);
+    board[(2, 1)] = Some(Piece::RED_PAWN);
+    board[(0, 4)] = Some(Piece::RED_GENERAL);
+    board[(4, 0)] = Some(Piece::BLACK_GENERAL);
+    let g = Game::new(GameConfig {
+        player: Player::Red,
+        board,
+        red_pool: vec![],
+        black_pool: vec![],
+        white: Piece::WHITE,
+        white_pool: 1,
+        result: GameResult::Unfinished,
+    })
+    .expect("valid");
+    let actions = g.valid_moves(2, 2);
+    // (2,1) is occupied, so no Move or Leave there.
+    assert_leaves(&actions, &[(0, 2), (1, 2), (3, 2), (4, 2), (2, 3), (2, 4)]);
 }

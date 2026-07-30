@@ -65,9 +65,13 @@ impl Formation {
     pub fn wizard(owner: Color, object: Color) -> (Ability, Ability) {
         match (owner, object) {
             (Color::Red, Color::White) => (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED),
+            (Color::Red, Color::Red) => (Ability::CONTROL_WHITE, Ability::CONTROL_WHITE),
+            (Color::Red, Color::Black) => (Ability::CONTROL_WHITE, Ability::NONE),
             (Color::Black, Color::White) => {
                 (Ability::CONTROLLED_BY_BLACK, Ability::CONTROLLED_BY_BLACK)
             },
+            (Color::Black, Color::Red) => (Ability::CONTROL_WHITE, Ability::NONE),
+            (Color::Black, Color::Black) => (Ability::CONTROL_WHITE, Ability::CONTROL_WHITE),
             _ => (Ability::NONE, Ability::NONE),
         }
     }

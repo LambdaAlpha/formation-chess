@@ -48,7 +48,7 @@ fn swap_changes_resolve_and_apply() {
     let game = Game::from_str(SWAP_STATE).expect("parse game");
     let board = game.board();
 
-    let result = NotationResolver::new(board)
+    let result = NotationResolver::movement(board)
         .parse_reaction("变化：[红车二四 红马一二]\n胜负：未分")
         .expect("parse result")
         .expect("success result");
@@ -65,11 +65,11 @@ fn swap_changes_are_order_independent() {
     let game = Game::from_str(SWAP_STATE).expect("parse game");
     let board = game.board();
 
-    let a = NotationResolver::new(board)
+    let a = NotationResolver::movement(board)
         .parse_reaction("变化：[红车二四 红马一二]\n胜负：未分")
         .expect("parse result")
         .expect("success result");
-    let b = NotationResolver::new(board)
+    let b = NotationResolver::movement(board)
         .parse_reaction("变化：[红马一二 红车二四]\n胜负：未分")
         .expect("parse result")
         .expect("success result");
@@ -82,7 +82,7 @@ fn coordinate_identified_swap_with_relative_position() {
     let game = Game::from_str(SWAP_STATE).expect("parse game");
     let board = game.board();
 
-    let result = NotationResolver::new(board)
+    let result = NotationResolver::movement(board)
         .parse_reaction("变化：[二四一二 一二一四]\n胜负：未分")
         .expect("parse result")
         .expect("success result");
@@ -100,8 +100,8 @@ fn removal_entry_clears_point() {
     let game = Game::from_str(SWAP_STATE).expect("parse game");
     let board = game.board();
 
-    let result = NotationResolver::new(board)
-        .parse_reaction("变化：[红车提]\n胜负：未分")
+    let result = NotationResolver::movement(board)
+        .parse_reaction("变化：[红车失]\n胜负：未分")
         .expect("parse result")
         .expect("success result");
 

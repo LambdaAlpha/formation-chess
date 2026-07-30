@@ -97,9 +97,7 @@ The board begins with the line `棋盘：`, followed by the grid itself.
 The first row of the grid is a header row for the columns. It starts with
 `零` (zero) in the row-label position and then lists each column in
 `x路` format — for instance `一路 二路 三路`. The `路` suffix ensures that
-the two-character piece names align neatly in every row. The `零` is
-only a marker for the label row; columns and rows themselves are
-numbered from `一`.
+the two-character piece names align neatly in every row.
 
 Each subsequent row starts with the Chinese numeral for the row index,
 followed by the cells in brackets. Every cell is exactly two characters
@@ -191,7 +189,7 @@ moves to an absolute row.
 
 A suffix after the position makes the intent of the action explicit.
 
-The two combat suffixes are used when the action targets an occupied
+The combat suffixes are used when the action targets an occupied
 point; they declare how the moving piece interacts with the piece
 already there:
 
@@ -201,11 +199,10 @@ already there:
 - `和` (draw): move your vital piece onto the opponent's vital piece,
   removing it and declaring a draw.
 
-The placement suffix targets an empty point instead:
+The special-move suffix targets an empty point:
 
-- `占` (place): explicitly place a piece onto the board. Used when the
-  piece might otherwise be misinterpreted as a move — for example, a second
-  white piece placed while one is already on the board.
+- `留` (leave): the piece moves to an empty point and leaves a white
+  piece behind at its original position.
 
 If the suffix is omitted, the action must target an empty point (a simple
 move or placement). Moving onto an occupied point without a push or
@@ -213,13 +210,16 @@ capture suffix is rejected.
 
 ### Placement vs. Movement
 
-When a piece is not yet on the board and the written position is
-absolute without a combat suffix, the game interprets the action as
-placing that piece onto the given point.
+An unsuffixed action — a piece followed by a position with no `捉`,
+`推`, `和`, or `留` suffix — can mean either a placement or a move,
+depending on the game phase:
 
-If the piece is already on the board, the action is treated as a move.
-Use the `占` suffix to explicitly mark a placement even when an
-identical piece already stands on the board.
+- **Placement phase**: a color-prefixed piece name with an absolute
+  position (e.g. `红车三四`) is a placement — the piece is taken from
+  the pool and set on that point. Any other form is illegal during this
+  phase.
+- **Movement phase**: every unsuffixed action is a move. The piece must
+  be on the board.
 
 ### Pass and Resign
 
@@ -232,8 +232,7 @@ name, position, or suffix. The color must match the player to move:
   immediately — `红认负` or `黑认负`.
 
 Pass is not allowed during the placement phase: every placement
-turn must place a piece. Resign may be used at any time. (Placing a
-white piece is likewise forbidden during the placement phase.) Both
+turn must place a piece. Resign may be used at any time. Both
 actions produce an empty change list.
 
 ### Examples
@@ -268,14 +267,20 @@ A white piece on column 3 moves vertically to row 2:
 白子直二
 ```
 
-The Wizard (`巫`) places a white piece from the pool onto column 2, row 4:
+A white piece is placed from the pool onto column 2, row 4:
 
 ```
-白子二四占
+白子二四
 ```
 
-The `占` suffix makes the placement explicit. Without it the action could
-be misinterpreted as a move once a white piece is already on the board.
+The red Wizard on column 3, row 3 moves straight to row 4 and leaves a
+white piece behind at its original position:
+
+```
+红巫直四留
+```
+
+The `留` suffix declares the piece leaves a white piece behind.
 
 Red passes the turn:
 
@@ -309,16 +314,15 @@ separated by spaces.
 
 Each entry describes the change of a single piece and is written like an
 action — piece identification followed by a position — but never carries
-a combat suffix (`捉` / `推`):
+a combat suffix (`捉` / `推` / `和`):
 
 - **Piece + position** — the piece now stands on that point, for
   example `红车进一` or `黑马三四`. The position may be absolute or
   relative, exactly as in actions. If the piece was not on the board
-  before the action, this is a placement onto the (absolute) point,
-  marked with the `占` suffix.
-- **Piece + `提`** — the piece is removed from the board and no new
-  piece arrives on its former point, for example `红雷提`. A normal
-  capture therefore needs no `提` entry for the captured piece: the
+  before the action, this is a placement onto the (absolute) point.
+- **Piece + `失`** — the piece is removed from the board and no new
+  piece arrives on its former point, for example `红雷失`. A normal
+  capture therefore needs no `失` entry for the captured piece: the
   attacker's own entry already shows a new piece arriving on that point.
 
 Piece identification follows the same rules as actions: a unique piece
@@ -377,7 +381,7 @@ Both attacker and target are destroyed (e.g. mine effect); neither
 point receives a new piece:
 
 ```
-变化：[红雷提 黑车提]
+变化：[红雷失 黑车失]
 胜负：未分
 ```
 
@@ -392,7 +396,7 @@ lands one step further:
 Placement from the pool (the piece was not on the board before):
 
 ```
-变化：[红车四四占]
+变化：[红车四四]
 胜负：未分
 ```
 
@@ -446,7 +450,7 @@ sequence of actions played. Replaying the actions reproduces every
 intermediate position and the final result, so nothing else needs to be
 stored.
 
-A record consists of:
+A record consists of two parts:
 
 - an optional game state block, followed by one blank line — present
   only when the game does not start from the standard setup (empty 9×10
@@ -509,13 +513,14 @@ piece        = ( color , name ) | coordinate ;
 coordinate   = numeral , numeral ;              (* column, then row *)
 position     = coordinate | relative ;
 relative     = ( "平" | "直" | "进" | "退" ) , numeral ;
-suffix       = "捉" | "推" | "和" | "占" ;
+suffix       = "捉" | "推" | "和" | "留" ;
 
 reaction     = success | error ;
 success      = "变化：[" , [ change , { " " , change } ] , "]" , newline ,
                "胜负：" , result ;
-change       = ( piece , "提" )
-             | ( piece , position , [ "占" ] ) ;
+change       = ( piece , "失" )
+             | ( piece , position , "占" )
+             | ( piece , position ) ;
 error        = "错误：" , text ;
 
 record       = [ game-state , newline ] , { round , newline } ;
@@ -541,6 +546,6 @@ Constraints the grammar does not capture:
   name, and never apply to white pieces.
 - After a coordinate-identified piece, only `平`, `直`, or an absolute
   position may follow.
-- A change entry never carries `捉`, `推`, or `和`; the `占` suffix appears
-  only on placements, whose position is absolute.
+- A change entry never carries any suffix.
+- `留` is only valid for pieces with the CONTROL_WHITE ability.
 - The final line of a text may omit the trailing newline.

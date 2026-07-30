@@ -322,7 +322,7 @@ formation grants pushability to ally: both ally and enemy can push
 四[一一 一一 一一 一一 一一]
 五[一一 一一 一一 一一 红将]
 -----
-变化：[黑风三二 红卒四三占]
+变化：[黑风三二 红卒四三]
 胜负：未分
 =====
 ally push succeeds on formation-protected ally
@@ -355,7 +355,7 @@ ally push succeeds on formation-protected ally
 四[一一 红山 一一 红卒 一一]
 五[一一 一一 一一 一一 红将]
 -----
-变化：[红风三三 红卒四四占]
+变化：[红风三三 红卒四四]
 胜负：未分
 =====
 formation demotes capture to push on protected ally
@@ -390,7 +390,7 @@ formation demotes capture to push on protected ally
 五[一一 一一 一一 一一 一一 一一]
 六[一一 一一 一一 一一 一一 红将]
 -----
-变化：[黑车平二 红矛一二占]
+变化：[黑车平二 红矛一二]
 胜负：未分
 =====
 formation grants captured_on_capture: mutual destruction
@@ -427,7 +427,7 @@ formation grants captured_on_capture: mutual destruction
 六[一一 一一 一一 一一 一一 一一 一一]
 七[一一 一一 一一 一一 一一 一一 红将]
 -----
-变化：[红矛提 黑卒提]
+变化：[红矛失 黑卒失]
 胜负：未分
 =====
 agent removes opponent control from allied spy

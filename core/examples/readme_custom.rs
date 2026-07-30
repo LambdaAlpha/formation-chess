@@ -2,6 +2,7 @@
 //! text protocol into a validated game.
 
 use formation_chess_core::game::Game;
+use formation_chess_core::game::Phase;
 
 fn main() -> Result<(), String> {
     let game: Game = "行棋方：黑
@@ -18,6 +19,6 @@ fn main() -> Result<(), String> {
 "
     .parse()?;
 
-    assert!(game.is_placement_phase(), "pools are not empty so phase must be placement");
+    assert_eq!(game.phase(), Phase::Place, "pools are not empty so phase must be placement");
     Ok(())
 }

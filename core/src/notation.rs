@@ -11,6 +11,7 @@ use crate::action::Reaction;
 use crate::board::Board;
 use crate::chinese_num::fmt_num;
 use crate::chinese_num::parse_num;
+use crate::game::Phase;
 use crate::piece::Color;
 use crate::piece::Piece;
 use crate::piece::Player;
@@ -21,22 +22,23 @@ use crate::piece::Player;
 /// board as it stood **before** that action.
 pub struct NotationResolver<'a> {
     board: &'a Board,
+    phase: Phase,
 }
 
 /// An action as written in notation, e.g. `红车平五推` or `黑认负`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ActionNotation {
-    /// Placement with the `占` suffix.
-    Place(PlaceNotation),
     /// Piece + position without a suffix: a move, or a placement when the
     /// piece is not on the board.
-    Move(PiecePosition),
+    Phase(PiecePosition),
     /// Piece + position + `捉`.
     Capture(PiecePosition),
     /// Piece + position + `推`.
     Push(PiecePosition),
     /// Piece + position + `和`.
     Draw(PiecePosition),
+    /// Piece + position + `留`: move and leave a white piece at origin.
+    Leave(PiecePosition),
     /// Color + `按兵`.
     Pass(Player),
     /// Color + `认负`.
@@ -62,11 +64,11 @@ pub enum ReactionNotation {
 pub enum ChangeNotation {
     /// Piece + absolute position + `占`: the piece arrived from off-board.
     Place(PlaceNotation),
-    /// Piece + `提`: the piece left the board and nothing replaced it.
+    /// Piece + `失`: the piece left the board and nothing replaced it.
     Remove(PieceNotation),
     /// Piece + position: the piece now stands there. Doubles as a
     /// placement when the piece is not on the board.
-    Move(PiecePosition),
+    Phase(PiecePosition),
 }
 
 /// A placement in notation: a canonical piece and a 1-based destination.
@@ -118,11 +120,12 @@ pub enum RelativePosition {
 impl Display for Action {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let na = match self {
-            Action::Place(p) => ActionNotation::Place(place_notation(*p)),
-            Action::Move(m) => ActionNotation::Move(piece_position(*m)),
+            Action::Place(p) => ActionNotation::Phase(place_notation(*p).into()),
+            Action::Move(m) => ActionNotation::Phase(piece_position(*m)),
             Action::Capture(m) => ActionNotation::Capture(piece_position(*m)),
             Action::Push(m) => ActionNotation::Push(piece_position(*m)),
             Action::Draw(m) => ActionNotation::Draw(piece_position(*m)),
+            Action::Leave(m) => ActionNotation::Leave(piece_position(*m)),
             Action::Pass(p) => ActionNotation::Pass(*p),
             Action::Resign(p) => ActionNotation::Resign(*p),
         };
@@ -175,14 +178,23 @@ fn change_notation(change: PositionChange) -> ChangeNotation {
     }
 }
 
+impl From<PlaceNotation> for PiecePosition {
+    fn from(notation: PlaceNotation) -> Self {
+        Self {
+            piece: PieceNotation::Name(notation.piece),
+            position: Position::Absolute(notation.to.0, notation.to.1),
+        }
+    }
+}
+
 impl Display for ActionNotation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ActionNotation::Place(p) => write!(f, "{p}"),
-            ActionNotation::Move(pp) => write!(f, "{pp}"),
+            ActionNotation::Phase(pp) => write!(f, "{pp}"),
             ActionNotation::Capture(pp) => write!(f, "{pp}捉"),
             ActionNotation::Push(pp) => write!(f, "{pp}推"),
             ActionNotation::Draw(pp) => write!(f, "{pp}和"),
+            ActionNotation::Leave(pp) => write!(f, "{pp}留"),
             ActionNotation::Pass(player) => write!(f, "{player}按兵"),
             ActionNotation::Resign(player) => write!(f, "{player}认负"),
         }
@@ -202,8 +214,8 @@ impl FromStr for ActionNotation {
         if let Some(player) = s.strip_suffix("认负") {
             return Ok(Self::Resign(player.parse()?));
         }
-        if s.ends_with('占') {
-            return Ok(Self::Place(s.parse()?));
+        if let Some(body) = s.strip_suffix("留") {
+            return Ok(Self::Leave(body.parse()?));
         }
         if let Some(body) = s.strip_suffix('捉') {
             return Ok(Self::Capture(body.parse()?));
@@ -214,7 +226,7 @@ impl FromStr for ActionNotation {
         if let Some(body) = s.strip_suffix('和') {
             return Ok(Self::Draw(body.parse()?));
         }
-        Ok(Self::Move(s.parse()?))
+        Ok(Self::Phase(s.parse()?))
     }
 }
 
@@ -273,9 +285,9 @@ impl FromStr for ReactionNotation {
 impl Display for ChangeNotation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ChangeNotation::Place(p) => write!(f, "{p}"),
-            ChangeNotation::Remove(piece) => write!(f, "{piece}提"),
-            ChangeNotation::Move(pp) => write!(f, "{pp}"),
+            ChangeNotation::Place(p) => write!(f, "{p}占"),
+            ChangeNotation::Remove(piece) => write!(f, "{piece}失"),
+            ChangeNotation::Phase(pp) => write!(f, "{pp}"),
         }
     }
 }
@@ -287,29 +299,26 @@ impl FromStr for ChangeNotation {
         if s.is_empty() {
             return Err("empty change entry".into());
         }
-        if let Some(body) = s.strip_suffix('提') {
+        if let Some(body) = s.strip_suffix('失') {
             return Ok(Self::Remove(body.parse()?));
         }
-        if s.ends_with('占') {
-            return Ok(Self::Place(s.parse()?));
+        if let Some(body) = s.strip_suffix('占') {
+            return Ok(Self::Place(body.parse()?));
         }
-        Ok(Self::Move(s.parse()?))
+        Ok(Self::Phase(s.parse()?))
     }
 }
 
 impl Display for PlaceNotation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}{}{}占", self.piece, fmt_num(self.to.0), fmt_num(self.to.1))
+        write!(f, "{}{}{}", self.piece, fmt_num(self.to.0), fmt_num(self.to.1))
     }
 }
 
 impl FromStr for PlaceNotation {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, String> {
-        let Some(body) = s.strip_suffix('占') else {
-            return Err(format!("placement must end with 占: {s}"));
-        };
-        let (pn, rest) = split_at_2(body)?;
+        let (pn, rest) = split_at_2(s)?;
         let p = match pn {
             PieceNotation::Name(p) => p,
             PieceNotation::Coord(_, _) => {
@@ -449,8 +458,15 @@ fn parse_two_numbers(s: &str) -> Result<(u8, u8), String> {
 }
 
 impl<'a> NotationResolver<'a> {
-    pub fn new(board: &'a Board) -> Self {
-        Self { board }
+    pub fn new(board: &'a Board, phase: Phase) -> Self {
+        Self { board, phase }
+    }
+
+    /// Convenience: creates a resolver with `phase = Phase::Move`.
+    /// Callers that know the actual phase should use
+    /// [`Self::new`].
+    pub fn movement(board: &'a Board) -> Self {
+        Self::new(board, Phase::Move)
     }
 
     // --- Convenience ---
@@ -482,15 +498,15 @@ impl<'a> NotationResolver<'a> {
     }
 
     /// Resolve a parsed action into 0-based API coordinates. An unsuffixed
-    /// piece-position resolves to a move when the piece is on the board,
-    /// and to a placement otherwise.
+    /// piece-position uses the resolver's `place_phase` to decide:
+    /// placement phase → Place, movement phase → Move.
     pub fn resolve_action(&self, action: ActionNotation) -> Result<Action, String> {
         let action = match action {
-            ActionNotation::Place(p) => Action::Place(self.place(p)?),
-            ActionNotation::Move(pp) => self.resolve_move_or_place(pp)?,
-            ActionNotation::Capture(pp) => Action::Capture(self.move_(pp.piece, pp.position)?),
-            ActionNotation::Push(pp) => Action::Push(self.move_(pp.piece, pp.position)?),
-            ActionNotation::Draw(pp) => Action::Draw(self.move_(pp.piece, pp.position)?),
+            ActionNotation::Phase(pp) => self.resolve_move_or_place(pp)?,
+            ActionNotation::Capture(pp) => Action::Capture(self.move_(pp)?),
+            ActionNotation::Push(pp) => Action::Push(self.move_(pp)?),
+            ActionNotation::Draw(pp) => Action::Draw(self.move_(pp)?),
+            ActionNotation::Leave(pp) => Action::Leave(self.move_(pp)?),
             ActionNotation::Pass(p) => Action::Pass(p),
             ActionNotation::Resign(p) => Action::Resign(p),
         };
@@ -498,34 +514,25 @@ impl<'a> NotationResolver<'a> {
     }
 
     fn resolve_move_or_place(&self, pp: PiecePosition) -> Result<Action, String> {
-        match pp.piece {
-            PieceNotation::Name(p) => match self.board.find_unique(p) {
-                Ok(from) => {
-                    let to = self.resolve_position(from, p.color, pp.position)?;
-                    Ok(Action::Move(Move { from, to }))
-                },
-                Err(false) => match pp.position {
-                    Position::Absolute(col, row) => {
-                        Ok(Action::Place(self.place(PlaceNotation { piece: p, to: (col, row) })?))
-                    },
-                    Position::Relative(_) => Err("placement requires absolute position".into()),
-                },
-                Err(true) => Err(format!("multiple {p} on board, identify by coordinates")),
-            },
-            PieceNotation::Coord(col, row) => {
-                Ok(Action::Move(self.coord_move(col, row, pp.position)?))
-            },
-        }
+        let action = if self.phase == Phase::Place
+            && let PieceNotation::Name(piece) = pp.piece
+            && let Position::Absolute(x, y) = pp.position
+        {
+            Action::Place(Place { piece, to: self.checked(x, y)? })
+        } else {
+            Action::Move(self.move_(pp)?)
+        };
+        Ok(action)
     }
 
-    fn move_(&self, piece: PieceNotation, position: Position) -> Result<Move, String> {
-        match piece {
+    fn move_(&self, pp: PiecePosition) -> Result<Move, String> {
+        match pp.piece {
             PieceNotation::Name(p) => {
                 let from = self.find_unique(p)?;
-                let to = self.resolve_position(from, p.color, position)?;
+                let to = self.resolve_position(from, p.color, pp.position)?;
                 Ok(Move { from, to })
             },
-            PieceNotation::Coord(col, row) => self.coord_move(col, row, position),
+            PieceNotation::Coord(col, row) => self.coord_move(col, row, pp.position),
         }
     }
 
@@ -553,11 +560,12 @@ impl<'a> NotationResolver<'a> {
     /// for unique pieces and coordinates otherwise.
     pub fn action_notation(&self, action: &Action) -> ActionNotation {
         match action {
-            Action::Place(p) => ActionNotation::Place(self.place_notation(*p)),
-            Action::Move(m) => ActionNotation::Move(self.piece_position(m.from, m.to)),
+            Action::Place(p) => ActionNotation::Phase(self.place_notation(*p).into()),
+            Action::Move(m) => ActionNotation::Phase(self.piece_position(m.from, m.to)),
             Action::Capture(m) => ActionNotation::Capture(self.piece_position(m.from, m.to)),
             Action::Push(m) => ActionNotation::Push(self.piece_position(m.from, m.to)),
             Action::Draw(m) => ActionNotation::Draw(self.piece_position(m.from, m.to)),
+            Action::Leave(m) => ActionNotation::Leave(self.piece_position(m.from, m.to)),
             Action::Pass(p) => ActionNotation::Pass(*p),
             Action::Resign(p) => ActionNotation::Resign(*p),
         }
@@ -607,39 +615,31 @@ impl<'a> NotationResolver<'a> {
                 };
                 Ok(vec![PositionChange { at: from, piece: None }])
             },
-            ChangeNotation::Move(pp) => match pp.piece {
-                PieceNotation::Name(p) => match self.board.find_unique(p) {
-                    Ok(from) => {
-                        let to = self.resolve_position(from, p.color, pp.position)?;
-                        let Some(piece) = self.board.get(from) else {
-                            return Err(format!("no piece at ({},{})", from.0, from.1));
-                        };
-                        Ok(vec![PositionChange { at: from, piece: None }, PositionChange {
-                            at: to,
-                            piece: Some(piece),
-                        }])
-                    },
-                    Err(false) => match pp.position {
-                        Position::Absolute(col, row) => {
-                            let place = self.place(PlaceNotation { piece: p, to: (col, row) })?;
-                            Ok(vec![PositionChange { at: place.to, piece: Some(place.piece) }])
-                        },
-                        Position::Relative(_) => Err("placement requires absolute position".into()),
-                    },
-                    Err(true) => Err(format!("multiple {p} on board, identify by coordinates")),
-                },
-                PieceNotation::Coord(col, row) => {
-                    let move_ = self.coord_move(col, row, pp.position)?;
-                    let Some(piece) = self.board.get(move_.from) else {
-                        return Err(format!("no piece at ({},{})", move_.from.0, move_.from.1));
-                    };
-                    Ok(vec![PositionChange { at: move_.from, piece: None }, PositionChange {
-                        at: move_.to,
-                        piece: Some(piece),
-                    }])
-                },
+            ChangeNotation::Phase(pp) => {
+                if self.phase == Phase::Place
+                    && let PieceNotation::Name(piece) = pp.piece
+                    && let Position::Absolute(col, row) = pp.position
+                {
+                    let place = self.place(PlaceNotation { piece, to: (col, row) })?;
+                    Ok(vec![PositionChange { at: place.to, piece: Some(place.piece) }])
+                } else {
+                    self.resolve_change_move(pp)
+                }
             },
         }
+    }
+
+    /// Resolve a `Phase` entry as a move. Returns an error when the piece
+    /// is not on the pre-action board.
+    fn resolve_change_move(&self, pp: PiecePosition) -> Result<Vec<PositionChange>, String> {
+        let move_ = self.move_(pp)?;
+        let Some(piece) = self.board.get(move_.from) else {
+            return Err(format!("no piece at ({},{})", move_.from.0, move_.from.1));
+        };
+        Ok(vec![PositionChange { at: move_.from, piece: None }, PositionChange {
+            at: move_.to,
+            piece: Some(piece),
+        }])
     }
 
     /// Convert position changes into notation form, against the pre-action
@@ -659,8 +659,12 @@ impl<'a> NotationResolver<'a> {
             let change_notation = match idx {
                 None => {
                     if let Some(p) = change.piece {
-                        let to = (change.at.0 + 1, change.at.1 + 1);
-                        ChangeNotation::Place(PlaceNotation { piece: p, to })
+                        if let Ok(from) = self.board.find_unique(p) {
+                            ChangeNotation::Phase(self.piece_position(from, change.at))
+                        } else {
+                            let to = (change.at.0 + 1, change.at.1 + 1);
+                            ChangeNotation::Place(PlaceNotation { piece: p, to })
+                        }
                     } else {
                         ChangeNotation::Remove(self.piece_notation(change.at))
                     }
@@ -670,14 +674,14 @@ impl<'a> NotationResolver<'a> {
                     match existing {
                         ChangeNotation::Remove(ref pn) if change.piece.is_some() => {
                             if let Some(from) = self.position_of(pn) {
-                                ChangeNotation::Move(self.piece_position(from, change.at))
+                                ChangeNotation::Phase(self.piece_position(from, change.at))
                             } else {
                                 existing
                             }
                         },
                         ChangeNotation::Place(ref p) if change.piece.is_none() => {
                             let to = (p.to.0.saturating_sub(1), p.to.1.saturating_sub(1));
-                            ChangeNotation::Move(self.piece_position(change.at, to))
+                            ChangeNotation::Phase(self.piece_position(change.at, to))
                         },
                         _ => existing,
                     }
@@ -692,7 +696,7 @@ impl<'a> NotationResolver<'a> {
     fn piece_of(&self, cn: &ChangeNotation) -> Option<Piece> {
         match cn {
             ChangeNotation::Place(p) => Some(p.piece),
-            ChangeNotation::Remove(pn) | ChangeNotation::Move(PiecePosition { piece: pn, .. }) => {
+            ChangeNotation::Remove(pn) | ChangeNotation::Phase(PiecePosition { piece: pn, .. }) => {
                 match pn {
                     PieceNotation::Name(p) => Some(*p),
                     PieceNotation::Coord(col, row) => self.board.get((col - 1, row - 1)),

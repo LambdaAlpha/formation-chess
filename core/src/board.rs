@@ -8,7 +8,6 @@ use std::str::FromStr;
 use crate::ability::Ability;
 use crate::action::Action;
 use crate::action::Move;
-use crate::action::Place;
 use crate::action::PositionChange;
 use crate::chinese_num::fmt_num;
 use crate::piece::Color;
@@ -191,45 +190,6 @@ impl Board {
         Ok(vec![PositionChange { at: to, piece: Some(piece) }])
     }
 
-    /// Place a white piece on an empty point covered by a CONTROL_WHITE
-    /// formation the given player commands.
-    pub fn place_white(
-        &mut self, white: Piece, to: (u8, u8), player: Player,
-    ) -> Result<Vec<PositionChange>, String> {
-        let changes = self.try_place_white(white, to, player)?;
-        self.apply(&changes);
-        Ok(changes)
-    }
-
-    /// Validate a white-piece placement without modifying the board.
-    /// The target must be empty and covered by a CONTROL_WHITE piece
-    /// that the given player commands.
-    pub fn try_place_white(
-        &self, white: Piece, to: (u8, u8), player: Player,
-    ) -> Result<Vec<PositionChange>, String> {
-        self.check_placement_target(to)?;
-        let mut has_control = false;
-        for n in &self.local(to).neighbors {
-            let Some(piece) = n.piece else {
-                continue;
-            };
-            if piece.formation.contains(-n.dx, -n.dy)
-                && piece.ability.has(Ability::CONTROL_WHITE)
-                && piece.can_controlled_by(player)
-            {
-                has_control = true;
-                break;
-            }
-        }
-        if !has_control {
-            return Err(format!(
-                "({},{}) is not covered by any piece with CONTROL_WHITE controlled by player {}",
-                to.0, to.1, player
-            ));
-        }
-        Ok(vec![PositionChange { at: to, piece: Some(white) }])
-    }
-
     /// Verify `to` is in bounds and empty, for placement.
     fn check_placement_target(&self, to: (u8, u8)) -> Result<(), String> {
         if !self.in_bounds(to) {
@@ -256,6 +216,26 @@ impl Board {
             return Err(format!("cannot move onto occupied destination ({},{})", to.0, to.1));
         }
         Ok(vec![PositionChange { at: from, piece: None }, PositionChange {
+            at: to,
+            piece: self[from],
+        }])
+    }
+
+    /// Validate a leave action without modifying the board. Checks movement,
+    /// CONTROL_WHITE ability, and that the destination is empty. Returns
+    /// changes that place a white piece at `from` and the moving piece at
+    /// `to`.
+    pub fn try_leave(
+        &self, from: (u8, u8), to: (u8, u8), white: Piece,
+    ) -> Result<Vec<PositionChange>, String> {
+        let piece = self.try_move_to(from, to)?;
+        if !piece.ability.has(Ability::CONTROL_WHITE) {
+            return Err("only pieces with CONTROL_WHITE can leave a white piece".into());
+        }
+        if self[to].is_some() {
+            return Err(format!("cannot move onto occupied destination ({},{})", to.0, to.1));
+        }
+        Ok(vec![PositionChange { at: from, piece: Some(white) }, PositionChange {
             at: to,
             piece: self[from],
         }])
@@ -597,49 +577,6 @@ impl Board {
         }
     }
 
-    pub fn valid_white_placements(&self, player: Player) -> Vec<(u8, u8)> {
-        let Some(place) = self.find_control_white(player) else {
-            return vec![];
-        };
-        let mut targets = Vec::new();
-        for dy in -1i8 ..= 1 {
-            for dx in -1i8 ..= 1 {
-                if dx == 0 && dy == 0 {
-                    continue;
-                }
-                if !place.piece.formation.contains(dx, dy) {
-                    continue;
-                }
-                let tx = place.to.0 as i8 + dx;
-                let ty = place.to.1 as i8 + dy;
-                if tx < 0 || ty < 0 {
-                    continue;
-                }
-                let to = (tx as u8, ty as u8);
-                if !self.in_bounds(to) || self[to].is_some() {
-                    continue;
-                }
-                targets.push(to);
-            }
-        }
-        targets
-    }
-
-    /// The first piece with the CONTROL_WHITE ability that `player`
-    /// commands, paired with its position. CONTROL_WHITE is never modified
-    /// by formation effects, so raw abilities suffice.
-    fn find_control_white(&self, player: Player) -> Option<Place> {
-        for (i, cell) in self.pieces.iter().enumerate() {
-            let Some(piece) = cell else {
-                continue;
-            };
-            if piece.ability.has(Ability::CONTROL_WHITE) && piece.can_controlled_by(player) {
-                return Some(Place { to: self.position(i), piece: *piece });
-            }
-        }
-        None
-    }
-
     /// Enumerate all legal actions for the piece at `from`. The piece must
     /// be present on the board. Actions are [`Action::Move`],
     /// [`Action::Capture`], [`Action::Push`], and [`Action::Draw`];
@@ -647,11 +584,11 @@ impl Board {
     ///
     /// `player` filters draw actions: only draws targeting the opponent's
     /// colored pieces are returned.
-    pub fn valid_moves(&self, player: Player, from: (u8, u8)) -> Vec<Action> {
+    pub fn valid_moves(&self, player: Player, from: (u8, u8), has_white: bool) -> Vec<Action> {
         let Some(piece) = self.effective(from) else {
             return vec![];
         };
-        let max_steps = if piece.ability.has(Ability::ANY_DISTANCE) {
+        let max = if piece.ability.has(Ability::ANY_DISTANCE) {
             self.width.max(self.height) as i8
         } else {
             1
@@ -659,19 +596,19 @@ impl Board {
         let mut actions = Vec::new();
         if piece.ability.has(Ability::DIRECTION_CROSS) {
             for (dx, dy) in [(0i8, -1), (0, 1), (-1, 0), (1, 0)] {
-                self.enumerate_line(player, piece, from, dx, dy, max_steps, &mut actions);
+                self.enumerate_line(player, piece, from, dx, dy, max, has_white, &mut actions);
             }
         }
         if piece.ability.has(Ability::DIRECTION_DIAGONAL) {
             for (dx, dy) in [(-1i8, -1), (1, -1), (-1, 1), (1, 1)] {
-                self.enumerate_line(player, piece, from, dx, dy, max_steps, &mut actions);
+                self.enumerate_line(player, piece, from, dx, dy, max, has_white, &mut actions);
             }
         }
         if piece.ability.has(Ability::DIRECTION_SHAPE_L) {
             for (dx, dy) in
                 [(1i8, 2), (2, 1), (-1, 2), (-2, 1), (1, -2), (2, -1), (-1, -2), (-2, -1)]
             {
-                self.enumerate_line(player, piece, from, dx, dy, max_steps, &mut actions);
+                self.enumerate_line(player, piece, from, dx, dy, max, has_white, &mut actions);
             }
         }
         actions
@@ -682,7 +619,7 @@ impl Board {
     #[expect(clippy::too_many_arguments)]
     fn enumerate_line(
         &self, player: Player, piece: Piece, from: (u8, u8), dx: i8, dy: i8, max_steps: i8,
-        actions: &mut Vec<Action>,
+        has_white: bool, actions: &mut Vec<Action>,
     ) {
         let mut origin = from;
         for _ in 0 .. max_steps {
@@ -700,6 +637,9 @@ impl Board {
                 break;
             }
             actions.push(Action::Move(Move { from, to }));
+            if has_white && piece.ability.has(Ability::CONTROL_WHITE) {
+                actions.push(Action::Leave(Move { from, to }));
+            }
             origin = to;
         }
     }

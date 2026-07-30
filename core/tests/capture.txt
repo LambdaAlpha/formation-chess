@@ -127,7 +127,7 @@ capture_on_captured mutual destruction when captured
 四[一一 一一 一一 一一 一一]
 五[一一 一一 一一 一一 红将]
 -----
-变化：[红车提 黑雷提]
+变化：[红车失 黑雷失]
 胜负：未分
 =====
 capture blocked by intervening piece on path
@@ -192,7 +192,7 @@ L-shaped capture with captured_on_capture triggers mutual destruction
 四[一一 一一 一一 一一 一一]
 五[一一 一一 一一 一一 红将]
 -----
-变化：[红弹提 黑卒提]
+变化：[红弹失 黑卒失]
 胜负：未分
 =====
 cannot capture without capture ability
@@ -355,7 +355,7 @@ captured_on_capture bypasses uncapturable for mutual destruction
 四[一一 一一 一一 一一 一一]
 五[一一 一一 一一 一一 红将]
 -----
-变化：[红弹提 黑盾提]
+变化：[红弹失 黑盾失]
 胜负：未分
 =====
 mine capture_on_captured triggers even when attacker lacks capture ability
@@ -388,7 +388,7 @@ mine capture_on_captured triggers even when attacker lacks capture ability
 四[一一 一一 一一 一一 一一]
 五[一一 一一 一一 一一 红将]
 -----
-变化：[红风提 黑雷提]
+变化：[红风失 黑雷失]
 胜负：未分
 =====
 formation-granted capture enables normal capture

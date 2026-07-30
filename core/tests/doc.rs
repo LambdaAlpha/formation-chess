@@ -8,6 +8,7 @@ use std::str::FromStr;
 use formation_chess_core::board::Board;
 use formation_chess_core::game::Game;
 use formation_chess_core::game::GameConfig;
+use formation_chess_core::game::Phase;
 use formation_chess_core::notation::NotationResolver;
 
 mod common;
@@ -51,7 +52,7 @@ fn notation_md_game_state_example_round_trips() {
 fn readme_quick_start_example() {
     let mut game = Game::new(GameConfig::default()).expect("standard setup must be valid");
     for text in ["红将五十", "黑将五一"] {
-        let action = NotationResolver::new(game.board())
+        let action = NotationResolver::new(game.board(), game.phase())
             .parse_action(text)
             .unwrap_or_else(|e| panic!("parse {text}: {e}"));
         let reaction = game.action(action).unwrap_or_else(|e| panic!("action {text}: {e}"));
@@ -83,7 +84,7 @@ fn readme_quick_start_example() {
 #[test]
 fn readme_custom_position_example() {
     let game: Game = GAME_STATE_SNAPSHOT.parse().expect("README.md snapshot must be a valid game");
-    assert!(game.is_placement_phase());
+    assert_eq!(game.phase(), Phase::Place);
 }
 
 /// The cyclic swap example in notation.md: `变化：[一二三四 三四一二]`
@@ -100,7 +101,7 @@ fn notation_md_swap_example_applies() {
     .parse()
     .expect("parse board");
 
-    let reaction = NotationResolver::new(&board)
+    let reaction = NotationResolver::movement(&board)
         .parse_reaction("变化：[一二三四 三四一二]\n胜负：未分")
         .expect("parse reaction")
         .expect("reaction is a success");

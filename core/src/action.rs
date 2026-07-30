@@ -17,6 +17,9 @@ pub enum Action {
     Push(Move),
     /// Move onto an opponent's vital piece to draw the game.
     Draw(Move),
+    /// Move to an empty point and leave a white piece at the original
+    /// position. Only pieces with CONTROL_WHITE ability may do this.
+    Leave(Move),
     /// Skip the turn without moving.
     Pass(Player),
     /// Concede: the opponent wins immediately.

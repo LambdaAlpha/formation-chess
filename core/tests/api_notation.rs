@@ -14,7 +14,7 @@ use api_common::SIMPLE;
 #[test]
 fn ambiguous_piece_name_is_a_parse_error() {
     let game = Game::from_str(SIMPLE).expect("parse");
-    let err = NotationResolver::new(game.board())
+    let err = NotationResolver::movement(game.board())
         .parse_action("红卒进一")
         .expect_err("must be ambiguous");
     assert!(err.contains("multiple 红卒"), "unexpected error: {err}");
@@ -24,7 +24,7 @@ fn ambiguous_piece_name_is_a_parse_error() {
 fn coordinates_disambiguate_same_name_pieces() {
     let mut game = Game::from_str(SIMPLE).expect("parse");
     let action =
-        NotationResolver::new(game.board()).parse_action("一三直二").expect("parse action");
+        NotationResolver::movement(game.board()).parse_action("一三直二").expect("parse action");
     game.action(action).expect("action");
     assert_eq!(game.board()[(0, 1)].map(|p| p.name), Some('卒'));
 }
@@ -59,43 +59,27 @@ fn moving_to_own_point_is_rejected() {
 }
 
 #[test]
-fn explicit_placement_suffix_parses_and_formats() {
+fn placement_with_relative_position_is_rejected() {
+    // During placement phase, only name + absolute position is a valid
+    // placement. Name + relative position (e.g. 红车进一) is rejected.
     let state = "行棋方：红
 红方：[车]
-黑方：[卒]
+黑方：[将]
 白方：0
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
-一[黑将 一一 一一 一一 一一]
+一[一一 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 ";
     let game = Game::from_str(state).expect("parse");
-    let action =
-        NotationResolver::new(game.board()).parse_action("红车三四占").expect("parse action");
-    let Action::Place(place) = action else {
-        panic!("expected placement, got {action}");
-    };
-    assert_eq!(place.to, (2, 3));
-    assert_eq!(NotationResolver::new(game.board()).fmt_action(&action), "红车三四占");
-
-    let implicit =
-        NotationResolver::new(game.board()).parse_action("红车三四").expect("parse action");
-    let Action::Place(place) = implicit else {
-        panic!("expected placement, got {implicit}");
-    };
-    assert_eq!(place.to, (2, 3));
-}
-
-#[test]
-fn placement_with_relative_position_is_rejected() {
-    let game = Game::from_str(SIMPLE).expect("parse");
-    let err =
-        NotationResolver::new(game.board()).parse_action("红车进一占").expect_err("must fail");
-    assert!(err.contains("absolute position"), "unexpected error: {err}");
+    let err = NotationResolver::new(game.board(), game.phase())
+        .parse_action("红车进一")
+        .expect_err("must fail");
+    assert!(err.contains("not on board"), "unexpected error: {err}");
 }
 
 #[test]
@@ -126,10 +110,10 @@ fn long_moves_on_tall_boards_format_and_parse() {
     );
     let game = Game::from_str(&state).expect("parse");
     let action = Action::Push(Move { from: (0, 14), to: (0, 0) });
-    let formatted = NotationResolver::new(game.board()).fmt_action(&action);
+    let formatted = NotationResolver::movement(game.board()).fmt_action(&action);
     assert_eq!(formatted, "红车进丁推");
     let reparsed =
-        NotationResolver::new(game.board()).parse_action(&formatted).expect("parse action");
+        NotationResolver::movement(game.board()).parse_action(&formatted).expect("parse action");
     let Action::Push(move_) = reparsed else {
         panic!("expected move, got {reparsed}");
     };
@@ -230,8 +214,8 @@ fn out_of_bounds_placement_is_an_error_not_a_panic() {
 ";
     let game = Game::from_str(state).expect("parse");
     let err =
-        NotationResolver::new(game.board()).parse_action("红车九九占").expect_err("must fail");
-    assert!(err.contains("outside the board"), "unexpected error: {err}");
+        NotationResolver::movement(game.board()).parse_action("红车九九留").expect_err("must fail");
+    assert!(err.contains("not on board"), "unexpected error: {err}");
 }
 
 #[test]
@@ -243,22 +227,23 @@ fn out_of_bounds_move_is_an_error_not_a_panic() {
     let action = Action::Push(Move { from: (9, 9), to: (0, 0) });
     let err = game.action(action).expect_err("must fail");
     assert!(err.contains("no piece"), "unexpected error: {err}");
-    let err = NotationResolver::new(game.board()).parse_action("九九平一").expect_err("must fail");
+    let err =
+        NotationResolver::movement(game.board()).parse_action("九九平一").expect_err("must fail");
     assert!(err.contains("outside the board"), "unexpected error: {err}");
 }
 
 #[test]
 fn numeral_zero_is_an_error_not_a_panic() {
     let game = Game::from_str(SIMPLE).expect("parse");
-    let resolver = NotationResolver::new(game.board());
+    let resolver = NotationResolver::movement(game.board());
     let err = resolver.parse_action("红将零一").expect_err("must fail");
     assert!(err.contains("cannot resolve position"), "unexpected error: {err}");
     let err = resolver.parse_action("红将平零").expect_err("must fail");
     assert!(err.contains("cannot resolve position"), "unexpected error: {err}");
     let err = resolver.parse_action("零一平二").expect_err("must fail");
     assert!(err.contains("outside the board"), "unexpected error: {err}");
-    let err = resolver.parse_action("红车零一占").expect_err("must fail");
-    assert!(err.contains("outside the board"), "unexpected error: {err}");
+    let err = resolver.parse_action("红车零一留").expect_err("must fail");
+    assert!(err.contains("not on board"), "unexpected error: {err}");
 }
 
 #[test]
@@ -277,29 +262,33 @@ fn advance_past_the_edge_is_an_error_not_a_panic() {
 五[红将 一一 一一 一一 一一]
 ";
     let game = Game::from_str(state).expect("parse");
-    let err = NotationResolver::new(game.board()).parse_action("红车进一").expect_err("must fail");
+    let err =
+        NotationResolver::movement(game.board()).parse_action("红车进一").expect_err("must fail");
     assert!(err.contains("cannot resolve position"), "unexpected error: {err}");
 }
 
 #[test]
 fn truncated_position_is_an_error_not_a_panic() {
     let game = Game::from_str(SIMPLE).expect("parse");
-    let err = NotationResolver::new(game.board()).parse_action("红将平").expect_err("must fail");
+    let err =
+        NotationResolver::movement(game.board()).parse_action("红将平").expect_err("must fail");
     assert!(err.contains("invalid position"), "unexpected error: {err}");
 }
 
 #[test]
 fn trailing_garbage_in_action_is_rejected() {
     let game = Game::from_str(SIMPLE).expect("parse");
-    let err =
-        NotationResolver::new(game.board()).parse_action("红将平五推吃").expect_err("must fail");
+    let err = NotationResolver::movement(game.board())
+        .parse_action("红将平五推吃")
+        .expect_err("must fail");
     assert!(err.contains("invalid position"), "unexpected error: {err}");
 }
 
 #[test]
 fn coordinate_move_from_empty_point_is_rejected() {
     let game = Game::from_str(SIMPLE).expect("parse");
-    let err = NotationResolver::new(game.board()).parse_action("二二平三").expect_err("must fail");
+    let err =
+        NotationResolver::movement(game.board()).parse_action("二二平三").expect_err("must fail");
     assert!(err.contains("no piece at (1,1)"), "unexpected error: {err}");
 }
 
@@ -399,20 +388,22 @@ fn wrong_row_label_is_rejected() {
 fn simple_move_formats_without_combat_suffix() {
     let game = Game::from_str(SIMPLE).expect("parse");
     let action = Action::Move(Move { from: (0, 4), to: (0, 3) });
-    assert_eq!(NotationResolver::new(game.board()).fmt_action(&action), "红将进一");
+    assert_eq!(NotationResolver::movement(game.board()).fmt_action(&action), "红将进一");
     let action = Action::Push(Move { from: (0, 4), to: (0, 2) });
-    assert_eq!(NotationResolver::new(game.board()).fmt_action(&action), "红将进二推");
+    assert_eq!(NotationResolver::movement(game.board()).fmt_action(&action), "红将进二推");
 }
 
 #[test]
 fn action_move_from_oob_origin_uses_vertical_notation() {
     let game = Game::from_str(SIMPLE).expect("parse");
     let action = Action::Move(Move { from: (2, 3), to: (2, 1) });
-    assert_eq!(NotationResolver::new(game.board()).fmt_action(&action), "三四直二");
+    assert_eq!(NotationResolver::movement(game.board()).fmt_action(&action), "三四直二");
 }
 
 #[test]
 fn mismatched_white_piece_is_rejected() {
+    // White pieces cannot be placed via the Place action.
+    // They only appear through captures or Leave actions.
     let state = "行棋方：红
 红方：[]
 黑方：[]
@@ -427,9 +418,8 @@ fn mismatched_white_piece_is_rejected() {
 五[红将 一一 一一 一一 一一]
 ";
     let mut game = Game::from_str(state).expect("parse");
-    let rogue = Piece { name: '皇', ..Piece::WHITE };
     let err = game
-        .action(Action::Place(Place { piece: rogue, to: (2, 3) }))
-        .expect_err("mismatched white piece must fail");
-    assert!(err.contains("does not match"), "unexpected error: {err}");
+        .action(Action::Place(Place { piece: Piece::WHITE, to: (1, 2) }))
+        .expect_err("white placement must fail");
+    assert!(err.contains("cannot place piece of color"), "unexpected error: {err}");
 }

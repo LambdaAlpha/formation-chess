@@ -39,8 +39,8 @@ for building frontends, servers, and engines.
 - **Turns.** After placement, a turn is one of: move to an empty point,
   **capture** an occupied one, **push** its occupant one point onward
   (a blocked push may escalate into a capture if either piece has the
-  escalation ability), place a white piece
-  through a wizard, pass, or resign.
+  escalation ability), leave a white piece
+  through a wizard's move, pass, or resign.
 - **White pieces.** Captured pieces are recycled into a shared neutral
   pool. A wizard can drop them back onto the board as weak, colorless
   blockers, commanded only through a wizard's formation.
@@ -71,7 +71,7 @@ fn main() -> Result<(), String> {
     let mut game = Game::new(GameConfig::default())?;
 
     for text in ["红将五十", "黑将五一"] {
-        let action = NotationResolver::new(game.board()).parse_action(text)?;
+        let action = NotationResolver::new(game.board(), game.phase()).parse_action(text)?;
         let reaction = game.action(action)?;
         println!("{text} → {}", reaction.game_result);
     }
@@ -127,7 +127,7 @@ Actions:
 | `一二三二` | the piece standing on (1,2) moves to (3,2) |
 | `红马四五捉` | the Red Horse moves to (4,5) and **captures** the piece there |
 | `红风五四推` | the Red Wind moves to (5,4) and **pushes** its occupant one point onward |
-| `白子二四占` | a white piece from the pool is **placed** on (2,4) |
+| `红巫直四留` | the Red Wizard moves to row 4 and **leaves** a white piece behind |
 | `红按兵` / `黑认负` | Red passes / Black resigns |
 
 Every action answers with either a success — the list of piece changes
@@ -175,7 +175,7 @@ fn main() -> Result<(), String> {
 "
     .parse()?;
 
-    assert!(game.is_placement_phase(), "pools are not empty so phase must be placement");
+    assert_eq!(game.phase(), Phase::Place, "pools are not empty so phase must be placement");
     Ok(())
 }
 ```

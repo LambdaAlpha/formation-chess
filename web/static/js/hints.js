@@ -16,7 +16,7 @@ export function showMoveHints(moves) {
         const intn = getIntersection(Number(xs), Number(ys));
         if (!intn) continue;
 
-        let cls = 'hint-multi';
+        let cls;
         if (types.length > 1) {
             cls = 'hint-multi';
         } else if (types.includes('draw')) {
@@ -25,6 +25,10 @@ export function showMoveHints(moves) {
             cls = 'hint-capture';
         } else if (types.includes('push')) {
             cls = 'hint-push';
+        } else if (types.includes('leave')) {
+            cls = 'hint-leave';
+        } else {
+            cls = 'hint-move';
         }
         intn.classList.add(cls);
 
@@ -36,21 +40,9 @@ export function showMoveHints(moves) {
     }
 }
 
-export function showPlacementHints(placements) {
-    clearHints();
-    if (!placements) return;
-    for (const [x, y] of placements) {
-        const intn = getIntersection(x, y);
-        if (intn) {
-            intn.classList.add('hint-white');
-            intn.dataset.hintType = 'place_white';
-        }
-    }
-}
-
 export function clearHints() {
     for (const el of document.querySelectorAll('.intersection')) {
-        el.classList.remove('hint-move', 'hint-capture', 'hint-push', 'hint-draw', 'hint-multi', 'hint-white');
+        el.classList.remove('hint-move', 'hint-capture', 'hint-push', 'hint-draw', 'hint-multi', 'hint-leave', 'hint-white');
         delete el.dataset.hintType;
         delete el.dataset.hintTypes;
     }

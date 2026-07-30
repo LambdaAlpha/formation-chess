@@ -29,7 +29,7 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 .toolbar-spacer { flex: 1; }
 .toolbar-sep { margin: 0 2px; color: #999; }
 #player-indicator { font-weight: 600; }
-#white-indicator:disabled { opacity: 0.5; pointer-events: none; }
+.toolbar-info { }
 
 /* ---- main ---- */
 #main { display: flex; flex: 1; overflow: hidden; }
@@ -67,17 +67,19 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 .intersection.hint-push::after,
 .intersection.hint-draw::after,
 .intersection.hint-multi::after,
-.intersection.hint-white::after {
+.intersection.hint-white::after,
+.intersection.hint-leave::after {
   content: ''; position: absolute; inset: 6%;
   border-radius: 50%; pointer-events: none; z-index: 5;
   border: 3px solid;
 }
-.intersection.hint-move::after    { border-color: rgba(76,175,80,.7);  background: rgba(76,175,80,.15); }
-.intersection.hint-draw::after    { border-color: rgba(76,175,80,.7);  background: rgba(76,175,80,.15); }
-.intersection.hint-capture::after { border-color: rgba(244,67,54,.7);  background: rgba(244,67,54,.15); }
-.intersection.hint-push::after    { border-color: rgba(255,152,0,.7);  background: rgba(255,152,0,.15); }
-.intersection.hint-multi::after   { border-color: rgba(156,39,176,.7); background: rgba(156,39,176,.15); }
-.intersection.hint-white::after   { border-color: rgba(33,150,243,.7); background: rgba(33,150,243,.15); }
+.intersection.hint-move::after        { border-color: rgba(76,175,80,.7);  background: rgba(76,175,80,.15); }
+.intersection.hint-draw::after        { border-color: rgba(76,175,80,.7);  background: rgba(76,175,80,.15); }
+.intersection.hint-capture::after     { border-color: rgba(244,67,54,.7);  background: rgba(244,67,54,.15); }
+.intersection.hint-push::after        { border-color: rgba(255,152,0,.7);  background: rgba(255,152,0,.15); }
+.intersection.hint-multi::after       { border-color: rgba(156,39,176,.7); background: rgba(156,39,176,.15); }
+.intersection.hint-white::after       { border-color: rgba(33,150,243,.7); background: rgba(33,150,243,.15); }
+.intersection.hint-leave::after { border-color: rgba(0,150,136,.7);  background: rgba(0,150,136,.15); }
 
 .intersection.selected::before {
   content: ''; position: absolute; inset: 12%;
@@ -181,6 +183,8 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 .popup button.capture-opt { color: #c62828; }
 .popup button.push-opt { color: #e65100; }
 .popup button.draw-opt { color: #2e7d32; }
+.popup button.move-opt { color: #1565c0; }
+.popup button.leave-opt { color: #00796b; }
 
 /* ---- game-over ---- */
 .game-over {

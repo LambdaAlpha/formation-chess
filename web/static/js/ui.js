@@ -1,6 +1,6 @@
 import { renderBoard, getIntersection } from './board.js';
 import { createPieceElement, getCachedPieceNames } from './pieces.js';
-import { showMoveHints, showPlacementHints, clearHints, setSelected } from './hints.js';
+import { showMoveHints, clearHints, setSelected } from './hints.js';
 import { postHints, getRules } from './api.js';
 
 let gameState = null;
@@ -31,7 +31,6 @@ function bindToolbar() {
     document.getElementById('btn-resign').addEventListener('click', () => {
         if (onAction) onAction({ type: 'resign' });
     });
-    document.getElementById('white-indicator').addEventListener('click', onWhiteIndicator);
 }
 
 function bindBoard() {
@@ -117,7 +116,6 @@ export function render(state) {
     document.getElementById('btn-pass').style.display = playing ? '' : 'none';
     document.getElementById('btn-resign').style.display = state.result === 'Unfinished' ? '' : 'none';
     document.getElementById('btn-undo').disabled = !state.can_undo;
-    document.getElementById('white-indicator').disabled = (state.white_pool === 0 || !playing);
     document.getElementById('sidebar').style.display = p === 'placement' ? '' : 'none';
 
     if (state.result !== 'Unfinished') {
@@ -196,14 +194,8 @@ async function handleBoardClick(x, y) {
     const hintType = intn ? (intn.dataset.hintType || '') : '';
     const hintTypes = intn ? (intn.dataset.hintTypes || '') : '';
 
-    /* Phase: movement — clicking a white placement target */
-    if (p === 'movement' && hintType === 'place_white') {
-        if (onAction) onAction({ type: 'place', piece: { name: '子', color: 'White' }, to: [x, y] });
-        return;
-    }
-
-    /* Phase: movement — clicking a move/capture/push/draw target */
-    if (p === 'movement' && (hintType === 'move' || hintType === 'capture' || hintType === 'push' || hintType === 'draw' || hintTypes)) {
+    /* Phase: movement — clicking a move/capture/push/draw/leave target */
+    if (p === 'movement' && (hintType === 'move' || hintType === 'capture' || hintType === 'push' || hintType === 'draw' || hintType === 'leave' || hintTypes)) {
         if (hintTypes) {
             showPopup(x, y, hintTypes.split(','));
         } else {
@@ -258,6 +250,8 @@ function executeHintAction(hintType, x, y) {
         if (onAction) onAction({ type: 'push', from: getSelectedBoardPos(), to: [x, y] });
     } else if (hintType === 'draw') {
         if (onAction) onAction({ type: 'draw', from: getSelectedBoardPos(), to: [x, y] });
+    } else if (hintType === 'leave') {
+        if (onAction) onAction({ type: 'leave', from: getSelectedBoardPos(), to: [x, y] });
     } else {
         console.error('unknown hint type for action:', hintType);
     }
@@ -282,25 +276,7 @@ function handlePoolClick(name, color) {
     if (el && el.parentElement) el.parentElement.classList.add('pool-piece-selected');
 }
 
-/* ======== White Indicator ======== */
-
-async function onWhiteIndicator() {
-    if (phase() !== 'movement' || !gameState || gameState.white_pool === 0) return;
-
-    clearSelection();
-    selection = { type: 'white_placement' };
-    try {
-        const hints = await postHints({ white: true });
-        showPlacementHints(hints.placements);
-        if (hints.placements && hints.placements.length === 0) {
-            setStatus('无可放置白子的位置', true);
-        }
-    } catch (e) {
-        setStatus(e.message, true);
-    }
-}
-
-/* ======== Popup (capture / push / draw choice) ======== */
+/* ======== Popup (capture / push / draw / leave choice) ======== */
 
 function showPopup(x, y, types) {
     const popup = document.getElementById('popup-choose');
@@ -310,15 +286,21 @@ function showPopup(x, y, types) {
         btn.dataset.choice = t;
         btn.dataset.tx = x;
         btn.dataset.ty = y;
-        if (t === 'draw') {
+        if (t === 'move') {
+            btn.textContent = '移动';
+            btn.className = 'move-opt';
+        } else if (t === 'draw') {
             btn.textContent = '和棋';
             btn.className = 'draw-opt';
         } else if (t === 'capture') {
-            btn.textContent = '吃子';
+            btn.textContent = '捉子';
             btn.className = 'capture-opt';
         } else if (t === 'push') {
             btn.textContent = '推子';
             btn.className = 'push-opt';
+        } else if (t === 'leave') {
+            btn.textContent = '留守';
+            btn.className = 'leave-opt';
         } else {
             console.error('unknown hint type for popup:', t);
         }

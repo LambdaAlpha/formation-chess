@@ -50,20 +50,22 @@ pub fn run_tests(data: &str, filepath: &str) {
 fn run_case(case: &TestCase) -> Result<(), String> {
     let mut game = case.game.clone();
     let mut pre_board = game.board().clone();
+    let mut pre_phase = game.phase();
     let mut last_result = None;
 
     for action_str in &case.actions {
-        let action = NotationResolver::new(game.board())
+        let action = NotationResolver::new(game.board(), game.phase())
             .parse_action(action_str)
             .map_err(|e| format!("parse action: {e}"))?;
         pre_board = game.board().clone();
+        pre_phase = game.phase();
         last_result = Some(game.action(action));
     }
 
     let actual =
         last_result.unwrap_or(Ok(Reaction { changes: Vec::new(), game_result: game.result() }));
 
-    let expected = NotationResolver::new(&pre_board)
+    let expected = NotationResolver::new(&pre_board, pre_phase)
         .parse_reaction(&case.expected_result)
         .map_err(|e| format!("parse result: {e}"))?;
 
@@ -78,8 +80,8 @@ fn run_case(case: &TestCase) -> Result<(), String> {
 
     // Round-trip: formatting the actual result and re-parsing it must
     // resolve to the same changes.
-    let formatted = NotationResolver::new(&pre_board).fmt_reaction(actual.clone());
-    let reparsed = NotationResolver::new(&pre_board)
+    let formatted = NotationResolver::new(&pre_board, pre_phase).fmt_reaction(actual.clone());
+    let reparsed = NotationResolver::new(&pre_board, pre_phase)
         .parse_reaction(&formatted)
         .map_err(|e| format!("reparse formatted result `{formatted}`: {e}"))?;
     compare_results(&actual, &reparsed)?;
@@ -221,13 +223,15 @@ fn gen_replacements(content: &str) -> String {
 fn generate_notation(state_str: &str, action_strs: &[String]) -> String {
     let mut game = Game::from_str(state_str).expect("parse game state for GEN");
     let mut pre_board = game.board().clone();
+    let mut pre_phase = game.phase();
     let mut result = Ok(Reaction { changes: Vec::new(), game_result: game.result() });
     for action_str in action_strs {
-        let action = NotationResolver::new(game.board())
+        let action = NotationResolver::new(game.board(), game.phase())
             .parse_action(action_str)
             .expect("parse action for GEN");
         pre_board = game.board().clone();
+        pre_phase = game.phase();
         result = game.action(action);
     }
-    NotationResolver::new(&pre_board).fmt_reaction(result)
+    NotationResolver::new(&pre_board, pre_phase).fmt_reaction(result)
 }

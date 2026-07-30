@@ -118,9 +118,10 @@ impl Ability {
     pub const DIRECTION_DIAGONAL: Ability = Ability(1 << 17);
     /// Move in L-shape (knight, 日) directions.
     pub const DIRECTION_SHAPE_L: Ability = Ability(1 << 18);
-    /// Place white pieces from the shared pool onto empty points covered
-    /// by this piece's formation. Commanding the placed white pieces is
-    /// not part of this bit — the wizard's formation effect grants that.
+    /// Move to an empty point and leave a white piece behind at the
+    /// original position (the `Leave` action). Commanding the placed
+    /// white pieces is not part of this bit — the wizard's formation
+    /// effect grants that.
     pub const CONTROL_WHITE: Ability = Ability(1 << 19);
     /// A side with no vital piece left (on the board or in its pool)
     /// loses; when both sides lose theirs in the same action, the game is
