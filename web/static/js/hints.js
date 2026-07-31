@@ -25,8 +25,8 @@ export function showMoveHints(moves) {
             cls = 'hint-capture';
         } else if (types.includes('push')) {
             cls = 'hint-push';
-        } else if (types.includes('leave')) {
-            cls = 'hint-leave';
+        } else if (types.includes('divide')) {
+            cls = 'hint-divide';
         } else {
             cls = 'hint-move';
         }
@@ -42,7 +42,7 @@ export function showMoveHints(moves) {
 
 export function clearHints() {
     for (const el of document.querySelectorAll('.intersection')) {
-        el.classList.remove('hint-move', 'hint-capture', 'hint-push', 'hint-draw', 'hint-multi', 'hint-leave', 'hint-white');
+        el.classList.remove('hint-move', 'hint-capture', 'hint-push', 'hint-draw', 'hint-multi', 'hint-divide');
         delete el.dataset.hintType;
         delete el.dataset.hintTypes;
     }

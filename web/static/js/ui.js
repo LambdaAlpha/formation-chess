@@ -194,8 +194,8 @@ async function handleBoardClick(x, y) {
     const hintType = intn ? (intn.dataset.hintType || '') : '';
     const hintTypes = intn ? (intn.dataset.hintTypes || '') : '';
 
-    /* Phase: movement — clicking a move/capture/push/draw/leave target */
-    if (p === 'movement' && (hintType === 'move' || hintType === 'capture' || hintType === 'push' || hintType === 'draw' || hintType === 'leave' || hintTypes)) {
+    /* Phase: movement — clicking a move/capture/push/draw/divide target */
+    if (p === 'movement' && (hintType === 'move' || hintType === 'capture' || hintType === 'push' || hintType === 'draw' || hintType === 'divide' || hintTypes)) {
         if (hintTypes) {
             showPopup(x, y, hintTypes.split(','));
         } else {
@@ -250,8 +250,8 @@ function executeHintAction(hintType, x, y) {
         if (onAction) onAction({ type: 'push', from: getSelectedBoardPos(), to: [x, y] });
     } else if (hintType === 'draw') {
         if (onAction) onAction({ type: 'draw', from: getSelectedBoardPos(), to: [x, y] });
-    } else if (hintType === 'leave') {
-        if (onAction) onAction({ type: 'leave', from: getSelectedBoardPos(), to: [x, y] });
+    } else if (hintType === 'divide') {
+        if (onAction) onAction({ type: 'divide', from: getSelectedBoardPos(), to: [x, y] });
     } else {
         console.error('unknown hint type for action:', hintType);
     }
@@ -276,7 +276,7 @@ function handlePoolClick(name, color) {
     if (el && el.parentElement) el.parentElement.classList.add('pool-piece-selected');
 }
 
-/* ======== Popup (capture / push / draw / leave choice) ======== */
+/* ======== Popup (capture / push / draw / divide choice) ======== */
 
 function showPopup(x, y, types) {
     const popup = document.getElementById('popup-choose');
@@ -298,9 +298,9 @@ function showPopup(x, y, types) {
         } else if (t === 'push') {
             btn.textContent = '推子';
             btn.className = 'push-opt';
-        } else if (t === 'leave') {
-            btn.textContent = '留守';
-            btn.className = 'leave-opt';
+        } else if (t === 'divide') {
+            btn.textContent = '分兵';
+            btn.className = 'divide-opt';
         } else {
             console.error('unknown hint type for popup:', t);
         }

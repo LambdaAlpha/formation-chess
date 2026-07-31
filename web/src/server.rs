@@ -141,8 +141,8 @@ fn action_destination(action: &Action) -> (u8, u8) {
         | Action::Capture(m)
         | Action::Push(m)
         | Action::Draw(m)
-        | Action::Leave(m) => m.to,
-        _ => unreachable!("valid_moves only returns move/capture/push/draw/leave"),
+        | Action::Divide(m) => m.to,
+        _ => unreachable!("valid_moves only returns move/capture/push/draw/divide"),
     }
 }
 

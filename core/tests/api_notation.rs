@@ -214,7 +214,7 @@ fn out_of_bounds_placement_is_an_error_not_a_panic() {
 ";
     let game = Game::from_str(state).expect("parse");
     let err =
-        NotationResolver::movement(game.board()).parse_action("红车九九留").expect_err("must fail");
+        NotationResolver::movement(game.board()).parse_action("红车九九分").expect_err("must fail");
     assert!(err.contains("not on board"), "unexpected error: {err}");
 }
 
@@ -242,7 +242,7 @@ fn numeral_zero_is_an_error_not_a_panic() {
     assert!(err.contains("cannot resolve position"), "unexpected error: {err}");
     let err = resolver.parse_action("零一平二").expect_err("must fail");
     assert!(err.contains("outside the board"), "unexpected error: {err}");
-    let err = resolver.parse_action("红车零一留").expect_err("must fail");
+    let err = resolver.parse_action("红车零一分").expect_err("must fail");
     assert!(err.contains("not on board"), "unexpected error: {err}");
 }
 
@@ -413,7 +413,7 @@ fn mismatched_white_piece_is_rejected() {
 零[一路 二路 三路 四路 五路]
 一[黑将 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
-三[一一 一一 红巫 一一 一一]
+三[一一 一一 红军 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 ";

@@ -109,7 +109,7 @@ impl Game {
         &self.black_pool
     }
 
-    /// Number of white pieces available for the `Leave` action.
+    /// Number of white pieces available for the `Divide` action.
     pub fn white_pool(&self) -> u8 {
         self.white_pool
     }
@@ -250,9 +250,9 @@ impl Game {
                 let changes = self.try_draw(move_)?;
                 self.apply_draw(changes)
             },
-            Action::Leave(move_) => {
-                let changes = self.try_leave(move_)?;
-                self.apply_leave(changes)
+            Action::Divide(move_) => {
+                let changes = self.try_divide(move_)?;
+                self.apply_divide(changes)
             },
             Action::Pass(player) => {
                 self.try_pass(player)?;
@@ -298,8 +298,8 @@ impl Game {
                 let changes = self.try_draw(move_)?;
                 Ok(Reaction { changes, game_result: GameResult::Draw })
             },
-            Action::Leave(move_) => {
-                let changes = self.try_leave(move_)?;
+            Action::Divide(move_) => {
+                let changes = self.try_divide(move_)?;
                 let game_result = self.move_result(&changes);
                 Ok(Reaction { changes, game_result })
             },
@@ -425,15 +425,15 @@ impl Game {
         Ok(Reaction { changes, game_result })
     }
 
-    fn try_leave(&self, move_: Move) -> Result<Vec<PositionChange>, String> {
+    fn try_divide(&self, move_: Move) -> Result<Vec<PositionChange>, String> {
         self.check_move(move_.from)?;
         if self.white_pool == 0 {
             return Err("no white pieces available".into());
         }
-        self.board.try_leave(move_.from, move_.to, self.white)
+        self.board.try_divide(move_.from, move_.to, self.white)
     }
 
-    fn apply_leave(&mut self, changes: Vec<PositionChange>) -> Result<Reaction, String> {
+    fn apply_divide(&mut self, changes: Vec<PositionChange>) -> Result<Reaction, String> {
         let game_result = self.move_result(&changes);
         self.board.apply(&changes);
         self.white_pool -= 1;

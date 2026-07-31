@@ -201,8 +201,8 @@ already there:
 
 The special-move suffix targets an empty point:
 
-- `留` (leave): the piece moves to an empty point and leaves a white
-  piece behind at its original position.
+- `分` (divide): the piece moves to an empty point and leaves a white
+  piece behind at its original position (divide forces).
 
 If the suffix is omitted, the action must target an empty point (a simple
 move or placement). Moving onto an occupied point without a push or
@@ -211,7 +211,7 @@ capture suffix is rejected.
 ### Placement vs. Movement
 
 An unsuffixed action — a piece followed by a position with no `捉`,
-`推`, `和`, or `留` suffix — can mean either a placement or a move,
+`推`, `和`, or `分` suffix — can mean either a placement or a move,
 depending on the game phase:
 
 - **Placement phase**: a color-prefixed piece name with an absolute
@@ -273,14 +273,14 @@ A white piece is placed from the pool onto column 2, row 4:
 白子二四
 ```
 
-The red Wizard on column 3, row 3 moves straight to row 4 and leaves a
-white piece behind at its original position:
+The red Army on column 3, row 3 moves straight to row 4 and leaves a
+white piece behind at its original position (dividing forces):
 
 ```
-红巫直四留
+红军直四分
 ```
 
-The `留` suffix declares the piece leaves a white piece behind.
+The `分` suffix declares the piece divides forces, leaving a white piece behind.
 
 Red passes the turn:
 
@@ -513,7 +513,7 @@ piece        = ( color , name ) | coordinate ;
 coordinate   = numeral , numeral ;              (* column, then row *)
 position     = coordinate | relative ;
 relative     = ( "平" | "直" | "进" | "退" ) , numeral ;
-suffix       = "捉" | "推" | "和" | "留" ;
+suffix       = "捉" | "推" | "和" | "分" ;
 
 reaction     = success | error ;
 success      = "变化：[" , [ change , { " " , change } ] , "]" , newline ,
@@ -530,7 +530,7 @@ half-move    = action | "……" ;
 side         = "红" | "黑" ;
 color        = "红" | "黑" | "白" ;
 result       = "未分" | "红胜" | "黑胜" | "和棋" ;
-name         = "将" | "巫" | "间" | "谍" | "车" | "卒" | "士" | "马"
+name         = "将" | "军" | "间" | "谍" | "车" | "卒" | "士" | "马"
              | "风" | "山" | "火" | "林" | "矛" | "盾" | "弹" | "雷"
              | "子" ;
 numeral      = "一" | "二" | "三" | "四" | "五" | "六" | "七" | "八"
@@ -547,5 +547,5 @@ Constraints the grammar does not capture:
 - After a coordinate-identified piece, only `平`, `直`, or an absolute
   position may follow.
 - A change entry never carries any suffix.
-- `留` is only valid for pieces with the CONTROL_WHITE ability.
+- `分` is only valid for pieces with the DIVIDE ability.
 - The final line of a text may omit the trailing newline.

@@ -221,16 +221,16 @@ impl Board {
         }])
     }
 
-    /// Validate a leave action without modifying the board. Checks movement,
-    /// CONTROL_WHITE ability, and that the destination is empty. Returns
+    /// Validate a divide action without modifying the board. Checks movement,
+    /// DIVIDE ability, and that the destination is empty. Returns
     /// changes that place a white piece at `from` and the moving piece at
     /// `to`.
-    pub fn try_leave(
+    pub fn try_divide(
         &self, from: (u8, u8), to: (u8, u8), white: Piece,
     ) -> Result<Vec<PositionChange>, String> {
         let piece = self.try_move_to(from, to)?;
-        if !piece.ability.has(Ability::CONTROL_WHITE) {
-            return Err("only pieces with CONTROL_WHITE can leave a white piece".into());
+        if !piece.ability.has(Ability::DIVIDE) {
+            return Err("only pieces with DIVIDE ability can divide forces".into());
         }
         if self[to].is_some() {
             return Err(format!("cannot move onto occupied destination ({},{})", to.0, to.1));
@@ -579,8 +579,8 @@ impl Board {
 
     /// Enumerate all legal actions for the piece at `from`. The piece must
     /// be present on the board. Actions are [`Action::Move`],
-    /// [`Action::Capture`], [`Action::Push`], and [`Action::Draw`];
-    /// placement, pass, and resign are the caller's concern.
+    /// [`Action::Capture`], [`Action::Push`], [`Action::Draw`], and
+    /// [`Action::Divide`]; placement, pass, and resign are the caller's concern.
     ///
     /// `player` filters draw actions: only draws targeting the opponent's
     /// colored pieces are returned.
@@ -637,8 +637,8 @@ impl Board {
                 break;
             }
             actions.push(Action::Move(Move { from, to }));
-            if has_white && piece.ability.has(Ability::CONTROL_WHITE) {
-                actions.push(Action::Leave(Move { from, to }));
+            if has_white && piece.ability.has(Ability::DIVIDE) {
+                actions.push(Action::Divide(Move { from, to }));
             }
             origin = to;
         }

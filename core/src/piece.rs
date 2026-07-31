@@ -55,8 +55,9 @@ impl Piece {
     }
 
     /// The white piece: cross + diagonal + L-shaped movement at any
-    /// distance, capturable by anyone, controlled by nobody until a
-    /// wizard's formation covers it.
+    /// distance, capturable by anyone, controlled by nobody until an
+    /// army's, agent's, or spy's formation covers it. Other formations
+    /// leave its abilities unchanged.
     pub const WHITE: Piece = Piece {
         name: '子',
         color: Color::White,
@@ -80,7 +81,7 @@ impl Piece {
             direction_cross: true,
             direction_diagonal: true,
             direction_shape_L: true,
-            control_white: false,
+            divide: false,
             vital: false,
             draw: false,
         }
@@ -112,7 +113,7 @@ impl Piece {
                 direction_cross: true,
                 direction_diagonal: false,
                 direction_shape_L: false,
-                control_white: false,
+                divide: false,
                 vital: true,
                 draw: true,
             }
@@ -120,12 +121,12 @@ impl Piece {
         }
     }
 
-    const fn wizard(color: Color) -> Piece {
+    const fn army(color: Color) -> Piece {
         let (controlled_by_red, controlled_by_black) = Self::controlled(color);
         Piece {
-            name: '巫',
+            name: '军',
             color,
-            formation: Self::orient(color, Formation::WIZARD),
+            formation: Self::orient(color, Formation::ARMY),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -145,7 +146,7 @@ impl Piece {
                 direction_cross: true,
                 direction_diagonal: false,
                 direction_shape_L: false,
-                control_white: true,
+                divide: true,
                 vital: false,
                 draw: false,
             }
@@ -178,7 +179,7 @@ impl Piece {
                 direction_cross: true,
                 direction_diagonal: false,
                 direction_shape_L: false,
-                control_white: false,
+                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -210,7 +211,7 @@ impl Piece {
                 direction_cross: true,
                 direction_diagonal: false,
                 direction_shape_L: false,
-                control_white: false,
+                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -243,7 +244,7 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: true,
                 direction_shape_L: false,
-                control_white: false,
+                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -276,7 +277,7 @@ impl Piece {
                 direction_cross: true,
                 direction_diagonal: false,
                 direction_shape_L: false,
-                control_white: false,
+                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -309,7 +310,7 @@ impl Piece {
                 direction_cross: true,
                 direction_diagonal: false,
                 direction_shape_L: false,
-                control_white: false,
+                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -342,7 +343,7 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: false,
                 direction_shape_L: true,
-                control_white: false,
+                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -375,7 +376,7 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: true,
                 direction_shape_L: false,
-                control_white: false,
+                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -408,7 +409,7 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: true,
                 direction_shape_L: false,
-                control_white: false,
+                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -441,7 +442,7 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: true,
                 direction_shape_L: false,
-                control_white: false,
+                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -474,7 +475,7 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: true,
                 direction_shape_L: false,
-                control_white: false,
+                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -507,7 +508,7 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: false,
                 direction_shape_L: true,
-                control_white: false,
+                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -540,7 +541,7 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: false,
                 direction_shape_L: true,
-                control_white: false,
+                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -573,7 +574,7 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: false,
                 direction_shape_L: true,
-                control_white: false,
+                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -606,7 +607,7 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: false,
                 direction_shape_L: true,
-                control_white: false,
+                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -617,8 +618,8 @@ impl Piece {
     // Canonical piece definitions, one constant per (name, color).
     pub const RED_GENERAL: Piece = Self::general(Color::Red);
     pub const BLACK_GENERAL: Piece = Self::general(Color::Black);
-    pub const RED_WIZARD: Piece = Self::wizard(Color::Red);
-    pub const BLACK_WIZARD: Piece = Self::wizard(Color::Black);
+    pub const RED_ARMY: Piece = Self::army(Color::Red);
+    pub const BLACK_ARMY: Piece = Self::army(Color::Black);
     pub const RED_AGENT: Piece = Self::agent(Color::Red);
     pub const BLACK_AGENT: Piece = Self::agent(Color::Black);
     pub const RED_SPY: Piece = Self::spy(Color::Red);
@@ -651,7 +652,7 @@ impl Piece {
     /// The standard 16-piece red army, used as the default red pool.
     pub const RED_PLAYER_PIECES: [Piece; 16] = [
         Piece::RED_GENERAL,
-        Piece::RED_WIZARD,
+        Piece::RED_ARMY,
         Piece::RED_AGENT,
         Piece::RED_SPY,
         Piece::RED_SCHOLAR,
@@ -671,7 +672,7 @@ impl Piece {
     /// The standard 16-piece black army, used as the default black pool.
     pub const BLACK_PLAYER_PIECES: [Piece; 16] = [
         Piece::BLACK_GENERAL,
-        Piece::BLACK_WIZARD,
+        Piece::BLACK_ARMY,
         Piece::BLACK_AGENT,
         Piece::BLACK_SPY,
         Piece::BLACK_SCHOLAR,
@@ -695,8 +696,8 @@ impl Piece {
             ('子', Color::White) => Piece::WHITE,
             ('将', Color::Red) => Piece::RED_GENERAL,
             ('将', Color::Black) => Piece::BLACK_GENERAL,
-            ('巫', Color::Red) => Piece::RED_WIZARD,
-            ('巫', Color::Black) => Piece::BLACK_WIZARD,
+            ('军', Color::Red) => Piece::RED_ARMY,
+            ('军', Color::Black) => Piece::BLACK_ARMY,
             ('间', Color::Red) => Piece::RED_AGENT,
             ('间', Color::Black) => Piece::BLACK_AGENT,
             ('谍', Color::Red) => Piece::RED_SPY,

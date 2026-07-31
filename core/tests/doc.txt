@@ -138,7 +138,7 @@ notation.md example: white piece moves vertically (白子直二)
 棋盘：
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
-二[一一 红巫 一一 一一 一一]
+二[一一 红军 一一 一一 一一]
 三[一一 一一 白子 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
@@ -153,7 +153,7 @@ notation.md example: white piece moves vertically (白子直二)
 棋盘：
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
-二[一一 红巫 白子 一一 一一]
+二[一一 红军 白子 一一 一一]
 三[一一 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
@@ -161,7 +161,7 @@ notation.md example: white piece moves vertically (白子直二)
 变化：[白子直二]
 胜负：未分
 =====
-notation.md example: wizard leaves a white piece when moving (红巫直四留)
+notation.md example: army divides forces (红军直四分)
 -----
 行棋方：红
 红方：[]
@@ -172,11 +172,11 @@ notation.md example: wizard leaves a white piece when moving (红巫直四留)
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
-三[一一 一一 红巫 一一 一一]
+三[一一 一一 红军 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 -----
-红巫直四留
+红军直四分
 -----
 行棋方：黑
 红方：[]
@@ -188,10 +188,10 @@ notation.md example: wizard leaves a white piece when moving (红巫直四留)
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 白子 一一 一一]
-四[一一 一一 红巫 一一 一一]
+四[一一 一一 红军 一一 一一]
 五[红将 一一 一一 一一 一一]
 -----
-变化：[白子三三占 红巫退一]
+变化：[白子三三占 红军退一]
 胜负：未分
 =====
 notation.md example: red passes the turn (红按兵)
@@ -660,8 +660,8 @@ rules.md example: placement does not trigger draw
 README.md quick start: the first two placement moves
 -----
 行棋方：红
-红方：[将 巫 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹 雷]
-黑方：[将 巫 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹 雷]
+红方：[将 军 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹 雷]
+黑方：[将 军 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹 雷]
 白方：0
 胜负：未分
 棋盘：
@@ -681,8 +681,8 @@ README.md quick start: the first two placement moves
 黑将五一
 -----
 行棋方：红
-红方：[雷 巫 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹]
-黑方：[雷 巫 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹]
+红方：[雷 军 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹]
+黑方：[雷 军 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹]
 白方：0
 胜负：未分
 棋盘：

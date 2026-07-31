@@ -39,11 +39,12 @@ for building frontends, servers, and engines.
 - **Turns.** After placement, a turn is one of: move to an empty point,
   **capture** an occupied one, **push** its occupant one point onward
   (a blocked push may escalate into a capture if either piece has the
-  escalation ability), leave a white piece
-  through a wizard's move, pass, or resign.
+  escalation ability),   divide forces to leave a white piece behind, pass, or resign.
 - **White pieces.** Captured pieces are recycled into a shared neutral
-  pool. A wizard can drop them back onto the board as weak, colorless
-  blockers, commanded only through a wizard's formation.
+  pool. Pieces with the *Divide* ability can leave a white piece behind
+  when moving (dividing forces), bringing them back as weak, colorless
+  blockers, commanded only through an army's, agent's, or spy's formation.
+  Other formation effects leave white pieces unchanged.
 - **Game end.** Lose your vital piece — the general — and you lose the
   game. Both vitals perishing in the same action is a draw, as are two
   generals standing inside each other's formation.
@@ -52,7 +53,7 @@ Each side fields 16 distinct pieces in four groups:
 
 | Group | Pieces | Formation theme |
 |---|---|---|
-| Control | 将 General (vital), 巫 Wizard, 间 Agent, 谍 Spy | who commands whom |
+| Control | 将 General (vital), 军 Army, 间 Agent, 谍 Spy | who commands whom |
 | Movement | 车 Rook, 卒 Pawn, 士 Scholar, 马 Horse | grant allies their movement, strip it from enemies |
 | Push | 风 Wind, 山 Mountain, 火 Fire, 林 Forest | shoving, push escalation, and capture demotion |
 | Capture | 矛 Spear, 盾 Shield, 弹 Shell, 雷 Mine | capture, immunity, sacrifice, and retaliation |
@@ -88,8 +89,8 @@ of the text protocol:
 红将五十 → 未分
 黑将五一 → 未分
 行棋方：红
-红方：[雷 巫 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹]
-黑方：[雷 巫 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹]
+红方：[雷 军 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹]
+黑方：[雷 军 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹]
 白方：0
 胜负：未分
 棋盘：
@@ -127,7 +128,7 @@ Actions:
 | `一二三二` | the piece standing on (1,2) moves to (3,2) |
 | `红马四五捉` | the Red Horse moves to (4,5) and **captures** the piece there |
 | `红风五四推` | the Red Wind moves to (5,4) and **pushes** its occupant one point onward |
-| `红巫直四留` | the Red Wizard moves to row 4 and **leaves** a white piece behind |
+| `红军直四分` | the Red Army moves to row 4 and **divides** forces, leaving a white piece behind |
 | `红按兵` / `黑认负` | Red passes / Black resigns |
 
 Every action answers with either a success — the list of piece changes

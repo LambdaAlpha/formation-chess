@@ -5,6 +5,8 @@ use crate::piece::Color;
 
 /// A piece's formation: which of the eight surrounding points its aura
 /// covers, and how it modifies the abilities of pieces standing there.
+/// White pieces are neutral and ignore formation effects except for the
+/// control granted by the army, agent, and spy.
 #[derive(Debug, Copy, Clone)]
 pub struct Formation {
     /// Bit set of covered points; see the `TOP_LEFT` … `BOTTOM_RIGHT`
@@ -19,7 +21,7 @@ pub struct Formation {
 
 impl Formation {
     pub const GENERAL: Self = Self { points: Self::CORNER, effect: Self::general };
-    pub const WIZARD: Self = Self { points: Self::CORNER, effect: Self::wizard };
+    pub const ARMY: Self = Self { points: Self::CORNER, effect: Self::army };
     pub const AGENT: Self = Self { points: Self::CORNER, effect: Self::agent };
     pub const SPY: Self = Self { points: Self::CORNER, effect: Self::spy };
     pub const SCHOLAR: Self = Self { points: Self::MIDDLE, effect: Self::scholar };
@@ -54,24 +56,35 @@ impl Formation {
     pub const BOTTOM_MIDDLE: u8 = 0b010_00_000;
     pub const BOTTOM_RIGHT: u8 = 0b100_00_000;
 
-    /// Allies gain DRAW; enemies lose it.
-    pub fn general(owner: Color, object: Color) -> (Ability, Ability) {
-        let mask = Ability::DRAW;
-        let update = if owner == object { Ability::DRAW } else { Ability::NONE };
-        (mask, update)
+    /// Grant `mask` to colored allies and strip it from colored enemies.
+    /// White pieces are neutral and remain unchanged.
+    fn grant_allies_strip_enemies(
+        owner: Color, object: Color, mask: Ability,
+    ) -> (Ability, Ability) {
+        match object {
+            Color::White => (Ability::NONE, Ability::NONE),
+            _ if owner == object => (mask, mask),
+            _ => (mask, Ability::NONE),
+        }
     }
 
-    /// White pieces become controlled by the wizard's player.
-    pub fn wizard(owner: Color, object: Color) -> (Ability, Ability) {
+    /// Allies gain DRAW; enemies lose it.
+    pub fn general(owner: Color, object: Color) -> (Ability, Ability) {
+        Self::grant_allies_strip_enemies(owner, object, Ability::DRAW)
+    }
+
+    /// White pieces become controlled by the army's player;
+    /// same-color allies gain DIVIDE; different-color enemies lose it.
+    pub fn army(owner: Color, object: Color) -> (Ability, Ability) {
         match (owner, object) {
             (Color::Red, Color::White) => (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED),
-            (Color::Red, Color::Red) => (Ability::CONTROL_WHITE, Ability::CONTROL_WHITE),
-            (Color::Red, Color::Black) => (Ability::CONTROL_WHITE, Ability::NONE),
+            (Color::Red, Color::Red) => (Ability::DIVIDE, Ability::DIVIDE),
+            (Color::Red, Color::Black) => (Ability::DIVIDE, Ability::NONE),
             (Color::Black, Color::White) => {
                 (Ability::CONTROLLED_BY_BLACK, Ability::CONTROLLED_BY_BLACK)
             },
-            (Color::Black, Color::Red) => (Ability::CONTROL_WHITE, Ability::NONE),
-            (Color::Black, Color::Black) => (Ability::CONTROL_WHITE, Ability::CONTROL_WHITE),
+            (Color::Black, Color::Red) => (Ability::DIVIDE, Ability::NONE),
+            (Color::Black, Color::Black) => (Ability::DIVIDE, Ability::DIVIDE),
             _ => (Ability::NONE, Ability::NONE),
         }
     }
@@ -82,11 +95,9 @@ impl Formation {
     pub fn agent(owner: Color, object: Color) -> (Ability, Ability) {
         match (owner, object) {
             (Color::Red, Color::Red) => (Ability::CONTROLLED_BY_BLACK, Ability::NONE),
-            (Color::Red, Color::Black) => (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED),
-            (Color::Black, Color::Red) => {
-                (Ability::CONTROLLED_BY_BLACK, Ability::CONTROLLED_BY_BLACK)
-            },
+            (Color::Red, _) => (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED),
             (Color::Black, Color::Black) => (Ability::CONTROLLED_BY_RED, Ability::NONE),
+            (Color::Black, _) => (Ability::CONTROLLED_BY_BLACK, Ability::CONTROLLED_BY_BLACK),
             _ => (Ability::NONE, Ability::NONE),
         }
     }
@@ -96,57 +107,46 @@ impl Formation {
     /// strips its own side's control from enemies).
     pub fn spy(owner: Color, object: Color) -> (Ability, Ability) {
         match (owner, object) {
-            (Color::Red, Color::Red) => {
-                (Ability::CONTROLLED_BY_BLACK, Ability::CONTROLLED_BY_BLACK)
-            },
             (Color::Red, Color::Black) => (Ability::CONTROLLED_BY_RED, Ability::NONE),
+            (Color::Red, _) => (Ability::CONTROLLED_BY_BLACK, Ability::CONTROLLED_BY_BLACK),
             (Color::Black, Color::Red) => (Ability::CONTROLLED_BY_BLACK, Ability::NONE),
-            (Color::Black, Color::Black) => {
-                (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED)
-            },
+            (Color::Black, _) => (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED),
             _ => (Ability::NONE, Ability::NONE),
         }
     }
 
     /// Allies gain DIRECTION_DIAGONAL; enemies lose it.
     pub fn scholar(owner: Color, object: Color) -> (Ability, Ability) {
-        let mask = Ability::DIRECTION_DIAGONAL;
-        let update = if owner == object { Ability::DIRECTION_DIAGONAL } else { Ability::NONE };
-        (mask, update)
+        Self::grant_allies_strip_enemies(owner, object, Ability::DIRECTION_DIAGONAL)
     }
 
     /// Allies gain DIRECTION_CROSS; enemies lose it.
     pub fn pawn(owner: Color, object: Color) -> (Ability, Ability) {
-        let mask = Ability::DIRECTION_CROSS;
-        let update = if owner == object { Ability::DIRECTION_CROSS } else { Ability::NONE };
-        (mask, update)
+        Self::grant_allies_strip_enemies(owner, object, Ability::DIRECTION_CROSS)
     }
 
     /// Allies gain ANY_DISTANCE; enemies lose it.
     pub fn rook(owner: Color, object: Color) -> (Ability, Ability) {
-        let mask = Ability::ANY_DISTANCE;
-        let update = if owner == object { Ability::ANY_DISTANCE } else { Ability::NONE };
-        (mask, update)
+        Self::grant_allies_strip_enemies(owner, object, Ability::ANY_DISTANCE)
     }
 
     /// Allies gain DIRECTION_SHAPE_L; enemies lose it.
     pub fn horse(owner: Color, object: Color) -> (Ability, Ability) {
-        let mask = Ability::DIRECTION_SHAPE_L;
-        let update = if owner == object { Ability::DIRECTION_SHAPE_L } else { Ability::NONE };
-        (mask, update)
+        Self::grant_allies_strip_enemies(owner, object, Ability::DIRECTION_SHAPE_L)
     }
 
     /// Allies gain both push abilities; enemies lose both.
     pub fn wind(owner: Color, object: Color) -> (Ability, Ability) {
         let mask = Ability::PUSH_ALLY | Ability::PUSH_ENEMY;
-        let update =
-            if owner == object { Ability::PUSH_ALLY | Ability::PUSH_ENEMY } else { Ability::NONE };
-        (mask, update)
+        Self::grant_allies_strip_enemies(owner, object, mask)
     }
 
     /// Takes over both pushed-by abilities: allies become pushable by
     /// allies only, enemies pushable by the mountain's side only.
     pub fn mountain(owner: Color, object: Color) -> (Ability, Ability) {
+        if object == Color::White {
+            return (Ability::NONE, Ability::NONE);
+        }
         let mask = Ability::PUSHED_BY_ALLY | Ability::PUSHED_BY_ENEMY;
         let update =
             if owner == object { Ability::PUSHED_BY_ALLY } else { Ability::PUSHED_BY_ENEMY };
@@ -156,6 +156,9 @@ impl Formation {
     /// Allies gain active push escalation and lose passive; enemies gain
     /// passive and lose active.
     pub fn fire(owner: Color, object: Color) -> (Ability, Ability) {
+        if object == Color::White {
+            return (Ability::NONE, Ability::NONE);
+        }
         let mask = Ability::CAPTURE_ON_PUSH_BLOCKED | Ability::CAPTURED_ON_PUSH_BLOCKED;
         let update = if owner == object {
             Ability::CAPTURE_ON_PUSH_BLOCKED
@@ -168,6 +171,9 @@ impl Formation {
     /// Allies gain passive capture demotion and lose active; enemies gain
     /// active and lose passive.
     pub fn forest(owner: Color, object: Color) -> (Ability, Ability) {
+        if object == Color::White {
+            return (Ability::NONE, Ability::NONE);
+        }
         let mask = Ability::PUSH_ON_CAPTURE_UNBLOCKED | Ability::PUSHED_ON_CAPTURE_UNBLOCKED;
         let update = if owner == object {
             Ability::PUSHED_ON_CAPTURE_UNBLOCKED
@@ -179,13 +185,14 @@ impl Formation {
 
     /// Allies gain CAPTURE; enemies lose it.
     pub fn spear(owner: Color, object: Color) -> (Ability, Ability) {
-        let mask = Ability::CAPTURE;
-        let update = if owner == object { Ability::CAPTURE } else { Ability::NONE };
-        (mask, update)
+        Self::grant_allies_strip_enemies(owner, object, Ability::CAPTURE)
     }
 
     /// Allies become uncapturable; enemies become capturable.
     pub fn shield(owner: Color, object: Color) -> (Ability, Ability) {
+        if object == Color::White {
+            return (Ability::NONE, Ability::NONE);
+        }
         let mask = Ability::CAPTURED;
         let update = if owner == object { Ability::NONE } else { Ability::CAPTURED };
         (mask, update)
@@ -193,16 +200,12 @@ impl Formation {
 
     /// Allies gain CAPTURED_ON_CAPTURE; enemies lose it.
     pub fn shell(owner: Color, object: Color) -> (Ability, Ability) {
-        let mask = Ability::CAPTURED_ON_CAPTURE;
-        let update = if owner == object { Ability::CAPTURED_ON_CAPTURE } else { Ability::NONE };
-        (mask, update)
+        Self::grant_allies_strip_enemies(owner, object, Ability::CAPTURED_ON_CAPTURE)
     }
 
     /// Allies gain CAPTURE_ON_CAPTURED; enemies lose it.
     pub fn mine(owner: Color, object: Color) -> (Ability, Ability) {
-        let mask = Ability::CAPTURE_ON_CAPTURED;
-        let update = if owner == object { Ability::CAPTURE_ON_CAPTURED } else { Ability::NONE };
-        (mask, update)
+        Self::grant_allies_strip_enemies(owner, object, Ability::CAPTURE_ON_CAPTURED)
     }
 
     /// No effect (white pieces cover no points anyway).

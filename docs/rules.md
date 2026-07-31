@@ -52,7 +52,7 @@ powers: what a piece can do is decided by the formations it stands in.
 There is no check or checkmate — the general is captured like any other
 piece, and losing it loses the game. Captured pieces are not gone for
 good: they turn white and can be brought back to the board by either
-side's wizard.
+side's army.
 
 ## The Basics
 
@@ -94,7 +94,7 @@ These are not static — they can be altered by formations. The full list:
 | **Direction: Cross** | Can move horizontally or vertically. |
 | **Direction: Diagonal** | Can move diagonally. |
 | **Direction: L-shaped** | Can move in an L-shaped pattern (one step orthogonally plus one step diagonally, the knight's move). |
-| **Control White** | Can place white pieces from the pool onto empty points inside its own formation. Commanding the placed pieces is granted separately, by the wizard's formation effect. |
+| **Divide** | Move to an empty point and leave a white piece behind at the original position (divide forces). Commanding the left-behind white pieces is granted separately, by the army's, agent's, or spy's formation effects. |
 | **Vital** | Losing this piece means losing the game. The general carries it. |
 | **Draw** | Can move onto an opponent's vital piece, removing it and ending the game in a draw. Granted to allies by the General's formation. |
 
@@ -136,7 +136,7 @@ downward, its lower-triangle pattern points upward.
 
 Each pattern belongs to one group of four pieces:
 
-- **Corners** — Control group: General, Wizard, Agent, Spy
+- **Corners** — Control group: General, Army, Agent, Spy
 - **Edges** — Movement group: Rook, Pawn, Scholar, Horse
 - **Upper Triangle** — Push group: Wind, Mountain, Fire, Forest
 - **Lower Triangle** — Capture group: Spear, Shield, Shell, Mine
@@ -154,6 +154,12 @@ modify the same ability on the same piece, the results are combined with
 the rule that **any formation that disables an ability wins**. If even one
 formation strips a power away, no other formation can restore it.
 Disabling is absolute.
+
+**White pieces are neutral.** For formation effects, a white piece is
+neither an ally nor an enemy. No formation modifies a white piece's
+abilities, except for the control explicitly granted by the Army, Agent,
+and Spy. Movement, pushing, and capture involving white pieces still use
+the white piece's own abilities.
 
 ## Moving a Piece
 
@@ -278,9 +284,9 @@ These pieces influence **who controls what**.
 | Piece | Symbol | Distinguishing traits | Formation Effect |
 |---|---|---|---|
 | **General** | 将 | *Vital*, *Draw* | Allies gain *Draw*; enemies lose it |
-| **Wizard** | 巫 | *Control White* | White pieces inside become controlled by the wizard's player |
-| **Agent** | 间 | — | Enemies inside become **also** controlled by the agent's player (converts them); allies inside have the opponent's control disabled (purges foreign control) |
-| **Spy** | 谍 | Controlled by *both* players | Allies inside become **also** controlled by the opponent (double agent effect); enemies inside have the spy player's control disabled (strips own control from enemies) |
+| **Army** | 军 | *Divide* | White pieces inside become controlled by the army's player; same-color allies gain *Divide*; different-color enemies lose *Divide* |
+| **Agent** | 间 | — | Enemies inside become **also** controlled by the agent's player (converts them); allies inside have the opponent's control disabled (purges foreign control); white pieces inside become controlled by the agent's player |
+| **Spy** | 谍 | Controlled by *both* players | Allies inside become **also** controlled by the opponent (double agent effect); enemies inside have the spy player's control disabled (strips own control from enemies); white pieces inside become controlled by the spy's opponent |
 
 The **General** is your vital piece — lose your general and you lose. It
 moves freely but cannot capture; protect it with formations. Its formation
@@ -288,9 +294,10 @@ grants *Draw* to allies and strips it from enemies, allowing allies to move
 onto the opponent's general to declare a draw. The general itself also
 carries this ability (see [How the Game Ends](#how-the-game-ends)).
 
-The **Wizard** brings captured pieces back into play: it places white
-pieces onto empty points inside its formation, and white pieces standing
-inside its formation obey the wizard's player. See
+The **Army** holds the *Divide* ability: it can move and leave a white
+piece behind at its original position (dividing forces). Its formation
+grants the same *Divide* ability to same-color allies standing inside it,
+and makes white pieces inside it controllable by the army's player. See
 [White Pieces](#white-pieces).
 
 ### Movement Group — Edges Pattern
@@ -363,20 +370,26 @@ by mutual-destruction — it becomes a **white piece** in a shared pool.
 White pieces have cross, diagonal, and L-shaped movement at any distance
 and can be captured by anyone. They cannot capture on their own.
 
-A piece with the **Control White** ability (the Wizard) can place white
-pieces from the pool onto any empty point within its formation. White
-pieces carry no control of their own: they are commanded through the
-wizard's formation — a white piece standing inside a wizard's formation
-can be moved by that wizard's player (by both players, if wizards of both
-sides cover it); outside every wizard's formation a white piece cannot be
-moved. Capturing a white piece returns it to the pool — white pieces are
-recycled, not destroyed.
+A piece with the **Divide** ability can move to an empty point and
+leave a white piece behind at its original position (divide forces),
+consuming one white piece from the pool. The Army starts with this
+ability, and its formation grants it to same-color allies standing
+within it.
+
+White pieces carry no control of their own. They are commanded only by
+three control-group formations: an Army or Agent lets its owner command
+white pieces inside, while a Spy lets the spy's opponent command them.
+Several control effects may combine, so a white piece can be commanded by
+both players at once. Outside these Army, Agent, and Spy control effects,
+a white piece cannot be moved. Capturing one returns it to the pool —
+white pieces are recycled, not destroyed.
 
 This adds a third dimension to the game: captured enemies become white
-pieces that your Wizard can bring back onto the board. White pieces do
-not benefit from formation effects, so their combat strength is far
-weaker than in their original form — they are primarily useful for
-occupying space and blocking paths.
+pieces that any piece with *Divide* can bring back onto the board through
+dividing forces. Apart from the control effects above, formations never
+rewrite a white piece's abilities. White pieces cannot capture and project
+no formation, so they are primarily useful for occupying space and
+blocking paths.
 
 ## How a Game Unfolds
 
@@ -405,11 +418,14 @@ turn a player takes exactly one of these actions:
 - **Draw:** move your own piece with *Draw* ability onto the opponent's
   *Vital* piece, removing the opponent's piece and ending the game in a
   draw.
-- **Place** a white piece through a wizard (this consumes the turn).
+- **Divide:** move a piece with *Divide* ability to an empty point
+  and leave a white piece behind at its original position (dividing
+  forces).
 - **Pass:** skip the turn without moving. Because passing is always
   available, having no legal move never forces a loss — there is no
-  stalemate defeat. Repeated mutual passing has no automatic outcome;
-  settling such a standoff is up to the players.
+  stalemate defeat. The core game assigns no automatic result for repeated
+  positions, consecutive passes, or elapsed time; tournament organizers may
+  specify repetition, clock, and adjudication rules separately.
 - **Resign:** concede the game, immediately ending it with a win for the
   opponent.
 
@@ -478,12 +494,14 @@ opponent's win. Both bypass the board check.
 - **Ability** — a single capability a piece may have or lack, such as a
   movement direction, capture, or being capturable. All rules operate on
   abilities.
-- **Ally / Enemy** — pieces of the same color as, or the opposing player's
-  color to, the piece in question. White pieces are nobody's ally.
+- **Ally / Enemy** — for Red and Black pieces, the same color is allied and
+  the opposing player's color is enemy. White pieces are neutral: formation
+  effects treat them as neither allies nor enemies.
 - **Pool** — where pieces wait off the board: each player's own pieces
   before placement, and the shared pool of white pieces.
 - **White piece** — a captured piece, recycled into the shared pool;
-  either side's wizard can bring it back to the board.
+  any piece with *Divide* ability can bring one back to the board by
+  dividing forces.
 - **Vital piece** — a piece whose ability *Vital* makes it a win
   condition: a player with no vital pieces left has lost. Normally the
   general.

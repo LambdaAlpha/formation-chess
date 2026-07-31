@@ -3,14 +3,16 @@ use formation_chess_core::action::Action;
 use formation_chess_core::action::GameResult;
 use formation_chess_core::action::Move;
 use formation_chess_core::board::Board;
+use formation_chess_core::formation::Formation;
 use formation_chess_core::game::Game;
 use formation_chess_core::game::GameConfig;
+use formation_chess_core::piece::Color;
 use formation_chess_core::piece::Piece;
 use formation_chess_core::piece::Player;
 
 mod api_common;
 use api_common::assert_captures;
-use api_common::assert_leaves;
+use api_common::assert_divides;
 use api_common::assert_moves;
 use api_common::assert_pushes;
 use api_common::game_one;
@@ -75,6 +77,55 @@ fn valid_moves_white_piece_returns_empty() {
         3,
     );
     assert!(g.valid_moves(1, 1).is_empty());
+}
+
+#[test]
+fn non_control_formations_ignore_white() {
+    #[expect(clippy::type_complexity)]
+    let effects: [fn(Color, Color) -> (Ability, Ability); 13] = [
+        Formation::general,
+        Formation::scholar,
+        Formation::pawn,
+        Formation::rook,
+        Formation::horse,
+        Formation::wind,
+        Formation::mountain,
+        Formation::fire,
+        Formation::forest,
+        Formation::spear,
+        Formation::shield,
+        Formation::shell,
+        Formation::mine,
+    ];
+    for owner in [Color::Red, Color::Black] {
+        for effect in effects {
+            assert_eq!(effect(owner, Color::White), (Ability::NONE, Ability::NONE));
+        }
+    }
+}
+
+#[test]
+fn control_formations_still_control_white() {
+    assert_eq!(
+        Formation::army(Color::Red, Color::White),
+        (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED)
+    );
+    assert_eq!(
+        Formation::agent(Color::Black, Color::White),
+        (Ability::CONTROLLED_BY_BLACK, Ability::CONTROLLED_BY_BLACK)
+    );
+    assert_eq!(
+        Formation::spy(Color::Red, Color::White),
+        (Ability::CONTROLLED_BY_BLACK, Ability::CONTROLLED_BY_BLACK)
+    );
+}
+
+#[test]
+fn white_keeps_base_abilities_inside_rook_formation() {
+    let mut board = Board::new(3, 3);
+    board[(1, 0)] = Some(Piece::RED_ROOK);
+    board[(1, 1)] = Some(Piece::WHITE);
+    assert_eq!(board.effective((1, 1)).expect("white piece").ability, Piece::WHITE.ability);
 }
 
 // -- unlimited orthogonal movement + capture -----------------------------------
@@ -600,12 +651,12 @@ fn mine_capture_on_captured_triggers_mutual_destruction() {
 
 // -- Leave actions -----------------------------------------------------------
 
-/// Wizard has both Move and Leave for empty cross-direction destinations
+/// Army has both Move and Divide for empty cross-direction destinations
 /// when white_pool > 0.
 #[test]
-fn leave_alongside_move_for_wizard() {
+fn divide_alongside_move_for_army() {
     let mut board = Board::new(5, 5);
-    board[(2, 2)] = Some(Piece::RED_WIZARD);
+    board[(2, 2)] = Some(Piece::RED_ARMY);
     board[(0, 4)] = Some(Piece::RED_GENERAL);
     board[(4, 0)] = Some(Piece::BLACK_GENERAL);
     let g = Game::new(GameConfig {
@@ -621,14 +672,14 @@ fn leave_alongside_move_for_wizard() {
     let actions = g.valid_moves(2, 2);
     let targets = &[(0, 2), (1, 2), (3, 2), (4, 2), (2, 0), (2, 1), (2, 3), (2, 4)];
     assert_moves(&actions, targets);
-    assert_leaves(&actions, targets);
+    assert_divides(&actions, targets);
 }
 
-/// Leave not available when white_pool == 0.
+/// Divide not available when white_pool == 0.
 #[test]
-fn leave_absent_when_no_white_pool() {
+fn divide_absent_when_no_white_pool() {
     let mut board = Board::new(5, 5);
-    board[(2, 2)] = Some(Piece::RED_WIZARD);
+    board[(2, 2)] = Some(Piece::RED_ARMY);
     board[(0, 4)] = Some(Piece::RED_GENERAL);
     board[(4, 0)] = Some(Piece::BLACK_GENERAL);
     let g = Game::new(GameConfig {
@@ -642,12 +693,12 @@ fn leave_absent_when_no_white_pool() {
     })
     .expect("valid");
     let actions = g.valid_moves(2, 2);
-    assert_leaves(&actions, &[]);
+    assert_divides(&actions, &[]);
 }
 
-/// Leave not available for pieces without CONTROL_WHITE.
+/// Divide not available for pieces without DIVIDE ability.
 #[test]
-fn leave_absent_without_control_white() {
+fn divide_absent_without_divide() {
     let mut board = Board::new(5, 5);
     board[(2, 2)] = Some(Piece::RED_ROOK);
     board[(0, 4)] = Some(Piece::RED_GENERAL);
@@ -663,14 +714,14 @@ fn leave_absent_without_control_white() {
     })
     .expect("valid");
     let actions = g.valid_moves(2, 2);
-    assert_leaves(&actions, &[]);
+    assert_divides(&actions, &[]);
 }
 
-/// Leave targets only empty points, not occupied ones.
+/// Divide targets only empty points, not occupied ones.
 #[test]
-fn leave_only_empty_destinations() {
+fn divide_only_empty_destinations() {
     let mut board = Board::new(5, 5);
-    board[(2, 2)] = Some(Piece::RED_WIZARD);
+    board[(2, 2)] = Some(Piece::RED_ARMY);
     board[(2, 1)] = Some(Piece::RED_PAWN);
     board[(0, 4)] = Some(Piece::RED_GENERAL);
     board[(4, 0)] = Some(Piece::BLACK_GENERAL);
@@ -686,5 +737,5 @@ fn leave_only_empty_destinations() {
     .expect("valid");
     let actions = g.valid_moves(2, 2);
     // (2,1) is occupied, so no Move or Leave there.
-    assert_leaves(&actions, &[(0, 2), (1, 2), (3, 2), (4, 2), (2, 3), (2, 4)]);
+    assert_divides(&actions, &[(0, 2), (1, 2), (3, 2), (4, 2), (2, 3), (2, 4)]);
 }

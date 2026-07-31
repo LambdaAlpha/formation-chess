@@ -121,10 +121,10 @@ pub fn assert_pushes(actions: &[Action], targets: &[(u8, u8)]) {
     assert_eq!(found, expected, "push targets mismatch");
 }
 
-pub fn assert_leaves(actions: &[Action], targets: &[(u8, u8)]) {
+pub fn assert_divides(actions: &[Action], targets: &[(u8, u8)]) {
     let mut found: Vec<(u8, u8)> = actions
         .iter()
-        .filter_map(|a| if let Action::Leave(m) = a { Some(m.to) } else { None })
+        .filter_map(|a| if let Action::Divide(m) = a { Some(m.to) } else { None })
         .collect();
     found.sort_unstable();
     let mut expected: Vec<_> = targets.to_vec();

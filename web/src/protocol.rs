@@ -96,7 +96,7 @@ pub enum ApiActionRequest {
     Capture { from: [u8; 2], to: [u8; 2] },
     Push { from: [u8; 2], to: [u8; 2] },
     Draw { from: [u8; 2], to: [u8; 2] },
-    Leave { from: [u8; 2], to: [u8; 2] },
+    Divide { from: [u8; 2], to: [u8; 2] },
     Pass,
     Resign,
 }
@@ -119,8 +119,8 @@ impl ApiActionRequest {
             ApiActionRequest::Draw { from, to } => {
                 Ok(Action::Draw(Move { from: (from[0], from[1]), to: (to[0], to[1]) }))
             },
-            ApiActionRequest::Leave { from, to } => {
-                Ok(Action::Leave(Move { from: (from[0], from[1]), to: (to[0], to[1]) }))
+            ApiActionRequest::Divide { from, to } => {
+                Ok(Action::Divide(Move { from: (from[0], from[1]), to: (to[0], to[1]) }))
             },
             ApiActionRequest::Pass => Ok(Action::Pass(current_player)),
             ApiActionRequest::Resign => Ok(Action::Resign(current_player)),
@@ -306,7 +306,7 @@ pub fn action_type_str(action: &Action) -> &'static str {
         Action::Capture(_) => "capture",
         Action::Push(_) => "push",
         Action::Draw(_) => "draw",
-        Action::Leave(_) => "leave",
+        Action::Divide(_) => "divide",
         _ => "move",
     }
 }

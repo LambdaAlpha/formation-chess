@@ -37,8 +37,8 @@ pub enum ActionNotation {
     Push(PiecePosition),
     /// Piece + position + `和`.
     Draw(PiecePosition),
-    /// Piece + position + `留`: move and leave a white piece at origin.
-    Leave(PiecePosition),
+    /// Piece + position + `分`: move and divide forces, leaving a white piece at origin.
+    Divide(PiecePosition),
     /// Color + `按兵`.
     Pass(Player),
     /// Color + `认负`.
@@ -125,7 +125,7 @@ impl Display for Action {
             Action::Capture(m) => ActionNotation::Capture(piece_position(*m)),
             Action::Push(m) => ActionNotation::Push(piece_position(*m)),
             Action::Draw(m) => ActionNotation::Draw(piece_position(*m)),
-            Action::Leave(m) => ActionNotation::Leave(piece_position(*m)),
+            Action::Divide(m) => ActionNotation::Divide(piece_position(*m)),
             Action::Pass(p) => ActionNotation::Pass(*p),
             Action::Resign(p) => ActionNotation::Resign(*p),
         };
@@ -194,7 +194,7 @@ impl Display for ActionNotation {
             ActionNotation::Capture(pp) => write!(f, "{pp}捉"),
             ActionNotation::Push(pp) => write!(f, "{pp}推"),
             ActionNotation::Draw(pp) => write!(f, "{pp}和"),
-            ActionNotation::Leave(pp) => write!(f, "{pp}留"),
+            ActionNotation::Divide(pp) => write!(f, "{pp}分"),
             ActionNotation::Pass(player) => write!(f, "{player}按兵"),
             ActionNotation::Resign(player) => write!(f, "{player}认负"),
         }
@@ -214,8 +214,8 @@ impl FromStr for ActionNotation {
         if let Some(player) = s.strip_suffix("认负") {
             return Ok(Self::Resign(player.parse()?));
         }
-        if let Some(body) = s.strip_suffix("留") {
-            return Ok(Self::Leave(body.parse()?));
+        if let Some(body) = s.strip_suffix('分') {
+            return Ok(Self::Divide(body.parse()?));
         }
         if let Some(body) = s.strip_suffix('捉') {
             return Ok(Self::Capture(body.parse()?));
@@ -506,7 +506,7 @@ impl<'a> NotationResolver<'a> {
             ActionNotation::Capture(pp) => Action::Capture(self.move_(pp)?),
             ActionNotation::Push(pp) => Action::Push(self.move_(pp)?),
             ActionNotation::Draw(pp) => Action::Draw(self.move_(pp)?),
-            ActionNotation::Leave(pp) => Action::Leave(self.move_(pp)?),
+            ActionNotation::Divide(pp) => Action::Divide(self.move_(pp)?),
             ActionNotation::Pass(p) => Action::Pass(p),
             ActionNotation::Resign(p) => Action::Resign(p),
         };
@@ -565,7 +565,7 @@ impl<'a> NotationResolver<'a> {
             Action::Capture(m) => ActionNotation::Capture(self.piece_position(m.from, m.to)),
             Action::Push(m) => ActionNotation::Push(self.piece_position(m.from, m.to)),
             Action::Draw(m) => ActionNotation::Draw(self.piece_position(m.from, m.to)),
-            Action::Leave(m) => ActionNotation::Leave(self.piece_position(m.from, m.to)),
+            Action::Divide(m) => ActionNotation::Divide(self.piece_position(m.from, m.to)),
             Action::Pass(p) => ActionNotation::Pass(*p),
             Action::Resign(p) => ActionNotation::Resign(*p),
         }
