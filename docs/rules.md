@@ -79,10 +79,6 @@ rewrite those abilities, producing the **effective abilities** used to judge an
 action. They change with the position and are not permanently written back to
 the piece.
 
-All four Control-group pieces (General, Army, Agent, and Spy) also start with
-**Push Ally** and **Push Enemy**. The table's “Distinctive base abilities or
-exceptions” column lists only what distinguishes each row from the other pieces.
-
 | Ability | Meaning |
 |---|---|
 | **Control (Red / Black)** | Which side may command the piece. A piece may be controlled by both sides or by neither. |
@@ -90,10 +86,10 @@ exceptions” column lists only what distinguishes each row from the other piece
 | **Push Enemy** | May push a different-color piece. |
 | **Pushed by Ally** | May be pushed by a same-color piece. |
 | **Pushed by Enemy** | May be pushed by a different-color piece. |
-| **Blocked-push capture (active)** | When this piece is the pusher and the target cannot land, the blocked push becomes a capture. The target's capture status and color are ignored. |
-| **Blocked-push capture (passive)** | When this piece is the pushed target and the push cannot land, the pusher captures it. |
-| **Clear-capture push (active)** | When this piece captures along a clear path, the capture becomes a push if the target can land one step farther. |
-| **Clear-capture push (passive)** | When this piece would be captured along a clear path, it is pushed instead if that landing is valid. |
+| **No-retreat push capture (active)** | When pushing, if the target has no retreat, the piece may capture the target instead. This capture does not require the target to have Captured or be a different color. |
+| **No-retreat push capture (passive)** | When pushed, if the target has no retreat, it is captured instead. This capture does not require the target to have Captured or be a different color. |
+| **Retreat capture push (active)** | When capturing, if the target has a retreat, the capture becomes a push. This push does not require the target to be pushable. |
+| **Retreat capture push (passive)** | When being captured, if the target has a retreat, it is pushed instead. This push does not require the target to be pushable. |
 | **Capture** | Has the normal permission to capture. |
 | **Captured** | May be removed by a normal capture. |
 | **Retaliation** | If this piece is captured, the capturer is removed too; its presence bypasses both normal Capture/Captured ability checks. |
@@ -282,34 +278,48 @@ If both trigger, the result is still that both pieces leave the board.
 
 ## Piece reference
 
-The table lists the base differences between the 16 Red and Black pieces.
-Unless a row says otherwise, a colored piece is controlled by its own side,
-can be pushed by an enemy, and can be captured. A Spy is also controlled by
-the opposing side by default. A formation affects neighbors in its active
-pattern, not the piece that projects it.
+### Default abilities
 
-| Piece | Base movement | Distinctive base abilities or exceptions | Formation effect on neighbors |
-|---|---|---|---|
-| **General** | Cross, Any Distance | Vital, Draw | White is controlled by the General's side; Allies gain Draw; enemies lose Draw |
-| **Army** | Cross, Any Distance | Divide | White is controlled by the Army's side; allies gain Divide; enemies lose Divide |
-| **Agent** | Cross, Any Distance | — | White is controlled by the Agent's side; Enemy pieces also become controlled by the Agent's side; allies lose opposing control |
-| **Spy** | Cross, Any Distance | Controlled by both sides | White is controlled by the opponent; Allies also become controlled by the opponent; enemy pieces lose the Spy side's control |
-| **Rook** | Cross, Any Distance | Capture | Allies gain Any Distance; enemies lose Any Distance |
-| **Pawn** | Cross | Capture | Allies gain Cross; enemies lose Cross |
-| **Scholar** | Diagonal | Capture | Allies gain Diagonal; enemies lose Diagonal |
-| **Horse** | L-shaped | Does not start with Capture | Allies gain L-shaped; enemies lose L-shaped |
-| **Wind** | Diagonal, Any Distance | Push Ally, Push Enemy | Allies gain both push abilities; enemies lose both |
-| **Mountain** | Diagonal, Any Distance | Pushed by Ally; not Pushed by Enemy | Allies can be pushed only by allies; enemies can be pushed only by the Mountain side |
-| **Fire** | Diagonal, Any Distance | Push Ally, Push Enemy; active blocked-push capture | Allies gain active blocked-push capture and lose the passive form; enemies get the reverse |
-| **Forest** | Diagonal, Any Distance | Passive clear-capture push | Allies gain the passive form and lose the active form; enemies get the reverse |
-| **Spear** | L-shaped, Any Distance | Capture | Allies gain Capture; enemies lose Capture |
-| **Shield** | L-shaped, Any Distance | Not Captured by a normal capture | Allies lose Captured; enemies gain Captured |
-| **Shell** | L-shaped, Any Distance | Sacrifice | Allies gain Sacrifice; enemies lose Sacrifice |
-| **Mine** | L-shaped, Any Distance | Retaliation | Allies gain Retaliation; enemies lose Retaliation |
+All Red and Black pieces default to:
+- Controlled by their own side's color
+- Capturable
+- Pushed by Enemy
+- Already possess the abilities they grant their allies through formations (direction, push, capture, etc.)
 
-Mountain rewrites both “pushed by” abilities of its neighbors. Fire and Forest
-control the two direction-of-resolution conversions. Shield, Shell, and Mine
-change capture permissions or consequences rather than movement directions.
+### Group commonalities
+
+The table below summarizes the common abilities of each group. Default abilities are not repeated.
+
+| Group | Pattern | Common abilities |
+|---|---|---|
+| Control group | Corners | Cross, Any Distance, Push Ally, Push Enemy; formation affects White control |
+| Movement group | Edges | Capture |
+| Push group | Upper Triangle | Diagonal, Any Distance |
+| Combat group | Lower Triangle | L-shaped, Any Distance |
+| White | None | Cross, Diagonal, L-shaped, Any Distance |
+
+### Piece traits
+
+The table only lists formation effects and distinctive traits. Default abilities and group commonalities are not repeated.
+
+| Piece | Formation effect | Other traits |
+|---|---|---|
+| **General** | White is controlled by the General's side; allies gain Draw; enemies lose Draw | Vital |
+| **Army** | White is controlled by the Army's side; allies gain Divide; enemies lose Divide | — |
+| **Agent** | White is controlled by the Agent's side; enemy pieces also become controlled by the Agent's side; allies lose opposing control | — |
+| **Spy** | White is controlled by the opponent; allies also become controlled by the opponent; enemy pieces lose the Spy side's control | Controlled by both sides |
+| **Rook** | Allies gain Any Distance; enemies lose Any Distance | — |
+| **Pawn** | Allies gain Cross; enemies lose Cross | — |
+| **Scholar** | Allies gain Diagonal; enemies lose Diagonal | — |
+| **Horse** | Allies gain L-shaped; enemies lose L-shaped | — |
+| **Wind** | Allies gain both push abilities; enemies lose both | — |
+| **Mountain** | Allies can be pushed only by allies; enemies can be pushed only by the Mountain side | — |
+| **Fire** | Allies gain active blocked-push capture and lose the passive form; enemies get the reverse | Push Ally, Push Enemy |
+| **Forest** | Allies gain the passive form and lose the active form; enemies get the reverse | — |
+| **Spear** | Allies gain Capture; enemies lose Capture | — |
+| **Shield** | Allies lose Captured; enemies gain Captured | — |
+| **Shell** | Allies gain Sacrifice; enemies lose Sacrifice | — |
+| **Mine** | Allies gain Retaliation; enemies lose Retaliation | — |
 
 ## White pieces and divide
 
