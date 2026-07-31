@@ -43,8 +43,7 @@ fn formation_black_orientation_flips_the_vertical_pattern() {
 #[test]
 fn formation_effects_ignore_neutral_targets_except_for_control() {
     #[expect(clippy::type_complexity)]
-    let effects: [fn(Color, Color) -> (Ability, Ability); 13] = [
-        Formation::general,
+    let effects: [fn(Color, Color) -> (Ability, Ability); 12] = [
         Formation::scholar,
         Formation::pawn,
         Formation::rook,
@@ -68,6 +67,10 @@ fn formation_effects_ignore_neutral_targets_except_for_control() {
 
 #[test]
 fn formation_control_effects_can_control_neutral_targets() {
+    assert_eq!(
+        Formation::general(Color::Red, Color::White),
+        (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED)
+    );
     assert_eq!(
         Formation::army(Color::Red, Color::White),
         (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED)

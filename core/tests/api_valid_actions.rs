@@ -69,7 +69,7 @@ fn valid_moves_wrong_player_returns_empty() {
 fn valid_moves_neutral_origin_returns_empty() {
     let g = game_with(
         Player::Red,
-        &[(Piece::WHITE, (1, 1)), (Piece::RED_GENERAL, (0, 2)), (Piece::BLACK_GENERAL, (2, 0))],
+        &[(Piece::WHITE, (0, 1)), (Piece::RED_GENERAL, (0, 2)), (Piece::BLACK_GENERAL, (2, 0))],
         3,
         3,
     );

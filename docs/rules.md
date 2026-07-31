@@ -183,8 +183,7 @@ combined simultaneously rather than applied in an arbitrary order:
 ### White is neutral to formation effects
 
 White is a neutral color. For the ally/enemy tests used by formations, a White
-piece is neither Red nor Black. Other than the explicit control granted by an
-Army, Agent, or Spy, formations do not rewrite a White piece's abilities.
+piece is neither Red nor Black. Other than the explicit control granted by a control-group piece, formations do not rewrite a White piece's abilities.
 White still participates in movement, push, and capture checks using its own
 abilities.
 
@@ -291,10 +290,10 @@ pattern, not the piece that projects it.
 
 | Piece | Base movement | Distinctive base abilities or exceptions | Formation effect on neighbors |
 |---|---|---|---|
-| **General** | Cross, Any Distance | Vital, Draw | Allies gain Draw; enemies lose Draw |
+| **General** | Cross, Any Distance | Vital, Draw | White is controlled by the General's side; Allies gain Draw; enemies lose Draw |
 | **Army** | Cross, Any Distance | Divide | White is controlled by the Army's side; allies gain Divide; enemies lose Divide |
-| **Agent** | Cross, Any Distance | — | Enemy pieces also become controlled by the Agent's side; allies lose opposing control; White is controlled by the Agent's side |
-| **Spy** | Cross, Any Distance | Controlled by both sides | Allies also become controlled by the opponent; enemy pieces lose the Spy side's control; White is controlled by the opponent |
+| **Agent** | Cross, Any Distance | — | White is controlled by the Agent's side; Enemy pieces also become controlled by the Agent's side; allies lose opposing control |
+| **Spy** | Cross, Any Distance | Controlled by both sides | White is controlled by the opponent; Allies also become controlled by the opponent; enemy pieces lose the Spy side's control |
 | **Rook** | Cross, Any Distance | Capture | Allies gain Any Distance; enemies lose Any Distance |
 | **Pawn** | Cross | Capture | Allies gain Cross; enemies lose Cross |
 | **Scholar** | Diagonal | Capture | Allies gain Diagonal; enemies lose Diagonal |
@@ -331,9 +330,10 @@ A White piece always has Cross, Diagonal, L-shaped, and Any Distance movement,
 as well as Captured and Pushed by Enemy. It has no Capture, Divide, Vital,
 Draw, or default control, and it projects no active formation.
 
-Whether a White piece is controlled depends only on the three control-group
+Whether a White piece is controlled depends only on the four control-group
 formations:
 
+- a General controls White pieces in its active points for the General's side;
 - an Army controls White pieces in its active points for the Army's side;
 - an Agent controls them for the Agent's side;
 - a Spy controls them for the Spy's opponent.

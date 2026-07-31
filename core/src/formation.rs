@@ -69,8 +69,19 @@ impl Formation {
     }
 
     /// Allies gain DRAW; enemies lose it.
+    /// White pieces become controlled by the general's player;
     pub fn general(owner: Color, object: Color) -> (Ability, Ability) {
-        Self::grant_allies_strip_enemies(owner, object, Ability::DRAW)
+        match (owner, object) {
+            (Color::Red, Color::White) => (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED),
+            (Color::Red, Color::Red) => (Ability::DRAW, Ability::DRAW),
+            (Color::Red, Color::Black) => (Ability::DRAW, Ability::NONE),
+            (Color::Black, Color::White) => {
+                (Ability::CONTROLLED_BY_BLACK, Ability::CONTROLLED_BY_BLACK)
+            },
+            (Color::Black, Color::Red) => (Ability::DRAW, Ability::NONE),
+            (Color::Black, Color::Black) => (Ability::DRAW, Ability::DRAW),
+            _ => (Ability::NONE, Ability::NONE),
+        }
     }
 
     /// White pieces become controlled by the army's player;
