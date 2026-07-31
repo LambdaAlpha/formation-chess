@@ -2,40 +2,78 @@
 
 [English](README.md)
 
-阵棋是一种双人策略棋类游戏。它沿用了象棋的 9×10 棋盘与棋子名称，却改动了一件足以改变一切的事：每枚棋子都向周围投射一小片被称为**阵法**的影响力区域，重写附近棋子——无论敌我——的能力。
+阵棋（Formation Chess）是一款以**局部影响力**为核心的双人抽象策略棋类游戏。它采用 9×10 棋盘和一组受象棋启发的棋子名称，但没有象棋的九宫、楚河、将军、将死或固定开局。
 
-没有任何棋子永远"只是它自己"。卒站在车旁，忽然就能横扫全盘；车误入敌方车阵，便痛失千里，只能徐行一步。开局也没有固定阵型：第一步棋之前，双方先把各自的16 枚棋子自由布置在己方半场——每一局都始于你亲手设计的阵势。
+每枚有色棋子都会向周围特定位置投射一个**阵法**；中立的白子没有生效阵法。站在阵法生效位置上的棋子，可能获得或失去移动方向、移动距离、控制权、推动、捉子以及特殊战斗效果。同名棋子在不同局面中，可能拥有完全不同的实际能力。
 
-## 学习游戏
+标准对局从空棋盘开始。红黑双方各自把 16 枚互不重复的棋子布置在己方半场，然后轮流行棋。被战斗移出棋盘的棋子会回收到共享白子池；拥有**分兵**能力的棋子可以把白子重新带回棋盘。
 
-- **[游戏规则](docs/rules.zh-Hans.md)** —— 完整规则书：棋盘、棋子、能力、阵法，以及对局的进行与胜负。
-- **[文本记谱法](docs/notation.zh-Hans.md)** —— 如何用纯文本书写局面与着法，用于记录和分享对局。
+## 从这里开始
 
-## 项目状态
+- **[游戏规则](docs/rules.zh-Hans.md)** —— 标准对局的完整规则：能力、阵法、移动、战斗、白子与终局。
+- **[文本记谱法](docs/notation.zh-Hans.md)** —— 局面快照、行动、行动结果，以及已定义但尚未由引擎直接解析的棋谱格式。
+- **[Web 内嵌规则](web/static/rules.zh-Hans.md)** —— 本地 Web 客户端内置的中文规则文本。
 
-本仓库目前包含游戏的**规则引擎**：一个实现了完整规则与文本记谱法的程序库。可供游玩的前端已在计划中，尚未开发——现阶段只能通过引擎的编程接口或文本协议驱动对局。
+## 仓库内容
 
-## 面向开发者
+- **`core/` —— `formation-chess-core`**：无外部依赖的 Rust 规则引擎与文本记谱法实现。不包含 AI、持久化或用户界面。
+- **`tui/` —— `formation-chess-tui`**：终端客户端，提供标准模式、随机布局模式和加载快照模式。
+- **`web/` —— `formation-chess-web`**：本地浏览器客户端与 HTTP 服务端；前端资源嵌入二进制，服务端维护一局内存中的对局。
+- **`docs/`**：规则书与记谱法规范的源文档。
+- **`core/tests/`**：规则引擎的数据驱动测试和 API 测试。
 
-引擎是位于 [`core/`](core) 的 Rust crate `formation-chess-core`，无外部依赖。构建与测试：
+这些客户端是本地参考界面。仓库不包含网络匹配、在线服务、AI 对手或持久化存档。
+
+## 快速运行
+
+构建并测试整个工作区：
 
 ```sh
-cargo build
-cargo test
+cargo build --workspace
+cargo test --workspace
 ```
 
-一次最小会话——开始一局标准对局并走出头两步布子（[core/examples/readme.rs](core/examples/readme.rs)，可用`cargo run --example readme` 运行）：
+运行终端客户端：
+
+```sh
+cargo run -p formation-chess-tui
+```
+
+运行浏览器客户端：
+
+```sh
+cargo run -p formation-chess-web
+```
+
+Web 服务只监听本机回环地址；不指定端口时会自动选择可用端口并尝试打开浏览器。也可以指定端口：
+
+```sh
+cargo run -p formation-chess-web -- 4000
+```
+
+规则引擎附带两个可执行示例：
+
+```sh
+cargo run -p formation-chess-core --example readme
+cargo run -p formation-chess-core --example readme_custom
+```
+
+前者从标准开局开始并执行两步布子，后者加载并验证一个自定义文本局面。
+
+## 最小引擎会话
+
+引擎会根据当前棋盘和阶段解析记谱法，再执行得到的行动：
 
 ```rust
-use formation_chess_core::game::Game;
-use formation_chess_core::game::GameConfig;
+use formation_chess_core::game::{Game, GameConfig};
 use formation_chess_core::notation::NotationResolver;
 
 fn main() -> Result<(), String> {
     let mut game = Game::new(GameConfig::default())?;
 
     for text in ["红将五十", "黑将五一"] {
-        let action = NotationResolver::new(game.board(), game.phase()).parse_action(text)?;
+        let resolver = NotationResolver::new(game.board(), game.phase());
+        let action = resolver.parse_action(text)?;
         let reaction = game.action(action)?;
         println!("{text} → {}", reaction.game_result);
     }
@@ -45,25 +83,23 @@ fn main() -> Result<(), String> {
 }
 ```
 
-除标准开局外，引擎也接受自定义配置——最大 16×16 的棋盘尺寸与任意初始局面——以 `GameConfig` 值或文本协议快照的形式提供；见[记谱法文档](docs/notation.zh-Hans.md)。
+API、快照校验和文本协议的说明见 [`core/README.md`](core/README.md)。
 
-仓库结构：
+## 自定义棋盘
 
-```
-core/          规则引擎（crate formation-chess-core）
-core/tests/    数据驱动的测试套件（*.txt 文件）
-docs/          游戏文档（规则、记谱法）
-```
+`GameConfig` 与文本快照协议可以描述最大 16×16 的矩形棋盘，也可以描述标准对局无法通过正常行动到达的局面。引擎仍会校验棋子颜色、要害棋子数量、布阵半场、棋池交替关系和声明的胜负状态。可接受的快照格式及限制见[记谱法文档](docs/notation.zh-Hans.md)。
 
 ## 许可证
 
-您可以选择使用
+您可以选择使用：
 
-* Apache 2.0 许可证
-  ([LICENSE-APACHE](LICENSE-APACHE) 或 <http://www.apache.org/licenses/LICENSE-2.0>)
-* MIT 许可证
-  ([LICENSE-MIT](LICENSE-MIT) 或 <http://opensource.org/licenses/MIT>)
+- Apache 2.0 许可证
+  （[LICENSE-APACHE](LICENSE-APACHE) 或
+  <https://www.apache.org/licenses/LICENSE-2.0>）
+- MIT 许可证
+  （[LICENSE-MIT](LICENSE-MIT) 或
+  <https://opensource.org/licenses/MIT>）
 
 ## 贡献
 
-除非您明确说明，否则您有意提交以纳入作品的任何贡献（如 Apache-2.0 许可证中所定义），均应按照上述方式获得双重许可，无任何附加条款或条件。
+除非您明确说明，否则您有意提交以纳入作品的任何贡献（如 Apache-2.0 许可证中所定义），均应按照上述方式获得双重许可，不附加任何其他条款或条件。
