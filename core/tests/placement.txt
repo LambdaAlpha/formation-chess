@@ -1,5 +1,5 @@
 =====
-red places rook in bottom half
+PLACE accepts a bottom-half destination for the lower-side player
 -----
 行棋方：红
 红方：[车]
@@ -32,7 +32,40 @@ red places rook in bottom half
 变化：[红车四四]
 胜负：未分
 =====
-red cannot place in top half
+PLACE accepts a top-half destination for the upper-side player
+-----
+行棋方：黑
+红方：[]
+黑方：[卒]
+白方：0
+胜负：未分
+棋盘：
+零[一路 二路 三路 四路 五路]
+一[黑将 一一 一一 一一 一一]
+二[一一 一一 一一 一一 一一]
+三[一一 一一 一一 一一 一一]
+四[一一 一一 一一 一一 一一]
+五[一一 一一 一一 一一 红将]
+-----
+黑卒四二
+-----
+行棋方：红
+红方：[]
+黑方：[]
+白方：0
+胜负：未分
+棋盘：
+零[一路 二路 三路 四路 五路]
+一[黑将 一一 一一 一一 一一]
+二[一一 一一 一一 黑卒 一一]
+三[一一 一一 一一 一一 一一]
+四[一一 一一 一一 一一 一一]
+五[一一 一一 一一 一一 红将]
+-----
+变化：[黑卒四二]
+胜负：未分
+=====
+PLACE rejects the upper half for the lower-side player
 -----
 行棋方：红
 红方：[车]
@@ -64,49 +97,16 @@ red cannot place in top half
 -----
 错误：red pieces can only be placed in the bottom half
 =====
-black places pawn in top half
+PLACE rejects the lower half for the upper-side player
 -----
 行棋方：黑
-红方：[车]
-黑方：[卒 卒]
-白方：0
-胜负：未分
-棋盘：
-零[一路 二路 三路 四路 五路]
-一[一一 黑将 一一 一一 一一]
-二[一一 一一 一一 一一 一一]
-三[一一 一一 一一 一一 一一]
-四[一一 一一 一一 一一 一一]
-五[一一 一一 一一 一一 红将]
------
-黑卒四一
------
-行棋方：红
-红方：[车]
+红方：[]
 黑方：[卒]
 白方：0
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
-一[一一 黑将 一一 黑卒 一一]
-二[一一 一一 一一 一一 一一]
-三[一一 一一 一一 一一 一一]
-四[一一 一一 一一 一一 一一]
-五[一一 一一 一一 一一 红将]
------
-变化：[黑卒四一]
-胜负：未分
-=====
-black cannot place in bottom half
------
-行棋方：黑
-红方：[车]
-黑方：[卒 卒]
-白方：0
-胜负：未分
-棋盘：
-零[一路 二路 三路 四路 五路]
-一[一一 黑将 一一 一一 一一]
+一[黑将 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
@@ -115,13 +115,13 @@ black cannot place in bottom half
 黑卒四四
 -----
 行棋方：黑
-红方：[车]
-黑方：[卒 卒]
+红方：[]
+黑方：[卒]
 白方：0
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
-一[一一 黑将 一一 一一 一一]
+一[黑将 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
@@ -129,7 +129,71 @@ black cannot place in bottom half
 -----
 错误：black pieces can only be placed in the top half
 =====
-cannot place on occupied point
+PLACE rejects the middle row for the lower-side player on odd height
+-----
+行棋方：红
+红方：[车]
+黑方：[卒]
+白方：0
+胜负：未分
+棋盘：
+零[一路 二路 三路 四路 五路]
+一[黑将 一一 一一 一一 一一]
+二[一一 一一 一一 一一 一一]
+三[一一 一一 一一 一一 一一]
+四[一一 一一 一一 一一 一一]
+五[一一 一一 一一 一一 红将]
+-----
+红车三三
+-----
+行棋方：红
+红方：[车]
+黑方：[卒]
+白方：0
+胜负：未分
+棋盘：
+零[一路 二路 三路 四路 五路]
+一[黑将 一一 一一 一一 一一]
+二[一一 一一 一一 一一 一一]
+三[一一 一一 一一 一一 一一]
+四[一一 一一 一一 一一 一一]
+五[一一 一一 一一 一一 红将]
+-----
+错误：red pieces can only be placed in the bottom half
+=====
+PLACE rejects the middle row for the upper-side player on odd height
+-----
+行棋方：黑
+红方：[]
+黑方：[卒]
+白方：0
+胜负：未分
+棋盘：
+零[一路 二路 三路 四路 五路]
+一[黑将 一一 一一 一一 一一]
+二[一一 一一 一一 一一 一一]
+三[一一 一一 一一 一一 一一]
+四[一一 一一 一一 一一 一一]
+五[一一 一一 一一 一一 红将]
+-----
+黑卒三三
+-----
+行棋方：黑
+红方：[]
+黑方：[卒]
+白方：0
+胜负：未分
+棋盘：
+零[一路 二路 三路 四路 五路]
+一[黑将 一一 一一 一一 一一]
+二[一一 一一 一一 一一 一一]
+三[一一 一一 一一 一一 一一]
+四[一一 一一 一一 一一 一一]
+五[一一 一一 一一 一一 红将]
+-----
+错误：black pieces can only be placed in the top half
+=====
+PLACE requires an empty destination
 -----
 行棋方：红
 红方：[车]
@@ -161,7 +225,7 @@ cannot place on occupied point
 -----
 错误：destination (0,0) is already occupied
 =====
-cannot move pieces during placement phase
+MOVE is rejected while placement pools remain
 -----
 行棋方：红
 红方：[车]
@@ -193,7 +257,7 @@ cannot move pieces during placement phase
 -----
 错误：cannot move pieces during the placement phase
 =====
-neither side can place on midline row for odd height
+PLACE rejects a piece whose color does not match the current player
 -----
 行棋方：红
 红方：[车]
@@ -206,13 +270,60 @@ neither side can place on midline row for odd height
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
-五[一一 一一 一一 一一 一一]
-六[一一 一一 一一 一一 一一]
-七[一一 一一 一一 一一 红将]
+五[一一 一一 一一 一一 红将]
+-----
+黑卒四二
+-----
+行棋方：红
+红方：[车]
+黑方：[卒]
+白方：0
+胜负：未分
+棋盘：
+零[一路 二路 三路 四路 五路]
+一[黑将 一一 一一 一一 一一]
+二[一一 一一 一一 一一 一一]
+三[一一 一一 一一 一一 一一]
+四[一一 一一 一一 一一 一一]
+五[一一 一一 一一 一一 红将]
+-----
+错误：player 红 cannot place piece of color 黑
+=====
+PLACE rejects a configuration absent from the current pool
+-----
+行棋方：红
+红方：[卒]
+黑方：[士]
+白方：0
+胜负：未分
+棋盘：
+零[一路 二路 三路 四路 五路]
+一[黑将 一一 一一 一一 一一]
+二[一一 一一 一一 一一 一一]
+三[一一 一一 一一 一一 一一]
+四[一一 一一 一一 一一 一一]
+五[一一 一一 一一 一一 红将]
 -----
 红车四四
 -----
 行棋方：红
+红方：[卒]
+黑方：[士]
+白方：0
+胜负：未分
+棋盘：
+零[一路 二路 三路 四路 五路]
+一[黑将 一一 一一 一一 一一]
+二[一一 一一 一一 一一 一一]
+三[一一 一一 一一 一一 一一]
+四[一一 一一 一一 一一 一一]
+五[一一 一一 一一 一一 红将]
+-----
+错误：piece 红车 not in pool
+=====
+final alternating PLACE actions transition to MOVE phase
+-----
+行棋方：红
 红方：[车]
 黑方：[卒]
 白方：0
@@ -223,44 +334,24 @@ neither side can place on midline row for odd height
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
-五[一一 一一 一一 一一 一一]
-六[一一 一一 一一 一一 一一]
-七[一一 一一 一一 一一 红将]
+五[一一 一一 一一 一一 红将]
 -----
-错误：red pieces can only be placed in the bottom half
-=====
-black cannot place on midline row for odd height
+红车四四
+黑卒四二
+红车平五
 -----
 行棋方：黑
-红方：[车]
-黑方：[卒 卒]
+红方：[]
+黑方：[]
 白方：0
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
-一[一一 黑将 一一 一一 一一]
-二[一一 一一 一一 一一 一一]
+一[黑将 一一 一一 一一 一一]
+二[一一 一一 一一 黑卒 一一]
 三[一一 一一 一一 一一 一一]
-四[一一 一一 一一 一一 一一]
-五[一一 一一 一一 一一 一一]
-六[一一 一一 一一 一一 一一]
-七[一一 一一 一一 一一 红将]
+四[一一 一一 一一 一一 红车]
+五[一一 一一 一一 一一 红将]
 -----
-黑卒四四
------
-行棋方：黑
-红方：[车]
-黑方：[卒 卒]
-白方：0
+变化：[红车平五]
 胜负：未分
-棋盘：
-零[一路 二路 三路 四路 五路]
-一[一一 黑将 一一 一一 一一]
-二[一一 一一 一一 一一 一一]
-三[一一 一一 一一 一一 一一]
-四[一一 一一 一一 一一 一一]
-五[一一 一一 一一 一一 一一]
-六[一一 一一 一一 一一 一一]
-七[一一 一一 一一 一一 红将]
------
-错误：black pieces can only be placed in the top half

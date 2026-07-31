@@ -196,7 +196,7 @@ already there:
 - `推` (push): shove the target one step further in the same direction.
 - `捉` (capture): remove the target from the board. A captured piece
   becomes a white piece added to the pool.
-- `和` (draw): move your vital piece onto the opponent's vital piece,
+- `和` (draw): a piece with the DRAW ability moves onto an opponent's vital piece,
   removing it and declaring a draw.
 
 The special-move suffix targets an empty point:
@@ -267,11 +267,8 @@ A white piece on column 3 moves vertically to row 2:
 白子直二
 ```
 
-A white piece is placed from the pool onto column 2, row 4:
-
-```
-白子二四
-```
+White pieces are not placed directly from the pool. A `白子` action refers
+to a white piece already on the board, such as the vertical move above.
 
 The red Army on column 3, row 3 moves straight to row 4 and leaves a
 white piece behind at its original position (dividing forces):
@@ -439,7 +436,7 @@ No action taken, but the board is already in a draw:
 An illegal action:
 
 ```
-错误：path blocked, cannot reach empty destination
+错误：path blocked, cannot reach destination
 ```
 
 

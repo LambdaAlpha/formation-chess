@@ -35,7 +35,7 @@ fn main() -> Result<(), String> {
     let mut game = Game::new(GameConfig::default())?;
 
     for text in ["红将五十", "黑将五一"] {
-        let action = NotationResolver::new(game.board()).parse_action(text)?;
+        let action = NotationResolver::new(game.board(), game.phase()).parse_action(text)?;
         let reaction = game.action(action)?;
         println!("{text} → {}", reaction.game_result);
     }

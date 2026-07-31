@@ -1,9 +1,13 @@
+#![allow(dead_code)]
+
+use std::collections::HashSet;
 use std::str::FromStr;
 
 use formation_chess_core::action::Reaction;
 use formation_chess_core::board::Board;
 use formation_chess_core::game::Game;
 use formation_chess_core::notation::NotationResolver;
+use formation_chess_core::piece::Piece;
 
 struct TestCase {
     title: String,
@@ -13,20 +17,13 @@ struct TestCase {
     expected_result: String,
 }
 
-pub fn run_tests(data: &str, filepath: &str) {
-    if data.contains("__GEN__") {
-        let content = std::fs::read_to_string(filepath).unwrap_or_else(|e| {
-            panic!("failed to read test file {filepath}: {e}");
-        });
-        let updated = gen_replacements(&content);
-        std::fs::write(filepath, updated.as_bytes())
-            .unwrap_or_else(|e| panic!("failed to write test file {filepath}: {e}"));
-        // Fail loudly: a leftover __GEN__ marker must never make the suite
-        // pass without running any assertions.
-        panic!("GEN: wrote {filepath}; review the generated data and re-run the tests");
-    }
-
+pub fn run_tests(data: &str) {
     let cases = parse_test_file(data);
+    assert!(!cases.is_empty(), "test fixture must contain at least one case");
+    let mut titles = HashSet::new();
+    for case in &cases {
+        assert!(titles.insert(case.title.as_str()), "duplicate test title: {}", case.title);
+    }
     let mut passed = 0;
     let mut failed = 0;
     for case in &cases {
@@ -140,6 +137,23 @@ fn assert_game_eq(actual: &Game, expected: &Game) -> Result<(), String> {
     if actual.player() != expected.player() {
         return Err(format!("player: {} != {}", actual.player(), expected.player()));
     }
+    if actual.red_pool() != expected.red_pool() {
+        return Err(format!(
+            "red_pool mismatch: expected [{}], actual [{}]",
+            format_pool(expected.red_pool()),
+            format_pool(actual.red_pool())
+        ));
+    }
+    if actual.black_pool() != expected.black_pool() {
+        return Err(format!(
+            "black_pool mismatch: expected [{}], actual [{}]",
+            format_pool(expected.black_pool()),
+            format_pool(actual.black_pool())
+        ));
+    }
+    if actual.phase() != expected.phase() {
+        return Err(format!("phase: {:?} != {:?}", actual.phase(), expected.phase()));
+    }
     if actual.white_pool() != expected.white_pool() {
         return Err(format!("white_count: {} != {}", actual.white_pool(), expected.white_pool()));
     }
@@ -158,6 +172,10 @@ fn assert_game_eq(actual: &Game, expected: &Game) -> Result<(), String> {
     Ok(())
 }
 
+fn format_pool(pool: &[Piece]) -> String {
+    pool.iter().map(ToString::to_string).collect::<Vec<_>>().join(" ")
+}
+
 fn parse_test_file(data: &str) -> Vec<TestCase> {
     let mut cases = Vec::new();
     for block in data.split("=====").map(str::trim).filter(|s| !s.is_empty()) {
@@ -169,6 +187,7 @@ fn parse_test_file(data: &str) -> Vec<TestCase> {
             sections.len()
         );
         let title = sections[0].to_string();
+        validate_title(&title);
         let game = Game::from_str(sections[1])
             .unwrap_or_else(|e| panic!("`{title}`: initial state parse error: {e}"));
         let actions: Vec<String> =
@@ -188,50 +207,26 @@ fn parse_test_file(data: &str) -> Vec<TestCase> {
     cases
 }
 
-fn gen_replacements(content: &str) -> String {
-    let blocks: Vec<&str> = content.split("=====").collect();
-    let mut result = String::new();
-
-    for (i, block) in blocks.iter().enumerate() {
-        if i == 0 {
-            result.push_str(block);
-            continue;
-        }
-        result.push_str("=====");
-
-        if !block.contains("__GEN__") {
-            result.push_str(block);
-            continue;
-        }
-
-        let sections: Vec<&str> = block.split("-----").map(str::trim).collect();
-        if sections.len() != 5 {
-            result.push_str(block);
-            continue;
-        }
-
-        let state = sections[1];
-        let action_strs: Vec<String> =
-            sections[2].lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect();
-        let notation = generate_notation(state, &action_strs);
-        result.push_str(&block.replace("__GEN__", &notation));
+fn validate_title(title: &str) {
+    const ENGLISH_PIECE_NAMES: &[&str] = &[
+        "general", "army", "agent", "spy", "scholar", "pawn", "rook", "horse", "wind", "mountain",
+        "fire", "forest", "spear", "shield", "shell", "mine",
+    ];
+    assert!(!title.is_empty(), "test title must not be empty");
+    assert!(!title.contains('\n'), "test title must be a single line: {title:?}");
+    let words = title
+        .split(|character: char| !character.is_ascii_alphanumeric())
+        .filter(|word| !word.is_empty());
+    for word in words {
+        assert!(
+            !ENGLISH_PIECE_NAMES.contains(&word.to_ascii_lowercase().as_str()),
+            "test title must describe an ability, formation, or action rather than piece config: {title}"
+        );
     }
-
-    result
-}
-
-fn generate_notation(state_str: &str, action_strs: &[String]) -> String {
-    let mut game = Game::from_str(state_str).expect("parse game state for GEN");
-    let mut pre_board = game.board().clone();
-    let mut pre_phase = game.phase();
-    let mut result = Ok(Reaction { changes: Vec::new(), game_result: game.result() });
-    for action_str in action_strs {
-        let action = NotationResolver::new(game.board(), game.phase())
-            .parse_action(action_str)
-            .expect("parse action for GEN");
-        pre_board = game.board().clone();
-        pre_phase = game.phase();
-        result = game.action(action);
+    for piece in Piece::RED_PLAYER_PIECES {
+        assert!(
+            !title.contains(piece.name),
+            "test title must describe an ability, formation, or action rather than piece config: {title}"
+        );
     }
-    NotationResolver::new(&pre_board, pre_phase).fmt_reaction(result)
 }

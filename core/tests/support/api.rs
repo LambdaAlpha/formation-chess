@@ -71,23 +71,6 @@ pub fn game_one_3x3(player: Player, piece: Piece, at: (u8, u8)) -> Game {
     )
 }
 
-pub fn game_with_white_pool(player: Player, pieces: &[(Piece, (u8, u8))], white_pool: u8) -> Game {
-    let mut board = Board::new(9, 10);
-    for &(p, at) in pieces {
-        board[at] = Some(p);
-    }
-    Game::new(GameConfig {
-        player,
-        board,
-        red_pool: vec![],
-        black_pool: vec![],
-        white: Piece::WHITE,
-        white_pool,
-        result: GameResult::Unfinished,
-    })
-    .expect("valid")
-}
-
 pub fn assert_moves(actions: &[Action], targets: &[(u8, u8)]) {
     let mut found: Vec<(u8, u8)> = actions
         .iter()
@@ -129,5 +112,5 @@ pub fn assert_divides(actions: &[Action], targets: &[(u8, u8)]) {
     found.sort_unstable();
     let mut expected: Vec<_> = targets.to_vec();
     expected.sort_unstable();
-    assert_eq!(found, expected, "leave targets mismatch");
+    assert_eq!(found, expected, "divide targets mismatch");
 }
