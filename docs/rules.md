@@ -158,7 +158,7 @@ The four patterns and their groups are:
 | Pattern | Group | Pieces |
 |---|---|---|
 | Corners | Control group | General, Army, Agent, Spy |
-| Edges | Movement group | Rook, Pawn, Scholar, Horse |
+| Edges | Movement group | Scholar, Pawn, Rook, Horse |
 | Upper Triangle | Push group | Wind, Mountain, Fire, Forest |
 | Lower Triangle | Combat group | Spear, Shield, Shell, Mine |
 
@@ -302,24 +302,24 @@ The table below summarizes the common abilities of each group. Default abilities
 
 The table only lists formation effects and distinctive traits. Default abilities and group commonalities are not repeated.
 
-| Piece | Formation effect | Other traits |
-|---|---|---|
-| **General** | White is controlled by the General's side; allies gain Draw; enemies lose Draw | Vital |
-| **Army** | White is controlled by the Army's side; allies gain Divide; enemies lose Divide | — |
-| **Agent** | White is controlled by the Agent's side; enemy pieces also become controlled by the Agent's side; allies lose opposing control | — |
-| **Spy** | White is controlled by the opponent; allies also become controlled by the opponent; enemy pieces lose the Spy side's control | Controlled by both sides |
-| **Rook** | Allies gain Any Distance; enemies lose Any Distance | — |
-| **Pawn** | Allies gain Cross; enemies lose Cross | — |
-| **Scholar** | Allies gain Diagonal; enemies lose Diagonal | — |
-| **Horse** | Allies gain L-shaped; enemies lose L-shaped | — |
-| **Wind** | Allies gain both push abilities; enemies lose both | — |
-| **Mountain** | Allies can be pushed only by allies; enemies can be pushed only by the Mountain side | — |
-| **Fire** | Allies gain active blocked-push capture and lose the passive form; enemies get the reverse | Push Ally, Push Enemy |
-| **Forest** | Allies gain the passive form and lose the active form; enemies get the reverse | — |
-| **Spear** | Allies gain Capture; enemies lose Capture | — |
-| **Shield** | Allies lose Captured; enemies gain Captured | — |
-| **Shell** | Allies gain Sacrifice; enemies lose Sacrifice | — |
-| **Mine** | Allies gain Retaliation; enemies lose Retaliation | — |
+| Piece | Group | Formation effect | Other traits |
+|---|---|---|---|
+| **General** | Control | White is controlled by the General's side; allies gain Draw; enemies lose Draw | Vital |
+| **Army** | Control | White is controlled by the Army's side; allies gain Divide; enemies lose Divide | — |
+| **Agent** | Control | White is controlled by the Agent's side; enemy pieces also become controlled by the Agent's side; allies lose opposing control | — |
+| **Spy** | Control | White is controlled by the opponent; allies also become controlled by the opponent; enemy pieces lose the Spy side's control | Controlled by both sides |
+| **Scholar** | Movement | Allies gain Diagonal; enemies lose Diagonal | — |
+| **Pawn** | Movement | Allies gain Cross; enemies lose Cross | — |
+| **Rook** | Movement | Allies gain Any Distance; enemies lose Any Distance | — |
+| **Horse** | Movement | Allies gain L-shaped; enemies lose L-shaped | — |
+| **Wind** | Push | Allies gain both push abilities; enemies lose both | — |
+| **Mountain** | Push | Allies can be pushed only by allies; enemies can be pushed only by the Mountain side | — |
+| **Fire** | Push | Allies gain active blocked-push capture and lose the passive form; enemies get the reverse | Push Ally, Push Enemy |
+| **Forest** | Push | Allies gain the passive form and lose the active form; enemies get the reverse | — |
+| **Spear** | Combat | Allies gain Capture; enemies lose Capture | — |
+| **Shield** | Combat | Allies lose Captured; enemies gain Captured | — |
+| **Shell** | Combat | Allies gain Sacrifice; enemies lose Sacrifice | — |
+| **Mine** | Combat | Allies gain Retaliation; enemies lose Retaliation | — |
 
 ## White pieces and divide
 
