@@ -24,13 +24,14 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
   display: flex; align-items: center; gap: 8px; padding: 6px 12px;
   background: #f5f5f5; border-bottom: 1px solid var(--color-border); font-size: 14px; flex-shrink: 0;
 }
+.toolbar-row { display: flex; align-items: center; gap: 8px; }
+.toolbar-row-info { margin-left: auto; }
 #toolbar button {
   padding: 4px 12px; border: 1px solid #bbb; border-radius: var(--radius);
   background: #fff; cursor: pointer; font-size: 13px;
 }
 #toolbar button:hover { background: #e8e8e8; }
 #toolbar .btn-action { border-color: #ddd; font-size: 13px; }
-.toolbar-spacer { flex: 1; }
 .toolbar-sep { margin: 0 2px; color: #999; }
 #player-indicator { font-weight: 600; }
 .toolbar-info { }
@@ -244,16 +245,27 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 @media (max-width: 600px) {
   :root { --cell-size: 38px; }
 
+  #app { height: auto; min-height: 100vh; }
+
   #toolbar {
-    gap: 3px; padding: 4px 6px; font-size: 11px; flex-wrap: wrap;
+    flex-direction: column; align-items: stretch; gap: 4px;
+    padding: 6px; font-size: 11px;
   }
+  .toolbar-row { width: 100%; }
+  .toolbar-row-info {
+    margin-left: 0; justify-content: flex-start; flex-wrap: wrap;
+  }
+  .toolbar-row-actions,
+  .toolbar-row-game { justify-content: center; flex-wrap: wrap; }
+  .toolbar-row-actions button,
+  .toolbar-row-game button { flex: 1; }
   #toolbar button {
-    padding: 3px 7px; font-size: 11px;
+    padding: 5px 8px; font-size: 12px;
   }
   #player-indicator { font-size: 12px; }
   #white-indicator { font-size: 11px; }
 
-  #main { flex-direction: column; }
+  #main { flex-direction: column; flex: none; overflow: visible; }
 
   #sidebar {
     width: 100%; flex-direction: column; height: auto;
@@ -263,14 +275,12 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
   .pool { flex: none; }
   .pool-label { font-size: 10px; padding: 1px 0; }
   .pool-divider { width: auto; height: 1px; margin: 2px 6px; }
-  .pool-items { flex-wrap: nowrap; gap: 3px; padding: 2px 3px; overflow-x: auto; }
-  .pool .piece-wrap { width: 28px; height: 28px; }
-  .pool .piece .piece-text { font-size: 11px; }
+  .pool-items { flex-wrap: wrap; gap: 6px; padding: 4px 3px; overflow-y: auto; max-height: 80px; }
+  .pool .piece-wrap { width: 30px; height: 30px; }
+  .pool .piece .piece-text { font-size: 14px; }
   .pool-piece-selected::after { --corner-size: 9px; --corner-width: 2px; }
-  .pool .shape-triangle-up .piece-text,
-  .pool .shape-triangle-down .piece-text { top: 50%; }  /* pool triangles: text at center */
 
-  #board-wrap { padding: 8px; }
+  #board-wrap { flex: none; overflow: visible; padding: 8px; }
   #board { border-radius: 2px; }
 
   .piece-text { font-size: 14px; }
@@ -349,18 +359,24 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 
 @media (max-width: 900px) {
   #analysis-panel { width: 220px; }
-  .candidate-row { grid-template-columns: 20px minmax(0, 1fr); }
-  .candidate-score { grid-column: 2; }
 }
 
 @media (max-width: 600px) {
   #analysis-panel {
-    width: 100%; max-height: 220px; min-height: 140px; padding: 8px;
-    border-left: none; border-top: 1px solid var(--color-border); order: 3;
+    width: 100%; padding: 8px; overflow: visible;
+    border-left: none; border-top: 1px solid var(--color-border); order: 2;
   }
-  #analysis-candidates { flex-direction: row; overflow-x: auto; overflow-y: hidden; }
-  .candidate-row { min-width: 180px; grid-template-columns: 20px minmax(0, 1fr); }
-  .candidate-score { grid-column: 2; }
+  .analysis-header { margin-bottom: 4px; }
+  #analysis-meta { margin-bottom: 6px; }
+  #analysis-candidates {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px; flex: none; overflow: visible;
+  }
+  .candidate-row { min-width: 0; padding: 7px 6px; grid-template-columns: 18px minmax(0, 1fr) auto; }
+  .candidate-notation { font-size: 12px; }
+  .candidate-score { font-size: 11px; grid-column: auto; }
   #btn-apply-candidate { margin-top: 6px; padding: 6px 10px; }
   .controller-settings .form-row { align-items: stretch; }
+
+  #sidebar { order: 1; }
 }

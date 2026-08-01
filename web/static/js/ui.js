@@ -265,6 +265,10 @@ function clearInteraction() {
     clearBoardSelection();
     clearPlayedAction();
     hidePopup();
+    clearPoolSelection();
+}
+
+function clearPoolSelection() {
     for (const element of document.querySelectorAll('.pool-piece-selected')) {
         element.classList.remove('pool-piece-selected');
     }
@@ -276,9 +280,7 @@ function clearManualSelectionForPreview() {
     clearBoardSelection();
     clearPlayedAction();
     hidePopup();
-    for (const element of document.querySelectorAll('.pool-piece-selected')) {
-        element.classList.remove('pool-piece-selected');
-    }
+    clearPoolSelection();
 }
 
 async function handleBoardClick(x, y) {
@@ -421,6 +423,7 @@ export function showAnalysis(response) {
     analysisCandidates = response.candidates || [];
     selectedCandidateIndex = null;
     clearCandidatePreview();
+    clearPoolSelection();
 
     const meta = document.getElementById('analysis-meta');
     meta.textContent = response.agent + ' · ' + analysisCandidates.length + ' 个候选';
@@ -475,7 +478,17 @@ function selectCandidate(index) {
         row.classList.toggle('selected', Number(row.dataset.index) === index);
     }
     previewAction(candidate.action);
+    highlightCandidatePoolPiece(candidate.action);
     updateApplyButton();
+}
+
+function highlightCandidatePoolPiece(action) {
+    if (!action || action.type !== 'place' || !action.piece) return;
+    const selector = '.pool .piece[data-piece-name="' + action.piece.name + '"][data-piece-color="' + action.piece.color + '"]';
+    const element = document.querySelector(selector);
+    if (element && element.parentElement) {
+        element.parentElement.classList.add('pool-piece-selected');
+    }
 }
 
 function clearAnalysisSelection() {

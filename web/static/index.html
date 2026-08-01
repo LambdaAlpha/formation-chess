@@ -9,18 +9,23 @@
 <body>
 <div id="app">
   <div id="toolbar">
-    <button id="btn-new" type="button">新局</button>
-    <button id="btn-custom" type="button">自定义…</button>
-    <button id="btn-rules" type="button">规则</button>
-    <span class="toolbar-spacer"></span>
-    <span id="player-indicator"></span>
-    <span class="toolbar-sep">·</span>
-    <span id="white-indicator" class="toolbar-info">白子×0</span>
-    <button id="btn-agent-hint" class="btn-agent" type="button">AI 提示</button>
-    <button id="btn-agent-step" class="btn-agent" type="button">下一步</button>
-    <button id="btn-pass" class="btn-action" type="button">按兵</button>
-    <button id="btn-resign" class="btn-action" type="button">认负</button>
-    <button id="btn-undo" class="btn-action" type="button">悔棋</button>
+    <div class="toolbar-row toolbar-row-actions">
+      <button id="btn-new" type="button">新局</button>
+      <button id="btn-custom" type="button">自定义…</button>
+      <button id="btn-rules" type="button">规则</button>
+    </div>
+    <div class="toolbar-row toolbar-row-info">
+      <span id="player-indicator"></span>
+      <span class="toolbar-sep">·</span>
+      <span id="white-indicator" class="toolbar-info">白子×0</span>
+    </div>
+    <div class="toolbar-row toolbar-row-game">
+      <button id="btn-agent-hint" class="btn-agent" type="button">AI 提示</button>
+      <button id="btn-agent-step" class="btn-agent" type="button">下一步</button>
+      <button id="btn-pass" class="btn-action" type="button">按兵</button>
+      <button id="btn-resign" class="btn-action" type="button">认负</button>
+      <button id="btn-undo" class="btn-action" type="button">悔棋</button>
+    </div>
   </div>
   <div id="main">
     <div id="sidebar">
