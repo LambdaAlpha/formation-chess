@@ -196,6 +196,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "formation-chess-agent"
+version = "0.2.0"
+dependencies = [
+ "formation-chess-core",
+ "rand",
+]
+
+[[package]]
 name = "formation-chess-core"
 version = "0.2.0"
 

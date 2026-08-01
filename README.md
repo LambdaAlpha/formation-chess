@@ -32,6 +32,9 @@ piece with the **Divide** ability can bring one back onto the board.
 - **`core/` — `formation-chess-core`**: the dependency-free Rust rules engine
   and text-notation implementation. It has no AI, persistence, or user
   interface.
+- **`agent/` — `formation-chess-agent`**: phase-specific agent interfaces,
+  compact geometric placement input, legal movement enumeration, validated
+  turn execution, and a seedable random baseline agent.
 - **`tui/` — `formation-chess-tui`**: a small terminal client with standard,
   random-layout, and snapshot-loading modes.
 - **`web/` — `formation-chess-web`**: a local browser client and HTTP server.
@@ -39,9 +42,9 @@ piece with the **Divide** ability can bring one back onto the board.
 - **`docs/`**: the source rulebook and notation specification.
 - **`core/tests/`**: data-driven and API-level tests for the engine.
 
-The clients are local reference interfaces. This repository does not include
-network matchmaking, an online service, an AI opponent, or durable game
-storage.
+The clients are local reference interfaces. They do not yet expose the random
+agent as an opponent. This repository does not include network matchmaking, an
+online service, or durable game storage.
 
 ## Quick start
 

@@ -50,6 +50,21 @@ pub enum Phase {
     Move,
 }
 
+impl Default for Game {
+    fn default() -> Self {
+        let config = GameConfig::default();
+        Self {
+            player: config.player,
+            board: config.board,
+            red_pool: config.red_pool,
+            black_pool: config.black_pool,
+            white: config.white,
+            white_pool: config.white_pool,
+            result: config.result,
+        }
+    }
+}
+
 /// The standard initial setup: an empty 9×10 board, both 16-piece armies
 /// in their pools, no white pieces, and Red to move.
 impl Default for GameConfig {
@@ -226,7 +241,7 @@ impl Game {
         };
         let pool = pool.iter().filter(|p| p.ability.has(Ability::VITAL)).count();
         let vital = |p: &Piece| p.color == player.color() && p.ability.has(Ability::VITAL);
-        let board = config.board.iter().filter(vital).count();
+        let board = config.board.iter().map(|(_, piece)| piece).filter(vital).count();
         pool + board
     }
 

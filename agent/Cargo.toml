@@ -1,0 +1,16 @@
+[package]
+name = "formation-chess-agent"
+version = "0.2.0"
+edition = "2024"
+description = "Agent interfaces and turn execution for Formation Chess"
+repository = "https://github.com/LambdaAlpha/formation-chess"
+license = "MIT OR Apache-2.0"
+keywords = ["board-game", "ai", "agent", "chess", "strategy"]
+categories = ["games"]
+
+[lints]
+workspace = true
+
+[dependencies]
+formation-chess-core = { path = "../core", version = "0.2.0" }
+rand = "0.10"

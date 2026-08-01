@@ -143,8 +143,12 @@ impl Board {
         Some(piece)
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = Piece> {
-        self.pieces.iter().filter_map(|p| *p)
+    /// Occupied points and their pieces, in row-major order.
+    pub fn iter(&self) -> impl Iterator<Item = ((u8, u8), Piece)> + '_ {
+        self.pieces
+            .iter()
+            .enumerate()
+            .filter_map(move |(index, piece)| (*piece).map(|piece| (self.position(index), piece)))
     }
     /// Find the unique point holding `piece`.
     ///

@@ -4,7 +4,7 @@ use crate::piece::Piece;
 use crate::piece::Player;
 
 /// A player action, expressed in 0-based board coordinates.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Action {
     /// Place a piece from a pool onto the board.
     Place(Place),
