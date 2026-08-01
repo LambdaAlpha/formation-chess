@@ -1,47 +1,50 @@
 const BASE = '';
 
-export async function getState() {
-    const r = await fetch(`${BASE}/api/state`);
-    return r.json();
-}
-
-export async function postAction(action) {
-    const r = await fetch(`${BASE}/api/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(action),
-    });
-    return r.json();
-}
-
-export async function postHints(request) {
-    const r = await fetch(`${BASE}/api/hints`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request),
-    });
-    return r.json();
-}
-
-export async function postNew(config) {
-    const r = await fetch(`${BASE}/api/new`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config),
-    });
-    if (!r.ok) {
-        const err = await r.json();
-        throw new Error(err.error || `HTTP ${r.status}`);
+async function requestJson(path, options = {}) {
+    const response = await fetch(`${BASE}${path}`, options);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data.error || `HTTP ${response.status}`);
     }
-    return r.json();
+    return data;
 }
 
-export async function getRules() {
-    const r = await fetch(`${BASE}/api/rules`);
-    return r.json();
+function jsonOptions(body) {
+    return {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    };
 }
 
-export async function postUndo() {
-    const r = await fetch(`${BASE}/api/undo`, { method: 'POST' });
-    return r.json();
+export function getState() {
+    return requestJson('/api/state');
+}
+
+export function postAction(request) {
+    return requestJson('/api/action', jsonOptions(request));
+}
+
+export function postLegalActions(request) {
+    return requestJson('/api/legal-actions', jsonOptions(request));
+}
+
+export function postAgentAnalyze(request) {
+    return requestJson('/api/agent/analyze', jsonOptions(request));
+}
+
+export function postAgentStep(request) {
+    return requestJson('/api/agent/step', jsonOptions(request));
+}
+
+export function postNew(request) {
+    return requestJson('/api/new', jsonOptions(request));
+}
+
+export function getRules() {
+    return requestJson('/api/rules');
+}
+
+export function postUndo(request) {
+    return requestJson('/api/undo', jsonOptions(request));
 }

@@ -5,8 +5,10 @@
 and Chinese rule text directly from the compiled binary; no frontend build
 step is required.
 
-The server binds to `127.0.0.1`, keeps one in-memory game, and is intended as a
-small reference interface rather than a network multiplayer service.
+The server binds to `127.0.0.1` and keeps one in-memory game session. The
+session owns one Agent instance for Red and one for Black. A side's control
+mode decides whether its Agent only analyzes candidates or also executes the
+best candidate.
 
 ## Run from the workspace
 
@@ -22,69 +24,101 @@ specific port:
 cargo run -p formation-chess-web -- 4000
 ```
 
-The process accepts only this optional numeric port argument. Restarting the
-process starts a fresh game; there is no durable storage or authentication.
+Restarting the process starts a fresh game; there is no durable storage or
+authentication. Refreshing the browser uses `GET /api/state` and keeps the
+current in-memory game.
 
 ## UI features
 
-- standard 9×10 games from the placement phase;
-- custom board dimensions from 1×1 through 16×16;
-- random layouts for quick experiments;
-- loading a game snapshot through the text notation format;
-- legal-action hints for a selected piece;
-- pass, resign, and one-step undo of the most recent successful action;
-- an in-app panel containing the embedded Chinese rules text.
+- independent Human or AI control for Red and Black;
+- one Agent per side, also available as a top-five hint provider on human turns;
+- manual one-action advancement when the current side is AI;
+- automatic single AI replies after a human action in mixed Human/AI games;
+- AI-vs-AI games that advance only when the user clicks `下一步`;
+- standard and custom boards from 1×1 through 16×16;
+- backend-generated random placement that returns only the completed layout;
+- notation-loaded game snapshots;
+- legal movement targets for a selected piece;
+- candidate preview by highlighting only the action's origin and destination;
+- pass, resign, and undo.
 
-The undo buffer stores one previous `Game` snapshot. Creating a new game clears
-that buffer, and undo cannot be chained.
+In mixed Human/AI games, undo restores the state before the latest human action
+and its automatic AI reply. Human-vs-Human and AI-vs-AI games undo one action.
+Creating a new game clears the undo history.
 
 ## HTTP API
 
-API requests and responses use JSON where applicable. Board coordinates are
-**0-based** `[x, y]` pairs,
-where `x` is the column and `y` is the row. Enum-like strings use the English
-serialized values such as `"Red"`, `"Black"`, `"Unfinished"`, and
-`"RedWin"`.
+Coordinates are 0-based `[x, y]` pairs. State-changing and analysis requests
+carry the state `revision` and current `side`; stale requests are rejected.
 
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/` | Serve the web UI |
-| `GET` | `/api/state` | Return the current state |
-| `POST` | `/api/action` | Submit one placement or movement action |
-| `POST` | `/api/hints` | Return legal movement actions for `{ "x": 0, "y": 0 }` |
-| `POST` | `/api/new` | Create a standard, custom, random, or notation-loaded game |
-| `POST` | `/api/undo` | Restore the one saved pre-action state |
-| `GET` | `/api/rules` | Return the embedded Chinese Markdown as `{ "text": "..." }` |
+| `GET` | `/api/state` | Return the current session state |
+| `POST` | `/api/action` | Submit one action for a human-controlled side |
+| `POST` | `/api/legal-actions` | Return legal actions for one board origin |
+| `POST` | `/api/agent/analyze` | Return up to `top_k` ranked Agent candidates |
+| `POST` | `/api/agent/step` | Execute the current AI side's top-one candidate |
+| `POST` | `/api/new` | Create or notation-load a game |
+| `POST` | `/api/undo` | Undo one action or one human-plus-AI round |
+| `GET` | `/api/rules` | Return the embedded Chinese rules text |
 
-### Action requests
+### State and controllers
 
-`POST /api/action` uses a tagged object. The supported `type` values are:
-
-```json
-{ "type": "move", "from": [4, 9], "to": [4, 8] }
-```
-
-The other movement types are `capture`, `push`, `draw`, and `divide`, each
-using `from` and `to`. Placement uses a piece reference and destination:
+The current side is explicit even when both Agent instances have the same
+name:
 
 ```json
-{ "type": "place", "piece": { "name": "将", "color": "Red" }, "to": [4, 9] }
+{
+  "revision": 17,
+  "player": "Red",
+  "phase": "movement",
+  "controllers": {
+    "red": { "control": "agent", "agent": "Random" },
+    "black": { "control": "agent", "agent": "Random" }
+  },
+  "current_controller": {
+    "side": "Red",
+    "control": "agent",
+    "agent": "Random"
+  }
+}
 ```
 
-`pass` and `resign` have no additional fields. A successful request returns
-the new state with `error: null`; a rejected request returns the unchanged
-state with a human-readable `error` string.
-
-### New-game requests
-
-`POST /api/new` accepts either a `notation` snapshot or a JSON board
-configuration. When no cells or pools are supplied, a standard pair of piece
-pools is created automatically. Board dimensions are limited to 16×16.
+### Human actions
 
 ```json
-{ "board": { "width": 9, "height": 10 } }
+{
+  "revision": 17,
+  "side": "Red",
+  "action": { "type": "move", "from": [4, 9], "to": [4, 8] }
+}
 ```
 
-For the exact snapshot format and the core validation rules, see
-[`docs/notation.md`](../docs/notation.md) and
-[`core/README.md`](../core/README.md).
+Other movement types are `capture`, `push`, `draw`, and `divide`. Placement
+uses `{ "type": "place", "piece": { ... }, "to": [x, y] }`.
+
+### Agent analysis
+
+```json
+{ "revision": 17, "side": "Red", "top_k": 5 }
+```
+
+Candidates are ordered best-first. Each candidate contains the complete action,
+its notation, and its finite Agent score. Array order is the rank.
+
+### New games and random placement
+
+```json
+{
+  "revision": 17,
+  "side": "Red",
+  "controllers": { "red": "human", "black": "agent" },
+  "board": { "width": 9, "height": 10 },
+  "random_placement": true
+}
+```
+
+When `random_placement` is true, the backend alternates the two Agents until
+the placement phase is complete and atomically replaces the session with the
+final layout. No intermediate placements are returned.

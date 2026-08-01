@@ -220,6 +220,7 @@ name = "formation-chess-web"
 version = "0.2.0"
 dependencies = [
  "axum",
+ "formation-chess-agent",
  "formation-chess-core",
  "rust-embed",
  "serde",

@@ -9,16 +9,18 @@
 <body>
 <div id="app">
   <div id="toolbar">
-    <button id="btn-new">新局</button>
-    <button id="btn-custom">自定义…</button>
-    <button id="btn-rules">规则</button>
+    <button id="btn-new" type="button">新局</button>
+    <button id="btn-custom" type="button">自定义…</button>
+    <button id="btn-rules" type="button">规则</button>
     <span class="toolbar-spacer"></span>
     <span id="player-indicator"></span>
     <span class="toolbar-sep">·</span>
     <span id="white-indicator" class="toolbar-info">白子×0</span>
-    <button id="btn-pass" class="btn-action">按兵</button>
-    <button id="btn-resign" class="btn-action">认负</button>
-    <button id="btn-undo" class="btn-action">悔棋</button>
+    <button id="btn-agent-hint" class="btn-agent" type="button">AI 提示</button>
+    <button id="btn-agent-step" class="btn-agent" type="button">下一步</button>
+    <button id="btn-pass" class="btn-action" type="button">按兵</button>
+    <button id="btn-resign" class="btn-action" type="button">认负</button>
+    <button id="btn-undo" class="btn-action" type="button">悔棋</button>
   </div>
   <div id="main">
     <div id="sidebar">
@@ -35,42 +37,69 @@
     <div id="board-wrap">
       <div id="board"></div>
     </div>
+    <aside id="analysis-panel" aria-label="AI 候选">
+      <div class="analysis-header">
+        <h2>AI 候选</h2>
+      </div>
+      <div id="analysis-meta">点击“AI 提示”获取当前局面的候选。</div>
+      <div id="analysis-candidates"></div>
+      <button id="btn-apply-candidate" type="button" disabled>采用此步</button>
+    </aside>
   </div>
   <div id="status"></div>
 </div>
 
 <div id="overlay" class="overlay hidden">
   <div id="panel-custom" class="panel custom-panel hidden">
-    <h2>自定义棋局</h2>
+    <h2>新棋局</h2>
+    <div class="controller-settings">
+      <div class="controller-settings-title">双方控制</div>
+      <div class="form-row">
+        <label>红方
+          <select id="red-control">
+            <option value="human" selected>人类</option>
+            <option value="agent">AI</option>
+          </select>
+        </label>
+        <label>黑方
+          <select id="black-control">
+            <option value="human">人类</option>
+            <option value="agent" selected>AI</option>
+          </select>
+        </label>
+      </div>
+      <p>每方都使用自己的 Agent；人类控制时 Agent 仍可提供提示。</p>
+    </div>
     <div class="panel-tabs">
-      <button class="tab active" data-tab="tab-size">棋盘尺寸</button>
-      <button class="tab" data-tab="tab-random">随机布局</button>
-      <button class="tab" data-tab="tab-load">加载残局</button>
+      <button class="tab active" data-tab="tab-size" type="button">棋盘尺寸</button>
+      <button class="tab" data-tab="tab-random" type="button">随机布局</button>
+      <button class="tab" data-tab="tab-load" type="button">加载残局</button>
     </div>
     <div id="tab-size" class="tab-content active">
       <div class="form-row">
         <label>宽度 <input id="custom-width" type="number" min="1" max="16" value="9"></label>
         <label>高度 <input id="custom-height" type="number" min="1" max="16" value="10"></label>
       </div>
-      <button id="btn-size-confirm">创建</button>
+      <button id="btn-size-confirm" type="button">创建</button>
     </div>
     <div id="tab-random" class="tab-content">
       <div class="form-row">
         <label>宽度 <input id="rand-width" type="number" min="1" max="16" value="9"></label>
         <label>高度 <input id="rand-height" type="number" min="2" max="16" value="10"></label>
       </div>
-      <button id="btn-random-confirm">随机开局</button>
+      <p class="tab-help">后端 Agent 将交替布完双方全部棋子，只返回最终布局。</p>
+      <button id="btn-random-confirm" type="button">随机开局</button>
     </div>
     <div id="tab-load" class="tab-content">
       <textarea id="load-text" placeholder="粘贴记谱法残局配置…&#10;例：&#10;行棋方：红&#10;红方：[车 马 炮]&#10;黑方：[]&#10;白方：0&#10;胜负：未决&#10;棋盘：&#10;..." rows="12"></textarea>
-      <button id="btn-load-confirm">加载</button>
+      <button id="btn-load-confirm" type="button">加载</button>
     </div>
-    <button class="panel-close">×</button>
+    <button class="panel-close" type="button" aria-label="关闭">×</button>
   </div>
 
   <div id="panel-rules" class="panel rules-panel hidden">
     <div class="rules-content"></div>
-    <button class="panel-close">×</button>
+    <button class="panel-close" type="button" aria-label="关闭">×</button>
   </div>
 </div>
 
@@ -79,8 +108,8 @@
 <div id="game-over" class="game-over hidden">
   <div class="game-over-content">
     <div class="game-over-title"></div>
-    <button id="btn-game-over-new">新局</button>
-    <button id="btn-game-over-close" class="btn-secondary">关闭</button>
+    <button id="btn-game-over-new" type="button">新局</button>
+    <button id="btn-game-over-close" class="btn-secondary" type="button">关闭</button>
   </div>
 </div>
 

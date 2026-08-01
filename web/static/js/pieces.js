@@ -1,43 +1,29 @@
 export function getShapeClass(formation) {
     switch (formation) {
         case 165: return 'shape-square';
-        case 90:  return 'shape-diamond';
+        case 90: return 'shape-diamond';
         case 162: return 'shape-triangle-up';
-        case 69:  return 'shape-triangle-down';
-        default:   return 'shape-circle';
+        case 69: return 'shape-triangle-down';
+        default: return 'shape-circle';
     }
 }
 
 export function createPieceElement(piece, pool = false) {
-    const el = document.createElement('div');
-    el.className = `piece piece-${piece.color.toLowerCase()} ${getShapeClass(piece.formation)}`;
+    const element = document.createElement('div');
+    element.className = `piece piece-${piece.color.toLowerCase()} ${getShapeClass(piece.formation)}`;
 
     const text = document.createElement('span');
     text.className = 'piece-text';
     text.textContent = piece.name;
-    el.appendChild(text);
+    element.appendChild(text);
 
-    if (pool) {
-        el.dataset.pieceName = piece.name;
-        el.dataset.pieceColor = piece.color;
+    if (!pool) return element;
 
-        const wrap = document.createElement('div');
-        wrap.className = 'piece-wrap';
-        wrap.appendChild(el);
-        return wrap;
-    }
+    element.dataset.pieceName = piece.name;
+    element.dataset.pieceColor = piece.color;
 
-    return el;
-}
-
-let cachedPieceNames = null;
-
-export function cachePieceListFromState(state) {
-    if (state.red_pool && state.red_pool.length > 0) {
-        cachedPieceNames = state.red_pool.map(p => p.name);
-    }
-}
-
-export function getCachedPieceNames() {
-    return cachedPieceNames || [];
+    const wrap = document.createElement('div');
+    wrap.className = 'piece-wrap';
+    wrap.appendChild(element);
+    return wrap;
 }

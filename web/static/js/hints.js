@@ -1,62 +1,106 @@
 import { getIntersection } from './board.js';
 
-export function showMoveHints(moves) {
+export function showMoveHints(actions) {
     clearHints();
-    if (!moves) return;
+    if (!actions) return;
 
-    const byPos = {};
-    for (const m of moves) {
-        const key = `${m.to[0]},${m.to[1]}`;
-        if (!byPos[key]) byPos[key] = [];
-        byPos[key].push(m.type);
+    const byPosition = {};
+    for (const action of actions) {
+        if (!action.to) continue;
+        const key = `${action.to[0]},${action.to[1]}`;
+        if (!byPosition[key]) byPosition[key] = [];
+        byPosition[key].push(action.type);
     }
 
-    for (const [key, types] of Object.entries(byPos)) {
-        const [xs, ys] = key.split(',');
-        const intn = getIntersection(Number(xs), Number(ys));
-        if (!intn) continue;
+    for (const [key, types] of Object.entries(byPosition)) {
+        const [x, y] = key.split(',').map(Number);
+        const intersection = getIntersection(x, y);
+        if (!intersection) continue;
 
-        let cls;
+        let className;
         if (types.length > 1) {
-            cls = 'hint-multi';
+            className = 'hint-multi';
         } else if (types.includes('draw')) {
-            cls = 'hint-draw';
+            className = 'hint-draw';
         } else if (types.includes('capture')) {
-            cls = 'hint-capture';
+            className = 'hint-capture';
         } else if (types.includes('push')) {
-            cls = 'hint-push';
+            className = 'hint-push';
         } else if (types.includes('divide')) {
-            cls = 'hint-divide';
+            className = 'hint-divide';
         } else {
-            cls = 'hint-move';
+            className = 'hint-move';
         }
-        intn.classList.add(cls);
+        intersection.classList.add(className);
 
         if (types.length > 1) {
-            intn.dataset.hintTypes = types.join(',');
+            intersection.dataset.hintTypes = types.join(',');
         } else {
-            intn.dataset.hintType = types[0];
+            intersection.dataset.hintType = types[0];
         }
     }
 }
 
 export function clearHints() {
-    for (const el of document.querySelectorAll('.intersection')) {
-        el.classList.remove('hint-move', 'hint-capture', 'hint-push', 'hint-draw', 'hint-multi', 'hint-divide');
-        delete el.dataset.hintType;
-        delete el.dataset.hintTypes;
+    for (const element of document.querySelectorAll('.intersection')) {
+        element.classList.remove(
+            'hint-move',
+            'hint-capture',
+            'hint-push',
+            'hint-draw',
+            'hint-multi',
+            'hint-divide',
+        );
+        delete element.dataset.hintType;
+        delete element.dataset.hintTypes;
     }
 }
 
 export function clearSelection() {
-    for (const el of document.querySelectorAll('.intersection.selected')) {
-        el.classList.remove('selected');
+    for (const element of document.querySelectorAll('.intersection.selected')) {
+        element.classList.remove('selected');
     }
 }
 
 export function setSelected(x, y) {
     clearSelection();
     clearHints();
-    const intn = getIntersection(x, y);
-    if (intn) intn.classList.add('selected');
+    const intersection = getIntersection(x, y);
+    if (intersection) intersection.classList.add('selected');
+}
+
+export function previewAction(action) {
+    clearCandidatePreview();
+    if (action.from) {
+        const from = getIntersection(action.from[0], action.from[1]);
+        if (from) from.classList.add('candidate-from');
+    }
+    if (action.to) {
+        const to = getIntersection(action.to[0], action.to[1]);
+        if (to) to.classList.add('candidate-to');
+    }
+}
+
+export function clearCandidatePreview() {
+    for (const element of document.querySelectorAll('.candidate-from, .candidate-to')) {
+        element.classList.remove('candidate-from', 'candidate-to');
+    }
+}
+
+export function showPlayedAction(action) {
+    clearPlayedAction();
+    if (action.from) {
+        const from = getIntersection(action.from[0], action.from[1]);
+        if (from) from.classList.add('played-from');
+    }
+    if (action.to) {
+        const to = getIntersection(action.to[0], action.to[1]);
+        if (to) to.classList.add('played-to');
+    }
+}
+
+export function clearPlayedAction() {
+    for (const element of document.querySelectorAll('.played-from, .played-to')) {
+        element.classList.remove('played-from', 'played-to');
+    }
 }

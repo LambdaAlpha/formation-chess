@@ -1,139 +1,186 @@
 import { renderBoard, getIntersection } from './board.js';
-import { createPieceElement, getCachedPieceNames } from './pieces.js';
-import { showMoveHints, clearHints, setSelected } from './hints.js';
-import { postHints, getRules } from './api.js';
+import { createPieceElement } from './pieces.js';
+import {
+    showMoveHints,
+    clearHints,
+    clearSelection as clearBoardSelection,
+    setSelected,
+    previewAction,
+    clearCandidatePreview,
+    showPlayedAction as highlightPlayedAction,
+    clearPlayedAction,
+} from './hints.js';
+import { postLegalActions, getRules } from './api.js';
 
 let gameState = null;
 let selection = { type: null };
-let onAction = null; /* callback to main: (action) => void */
+let onCommand = null;
+let busy = false;
+let analysisCandidates = [];
+let selectedCandidateIndex = null;
 
-export function init(actionCallback) {
-    onAction = actionCallback;
+export function init(commandCallback) {
+    onCommand = commandCallback;
     bindToolbar();
     bindBoard();
     bindPool();
+    bindAnalysis();
     bindOverlay();
     bindGameOver();
 }
 
 function bindToolbar() {
     document.getElementById('btn-new').addEventListener('click', () => {
-        if (onAction) onAction({ type: 'new_game', board: { width: 9, height: 10 } });
+        sendCommand({
+            type: 'new_game',
+            board: { width: 9, height: 10 },
+            controllers: controllerSettings(),
+        });
     });
     document.getElementById('btn-undo').addEventListener('click', () => {
-        if (onAction) onAction({ type: 'undo' });
+        sendCommand({ type: 'undo' });
     });
     document.getElementById('btn-custom').addEventListener('click', openCustomPanel);
     document.getElementById('btn-rules').addEventListener('click', openRulesPanel);
+    document.getElementById('btn-agent-hint').addEventListener('click', () => {
+        sendCommand({ type: 'agent_analyze' });
+    });
+    document.getElementById('btn-agent-step').addEventListener('click', () => {
+        sendCommand({ type: 'agent_step' });
+    });
     document.getElementById('btn-pass').addEventListener('click', () => {
-        if (onAction) onAction({ type: 'pass' });
+        submitAction({ type: 'pass' });
     });
     document.getElementById('btn-resign').addEventListener('click', () => {
-        if (onAction) onAction({ type: 'resign' });
+        submitAction({ type: 'resign' });
     });
 }
 
 function bindBoard() {
-    document.getElementById('board').addEventListener('click', (e) => {
-        const intn = e.target.closest('.intersection');
-        if (!intn) return;
-        const x = Number(intn.dataset.x);
-        const y = Number(intn.dataset.y);
+    document.getElementById('board').addEventListener('click', (event) => {
+        const intersection = event.target.closest('.intersection');
+        if (!intersection) return;
+        const x = Number(intersection.dataset.x);
+        const y = Number(intersection.dataset.y);
         handleBoardClick(x, y);
     });
 }
 
 function bindPool() {
-    document.getElementById('red-pool').addEventListener('click', (e) => {
-        const pieceEl = e.target.closest('.piece');
-        if (!pieceEl) return;
-        handlePoolClick(pieceEl.dataset.pieceName, pieceEl.dataset.pieceColor);
+    document.getElementById('red-pool').addEventListener('click', (event) => {
+        const piece = event.target.closest('.piece');
+        if (!piece) return;
+        handlePoolClick(piece.dataset.pieceName, piece.dataset.pieceColor);
     });
-    document.getElementById('black-pool').addEventListener('click', (e) => {
-        const pieceEl = e.target.closest('.piece');
-        if (!pieceEl) return;
-        handlePoolClick(pieceEl.dataset.pieceName, pieceEl.dataset.pieceColor);
+    document.getElementById('black-pool').addEventListener('click', (event) => {
+        const piece = event.target.closest('.piece');
+        if (!piece) return;
+        handlePoolClick(piece.dataset.pieceName, piece.dataset.pieceColor);
+    });
+}
+
+function bindAnalysis() {
+    document.getElementById('analysis-candidates').addEventListener('click', (event) => {
+        const row = event.target.closest('.candidate-row');
+        if (!row) return;
+        selectCandidate(Number(row.dataset.index));
+    });
+    document.getElementById('btn-apply-candidate').addEventListener('click', () => {
+        if (selectedCandidateIndex === null || !canHumanAct()) return;
+        const candidate = analysisCandidates[selectedCandidateIndex];
+        if (candidate) submitAction(candidate.action);
     });
 }
 
 function bindOverlay() {
-    document.getElementById('overlay').addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) closeAllPanels();
+    document.getElementById('overlay').addEventListener('click', (event) => {
+        if (event.target === event.currentTarget) closeAllPanels();
     });
-    for (const btn of document.querySelectorAll('.panel-close')) {
-        btn.addEventListener('click', closeAllPanels);
+    for (const button of document.querySelectorAll('.panel-close')) {
+        button.addEventListener('click', closeAllPanels);
     }
 
-    /* tabs */
-    document.querySelector('.panel-tabs').addEventListener('click', (e) => {
-        if (!e.target.classList.contains('tab')) return;
-        const tabName = e.target.dataset.tab;
-        for (const t of document.querySelectorAll('.panel-tabs .tab')) {
-            t.classList.toggle('active', t === e.target);
+    document.querySelector('.panel-tabs').addEventListener('click', (event) => {
+        if (!event.target.classList.contains('tab')) return;
+        const tabName = event.target.dataset.tab;
+        for (const tab of document.querySelectorAll('.panel-tabs .tab')) {
+            tab.classList.toggle('active', tab === event.target);
         }
-        for (const c of document.querySelectorAll('.panel .tab-content')) {
-            c.classList.toggle('active', c.id === tabName);
+        for (const content of document.querySelectorAll('.panel .tab-content')) {
+            content.classList.toggle('active', content.id === tabName);
         }
     });
 
-    /* custom panel buttons */
     document.getElementById('btn-size-confirm').addEventListener('click', confirmSizeGame);
     document.getElementById('btn-random-confirm').addEventListener('click', confirmRandomGame);
     document.getElementById('btn-load-confirm').addEventListener('click', confirmLoadGame);
 
-    /* popup */
-    document.getElementById('popup-choose').addEventListener('click', (e) => {
-        const btn = e.target.closest('button');
-        if (!btn) return;
-        handlePopupChoice(btn.dataset.choice);
+    document.getElementById('popup-choose').addEventListener('click', (event) => {
+        const button = event.target.closest('button');
+        if (!button) return;
+        handlePopupChoice(button.dataset.choice);
     });
 }
 
 function bindGameOver() {
     document.getElementById('btn-game-over-new').addEventListener('click', () => {
         hideGameOver();
-        if (onAction) onAction({ type: 'new_game', board: { width: 9, height: 10 } });
+        sendCommand({
+            type: 'new_game',
+            board: { width: 9, height: 10 },
+            controllers: controllerSettings(),
+        });
     });
     document.getElementById('btn-game-over-close').addEventListener('click', hideGameOver);
 }
 
-/* ======== State & Render ======== */
+function sendCommand(command) {
+    if (!busy && onCommand) onCommand(command);
+}
+
+function submitAction(action) {
+    if (!canHumanAct()) return;
+    sendCommand({ type: 'submit_action', action });
+}
 
 function phase() {
-    if (!gameState) return 'placement';
-    return (gameState.red_pool.length > 0 || gameState.black_pool.length > 0) ? 'placement' : 'movement';
+    return gameState ? gameState.phase : 'placement';
+}
+
+function canHumanAct() {
+    return Boolean(gameState && gameState.can_human_act && !busy);
 }
 
 export function render(state) {
     gameState = state;
-    clearSelection();
+    clearInteraction();
+    clearAnalysis();
     renderBoard(state);
     renderPools(state);
     renderToolbar(state);
+    syncControllerSettings(state);
 
-    const p = phase();
-    const playing = state.result === 'Unfinished' && p === 'movement';
-    document.getElementById('btn-pass').style.display = playing ? '' : 'none';
-    document.getElementById('btn-resign').style.display = state.result === 'Unfinished' ? '' : 'none';
-    document.getElementById('btn-undo').disabled = !state.can_undo;
-    document.getElementById('sidebar').style.display = p === 'placement' ? '' : 'none';
+    const placement = phase() === 'placement';
+    document.getElementById('sidebar').classList.toggle('hidden', !placement);
 
     if (state.result !== 'Unfinished') {
         setStatus(resultLabel(state.result));
         showGameOver(state.result);
-    } else if (p === 'placement') {
-        hideGameOver();
-        setStatus(`${playerLabel(state.player)}方布子`);
     } else {
         hideGameOver();
-        setStatus(`${playerLabel(state.player)}方行棋`);
+        const verb = placement ? '布子' : '行棋';
+        setStatus(playerLabel(state.player) + '方（' + controlLabel(state.current_controller.control) + '）' + verb);
     }
+}
+
+export function showPlayedAction(action) {
+    clearCandidatePreview();
+    highlightPlayedAction(action);
 }
 
 function renderPools(state) {
     const redItems = document.getElementById('red-pool').querySelector('.pool-items');
     const blackItems = document.getElementById('black-pool').querySelector('.pool-items');
-
     redItems.innerHTML = '';
     blackItems.innerHTML = '';
 
@@ -149,6 +196,10 @@ function playerLabel(player) {
     return player === 'Red' ? '红' : '黑';
 }
 
+function controlLabel(control) {
+    return control === 'agent' ? 'AI' : '人类';
+}
+
 function resultLabel(result) {
     switch (result) {
         case 'RedWin': return '红胜';
@@ -159,43 +210,88 @@ function resultLabel(result) {
 }
 
 function renderToolbar(state) {
-    document.getElementById('player-indicator').textContent = `行棋方：${playerLabel(state.player)}`;
-    document.getElementById('white-indicator').textContent = `白子×${state.white_pool}`;
+    const current = state.current_controller;
+    const controller = current.control === 'agent'
+        ? 'AI（' + current.agent + '）'
+        : '人类';
+    document.getElementById('player-indicator').textContent =
+        '行棋方：' + playerLabel(state.player) + ' · ' + controller;
+    document.getElementById('white-indicator').textContent = '白子×' + state.white_pool;
+    refreshInteractivity();
+}
+
+function refreshInteractivity() {
+    if (!gameState) return;
+    const unfinished = gameState.result === 'Unfinished';
+    const movement = phase() === 'movement';
+    const human = canHumanAct();
+    const canStep = unfinished && gameState.can_agent_step;
+
+    document.getElementById('btn-new').disabled = busy;
+    document.getElementById('btn-custom').disabled = busy;
+    document.getElementById('btn-agent-hint').disabled = busy || !unfinished;
+    document.getElementById('btn-agent-step').classList.toggle('hidden', !canStep);
+    document.getElementById('btn-agent-step').disabled = busy || !canStep;
+    document.getElementById('btn-pass').classList.toggle('hidden', !movement || !unfinished);
+    document.getElementById('btn-pass').disabled = !human;
+    document.getElementById('btn-resign').classList.toggle('hidden', !unfinished);
+    document.getElementById('btn-resign').disabled = !human;
+    document.getElementById('btn-undo').disabled = busy || !gameState.can_undo;
+    document.getElementById('board-wrap').classList.toggle('interaction-locked', !human);
+    document.getElementById('sidebar').classList.toggle('interaction-locked', !human);
+    updateApplyButton();
+}
+
+export function setBusy(value) {
+    busy = value;
+    document.getElementById('app').classList.toggle('is-busy', busy);
+    refreshInteractivity();
 }
 
 let statusTimeout = null;
-export function setStatus(msg, error = false) {
+export function setStatus(message, error = false) {
     clearTimeout(statusTimeout);
-    const el = document.getElementById('status');
-    el.textContent = msg;
-    el.classList.toggle('error', error);
-    if (!error && msg) {
-        statusTimeout = setTimeout(() => { el.textContent = ''; }, 4000);
+    const element = document.getElementById('status');
+    element.textContent = message;
+    element.classList.toggle('error', error);
+    if (!error && message) {
+        statusTimeout = setTimeout(() => { element.textContent = ''; }, 4000);
     }
 }
 
-function clearSelection() {
+function clearInteraction() {
     selection = { type: null };
     clearHints();
-    for (const el of document.querySelectorAll('.intersection.selected')) {
-        el.classList.remove('selected');
-    }
-    for (const el of document.querySelectorAll('.pool-piece-selected')) {
-        el.classList.remove('pool-piece-selected');
+    clearBoardSelection();
+    clearPlayedAction();
+    hidePopup();
+    for (const element of document.querySelectorAll('.pool-piece-selected')) {
+        element.classList.remove('pool-piece-selected');
     }
 }
 
-/* ======== Board Click Handling ======== */
+function clearManualSelectionForPreview() {
+    selection = { type: null };
+    clearHints();
+    clearBoardSelection();
+    clearPlayedAction();
+    hidePopup();
+    for (const element of document.querySelectorAll('.pool-piece-selected')) {
+        element.classList.remove('pool-piece-selected');
+    }
+}
 
 async function handleBoardClick(x, y) {
-    const p = phase();
-    const intn = getIntersection(x, y);
-    const hasPiece = intn && intn.querySelector('.piece');
-    const hintType = intn ? (intn.dataset.hintType || '') : '';
-    const hintTypes = intn ? (intn.dataset.hintTypes || '') : '';
+    if (!canHumanAct()) return;
+    clearAnalysisSelection();
 
-    /* Phase: movement — clicking a move/capture/push/draw/divide target */
-    if (p === 'movement' && (hintType === 'move' || hintType === 'capture' || hintType === 'push' || hintType === 'draw' || hintType === 'divide' || hintTypes)) {
+    const currentPhase = phase();
+    const intersection = getIntersection(x, y);
+    const hasPiece = intersection && intersection.querySelector('.piece');
+    const hintType = intersection ? (intersection.dataset.hintType || '') : '';
+    const hintTypes = intersection ? (intersection.dataset.hintTypes || '') : '';
+
+    if (currentPhase === 'movement' && (hintType || hintTypes)) {
         if (hintTypes) {
             showPopup(x, y, hintTypes.split(','));
         } else {
@@ -204,175 +300,271 @@ async function handleBoardClick(x, y) {
         return;
     }
 
-    /* Phase: placement — clicking own half */
-    if (p === 'placement' && selection.type === 'pool_piece' && !hasPiece) {
-        if (isOwnHalf(x, y, selection.piece.color)) {
-            if (onAction) onAction({ type: 'place', piece: { name: selection.piece.name, color: selection.piece.color }, to: [x, y] });
+    if (currentPhase === 'placement' && selection.type === 'pool_piece' && !hasPiece) {
+        if (isOwnHalf(y, selection.piece.color)) {
+            submitAction({
+                type: 'place',
+                piece: { name: selection.piece.name, color: selection.piece.color },
+                to: [x, y],
+            });
             return;
         }
         setStatus('只能放在己方半区', true);
         return;
     }
 
-    /* Phase: movement — clicking own piece to query hints */
-    if (p === 'movement' && hasPiece && !hintType && !hintTypes) {
-        clearSelection();
+    if (currentPhase === 'movement' && hasPiece && !hintType && !hintTypes) {
+        clearInteraction();
         setSelected(x, y);
         try {
-            const hints = await postHints({ x, y });
-            showMoveHints(hints.moves);
-            if (hints.moves && hints.moves.length === 0) {
+            const response = await postLegalActions({
+                revision: gameState.revision,
+                side: gameState.player,
+                from: [x, y],
+            });
+            if (!gameState || response.revision !== gameState.revision) return;
+            showMoveHints(response.actions);
+            if (response.actions.length === 0) {
                 setStatus('该棋子无可行动作', true);
             }
-        } catch (e) {
-            setStatus(e.message, true);
+        } catch (error) {
+            setStatus(error.message, true);
         }
         return;
     }
 
-    /* anything else: clear selection */
-    clearSelection();
+    clearInteraction();
 }
 
-function isOwnHalf(x, y, color) {
+function isOwnHalf(y, color) {
     if (!gameState) return false;
-    const h = gameState.board.height;
-    if (color === 'Red') return y >= Math.ceil(h / 2);
-    return y < Math.floor(h / 2);
+    const height = gameState.board.height;
+    if (color === 'Red') return y >= Math.ceil(height / 2);
+    return y < Math.floor(height / 2);
 }
 
-function executeHintAction(hintType, x, y) {
-    if (hintType === 'move') {
-        if (onAction) onAction({ type: 'move', from: getSelectedBoardPos(), to: [x, y] });
-    } else if (hintType === 'capture') {
-        if (onAction) onAction({ type: 'capture', from: getSelectedBoardPos(), to: [x, y] });
-    } else if (hintType === 'push') {
-        if (onAction) onAction({ type: 'push', from: getSelectedBoardPos(), to: [x, y] });
-    } else if (hintType === 'draw') {
-        if (onAction) onAction({ type: 'draw', from: getSelectedBoardPos(), to: [x, y] });
-    } else if (hintType === 'divide') {
-        if (onAction) onAction({ type: 'divide', from: getSelectedBoardPos(), to: [x, y] });
-    } else {
-        console.error('unknown hint type for action:', hintType);
-    }
+function executeHintAction(actionType, x, y) {
+    submitAction({ type: actionType, from: selectedBoardPosition(), to: [x, y] });
 }
 
-function getSelectedBoardPos() {
-    const sel = document.querySelector('.intersection.selected');
-    if (sel) return [Number(sel.dataset.x), Number(sel.dataset.y)];
-    return [0, 0];
+function selectedBoardPosition() {
+    const selected = document.querySelector('.intersection.selected');
+    if (!selected) return [0, 0];
+    return [Number(selected.dataset.x), Number(selected.dataset.y)];
 }
-
-/* ======== Pool Click Handling ======== */
 
 function handlePoolClick(name, color) {
-    if (phase() !== 'placement') return;
-    if (gameState && color !== gameState.player) return;
+    if (!canHumanAct() || phase() !== 'placement') return;
+    if (color !== gameState.player) return;
 
-    clearSelection();
+    clearAnalysisSelection();
+    clearInteraction();
     selection = { type: 'pool_piece', piece: { name, color } };
 
-    const el = document.querySelector(`.pool .piece[data-piece-name="${name}"][data-piece-color="${color}"]`);
-    if (el && el.parentElement) el.parentElement.classList.add('pool-piece-selected');
+    const selector = '.pool .piece[data-piece-name="' + name + '"][data-piece-color="' + color + '"]';
+    const element = document.querySelector(selector);
+    if (element && element.parentElement) {
+        element.parentElement.classList.add('pool-piece-selected');
+    }
 }
-
-/* ======== Popup (capture / push / draw / divide choice) ======== */
 
 function showPopup(x, y, types) {
     const popup = document.getElementById('popup-choose');
     popup.innerHTML = '';
-    for (const t of types) {
-        const btn = document.createElement('button');
-        btn.dataset.choice = t;
-        btn.dataset.tx = x;
-        btn.dataset.ty = y;
-        if (t === 'move') {
-            btn.textContent = '移动';
-            btn.className = 'move-opt';
-        } else if (t === 'draw') {
-            btn.textContent = '和棋';
-            btn.className = 'draw-opt';
-        } else if (t === 'capture') {
-            btn.textContent = '捉子';
-            btn.className = 'capture-opt';
-        } else if (t === 'push') {
-            btn.textContent = '推子';
-            btn.className = 'push-opt';
-        } else if (t === 'divide') {
-            btn.textContent = '分兵';
-            btn.className = 'divide-opt';
-        } else {
-            console.error('unknown hint type for popup:', t);
-        }
-        popup.appendChild(btn);
+    for (const type of types) {
+        const button = document.createElement('button');
+        button.dataset.choice = type;
+        button.dataset.tx = x;
+        button.dataset.ty = y;
+        const option = actionOption(type);
+        button.textContent = option.label;
+        button.className = option.className;
+        popup.appendChild(button);
     }
 
-    const intn = getIntersection(x, y);
-    if (intn) {
-        const rect = intn.getBoundingClientRect();
-        popup.style.left = `${rect.right + 4}px`;
-        popup.style.top = `${rect.top}px`;
+    const intersection = getIntersection(x, y);
+    if (intersection) {
+        const rect = intersection.getBoundingClientRect();
+        popup.style.left = (rect.right + 4) + 'px';
+        popup.style.top = rect.top + 'px';
     }
-
     popup.classList.remove('hidden');
+}
+
+function actionOption(type) {
+    switch (type) {
+        case 'move': return { label: '移动', className: 'move-opt' };
+        case 'draw': return { label: '和棋', className: 'draw-opt' };
+        case 'capture': return { label: '捉子', className: 'capture-opt' };
+        case 'push': return { label: '推子', className: 'push-opt' };
+        case 'divide': return { label: '分兵', className: 'divide-opt' };
+        default: return { label: type, className: '' };
+    }
 }
 
 function handlePopupChoice(actionType) {
     const popup = document.getElementById('popup-choose');
-    const btn = popup.querySelector(`button[data-choice="${actionType}"]`);
-    const x = Number(btn.dataset.tx);
-    const y = Number(btn.dataset.ty);
-    popup.classList.add('hidden');
-
-    if (onAction) onAction({ type: actionType, from: getSelectedBoardPos(), to: [x, y] });
+    const button = popup.querySelector('button[data-choice="' + actionType + '"]');
+    if (!button) return;
+    const x = Number(button.dataset.tx);
+    const y = Number(button.dataset.ty);
+    hidePopup();
+    executeHintAction(actionType, x, y);
 }
 
 export function hidePopup() {
     document.getElementById('popup-choose').classList.add('hidden');
 }
 
-/* ======== Custom Panel ======== */
+export function showAnalysis(response) {
+    if (!gameState || response.revision !== gameState.revision) return;
+    analysisCandidates = response.candidates || [];
+    selectedCandidateIndex = null;
+    clearCandidatePreview();
+
+    const meta = document.getElementById('analysis-meta');
+    meta.textContent = response.agent + ' · ' + analysisCandidates.length + ' 个候选';
+    renderAnalysisCandidates();
+}
+
+function renderAnalysisCandidates() {
+    const container = document.getElementById('analysis-candidates');
+    container.innerHTML = '';
+
+    if (analysisCandidates.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'analysis-empty';
+        empty.textContent = '当前没有候选。';
+        container.appendChild(empty);
+    } else {
+        analysisCandidates.forEach((candidate, index) => {
+            const row = document.createElement('button');
+            row.type = 'button';
+            row.className = 'candidate-row';
+            row.dataset.index = index;
+            const rank = document.createElement('span');
+            rank.className = 'candidate-rank';
+            rank.textContent = String(index + 1);
+
+            const notation = document.createElement('span');
+            notation.className = 'candidate-notation';
+            notation.textContent = candidate.notation;
+
+            const score = document.createElement('span');
+            score.className = 'candidate-score';
+            score.textContent = formatScore(candidate.score);
+
+            row.append(rank, notation, score);
+            container.appendChild(row);
+        });
+    }
+    updateApplyButton();
+}
+
+function formatScore(score) {
+    return Number(score).toLocaleString('zh-CN', { maximumFractionDigits: 3 });
+}
+
+function selectCandidate(index) {
+    const candidate = analysisCandidates[index];
+    if (!candidate) return;
+    clearManualSelectionForPreview();
+    selectedCandidateIndex = index;
+
+    for (const row of document.querySelectorAll('.candidate-row')) {
+        row.classList.toggle('selected', Number(row.dataset.index) === index);
+    }
+    previewAction(candidate.action);
+    updateApplyButton();
+}
+
+function clearAnalysisSelection() {
+    selectedCandidateIndex = null;
+    clearCandidatePreview();
+    for (const row of document.querySelectorAll('.candidate-row.selected')) {
+        row.classList.remove('selected');
+    }
+    updateApplyButton();
+}
+
+export function clearAnalysis() {
+    analysisCandidates = [];
+    selectedCandidateIndex = null;
+    clearCandidatePreview();
+    document.getElementById('analysis-meta').textContent = '点击“AI 提示”获取当前局面的候选。';
+    document.getElementById('analysis-candidates').innerHTML = '';
+    updateApplyButton();
+}
+
+function updateApplyButton() {
+    const button = document.getElementById('btn-apply-candidate');
+    const human = Boolean(gameState && gameState.can_human_act);
+    button.classList.toggle('hidden', !human);
+    button.disabled = busy || !human || selectedCandidateIndex === null;
+}
 
 function openCustomPanel() {
+    if (busy) return;
     document.getElementById('overlay').classList.remove('hidden');
     document.getElementById('panel-custom').classList.remove('hidden');
     document.getElementById('panel-rules').classList.add('hidden');
 }
 
 function confirmSizeGame() {
-    const w = clampSize(Number(document.getElementById('custom-width').value), 1, 16);
-    const h = clampSize(Number(document.getElementById('custom-height').value), 1, 16);
+    const width = clampSize(Number(document.getElementById('custom-width').value), 1, 16);
+    const height = clampSize(Number(document.getElementById('custom-height').value), 1, 16);
     closeAllPanels();
-    if (onAction) onAction({ type: 'new_game', board: { width: w, height: h } });
+    sendCommand({
+        type: 'new_game',
+        board: { width, height },
+        controllers: controllerSettings(),
+    });
 }
 
 function confirmRandomGame() {
-    const w = clampSize(Number(document.getElementById('rand-width').value), 1, 16);
-    const h = clampSize(Number(document.getElementById('rand-height').value), 2, 16);
-
-    const redSlots = w * (h - Math.ceil(h / 2));
-    const blackSlots = w * Math.floor(h / 2);
+    const width = clampSize(Number(document.getElementById('rand-width').value), 1, 16);
+    const height = clampSize(Number(document.getElementById('rand-height').value), 2, 16);
+    const redSlots = width * (height - Math.ceil(height / 2));
+    const blackSlots = width * Math.floor(height / 2);
     if (redSlots < 16 || blackSlots < 16) {
-        setStatus(`棋盘太小，每方半区至少需要 16 个位置（当前红 ${redSlots} / 黑 ${blackSlots}）`, true);
+        setStatus(
+            '棋盘太小，每方半区至少需要 16 个位置（当前红 ' +
+                redSlots + ' / 黑 ' + blackSlots + '）',
+            true,
+        );
         return;
     }
 
     closeAllPanels();
-
-    if (onAction) {
-        const randomConfig = buildRandomConfig(w, h);
-        onAction({ type: 'new_game', ...randomConfig });
-    }
+    sendCommand({
+        type: 'new_game',
+        board: { width, height },
+        controllers: controllerSettings(),
+        random_placement: true,
+    });
 }
 
 function confirmLoadGame() {
-    const text = document.getElementById('load-text').value.trim();
-    if (!text) return;
+    const notation = document.getElementById('load-text').value.trim();
+    if (!notation) return;
     closeAllPanels();
+    sendCommand({
+        type: 'new_game',
+        notation,
+        controllers: controllerSettings(),
+    });
+}
 
-    if (onAction) {
-        onAction({ type: 'new_game', notation: text });
-    }
+function controllerSettings() {
+    return {
+        red: document.getElementById('red-control').value,
+        black: document.getElementById('black-control').value,
+    };
+}
+
+function syncControllerSettings(state) {
+    document.getElementById('red-control').value = state.controllers.red.control;
+    document.getElementById('black-control').value = state.controllers.black.control;
 }
 
 function closeAllPanels() {
@@ -381,56 +573,9 @@ function closeAllPanels() {
     document.getElementById('panel-rules').classList.add('hidden');
 }
 
-function clampSize(v, min, max) {
-    return Math.max(min, Math.min(max, Number.isFinite(v) ? v : min));
+function clampSize(value, min, max) {
+    return Math.max(min, Math.min(max, Number.isFinite(value) ? value : min));
 }
-
-/* ======== Random Layout ======== */
-
-function buildRandomConfig(width, height) {
-    const half = Math.floor(height / 2);
-    const midpoint = Math.ceil(height / 2);
-
-    const redPositions = [];
-    const blackPositions = [];
-    for (let x = 0; x < width; x++) {
-        for (let y = midpoint; y < height; y++) redPositions.push([x, y]);
-        for (let y = 0; y < half; y++) blackPositions.push([x, y]);
-    }
-
-    shuffle(redPositions);
-    shuffle(blackPositions);
-
-    const cells = Array.from({ length: height }, () => Array.from({ length: width }, () => null));
-
-    const pieceNames = getCachedPieceNames();
-    for (let i = 0; i < pieceNames.length; i++) {
-        const [rx, ry] = redPositions[i];
-        cells[ry][rx] = { name: pieceNames[i], color: 'Red' };
-    }
-    for (let i = 0; i < pieceNames.length; i++) {
-        const [bx, by] = blackPositions[i];
-        cells[by][bx] = { name: pieceNames[i], color: 'Black' };
-    }
-
-    return {
-        board: { width, height, cells },
-        red_pool: [],
-        black_pool: [],
-        white_pool: 0,
-        player: 'Red',
-    };
-}
-
-function shuffle(arr) {
-    for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
-}
-
-/* ======== Rules Panel ======== */
 
 async function openRulesPanel() {
     document.getElementById('overlay').classList.remove('hidden');
@@ -444,32 +589,22 @@ async function openRulesPanel() {
     try {
         const data = await getRules();
         content.textContent = data.text || '';
-    } catch (e) {
-        content.textContent = '无法加载规则';
+    } catch (error) {
+        content.textContent = '无法加载规则：' + error.message;
     }
 }
-
-/* ======== Game Over Overlay ======== */
 
 function showGameOver(result) {
     const overlay = document.getElementById('game-over');
     const title = overlay.querySelector('.game-over-title');
     title.textContent = resultLabel(result);
     title.className = 'game-over-title';
-    switch (result) {
-        case 'RedWin': title.classList.add('red'); break;
-        case 'BlackWin': title.classList.add('black'); break;
-        case 'Draw': title.classList.add('draw'); break;
-    }
+    if (result === 'RedWin') title.classList.add('red');
+    if (result === 'BlackWin') title.classList.add('black');
+    if (result === 'Draw') title.classList.add('draw');
     overlay.classList.remove('hidden');
 }
 
 function hideGameOver() {
     document.getElementById('game-over').classList.add('hidden');
-}
-
-/* ======== Export for main.js ======== */
-
-export function isPlacementPhase() {
-    return phase() === 'placement';
 }
