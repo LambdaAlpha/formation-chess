@@ -252,7 +252,7 @@ let statusTimeout = null;
 export function setStatus(message, error = false) {
     clearTimeout(statusTimeout);
     const element = document.getElementById('status');
-    element.textContent = message;
+    element.textContent = error && message ? `⚠ ${message}` : message;
     element.classList.toggle('error', error);
     if (!error && message) {
         statusTimeout = setTimeout(() => { element.textContent = ''; }, 4000);

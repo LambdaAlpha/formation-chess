@@ -1,5 +1,67 @@
 import { getIntersection } from './board.js';
 
+const ACTION_LABELS = {
+    place: '布子',
+    move: '移动',
+    draw: '和棋',
+    capture: '捉子',
+    push: '推子',
+    divide: '分兵',
+    pass: '按兵',
+    resign: '认输',
+};
+
+function uniqueTypes(types) {
+    return [...new Set(types)];
+}
+
+function actionLabel(type) {
+    return ACTION_LABELS[type] || type;
+}
+
+function addCorners(marker) {
+    for (const position of ['top-left', 'top-right', 'bottom-left', 'bottom-right']) {
+        const corner = document.createElement('span');
+        corner.className = `action-marker-corner corner-${position}`;
+        marker.appendChild(corner);
+    }
+}
+
+function addOriginMarker(intersection, state) {
+    const marker = document.createElement('div');
+    marker.className = `action-marker action-origin marker-${state}`;
+    addCorners(marker);
+    intersection.appendChild(marker);
+}
+
+function addTargetMarker(intersection, state, multiple = false) {
+    const marker = document.createElement('div');
+    marker.className = `action-marker action-target marker-${state}`;
+    addCorners(marker);
+    if (multiple) {
+        const inner = document.createElement('span');
+        inner.className = 'action-target-inner';
+        addCorners(inner);
+        marker.appendChild(inner);
+    }
+    intersection.appendChild(marker);
+}
+
+function addTooltip(intersection, text, state) {
+    if (!text) return;
+    const tooltip = document.createElement('div');
+    tooltip.className = `action-tooltip tooltip-${state}`;
+    tooltip.setAttribute('role', 'tooltip');
+    tooltip.textContent = text;
+    intersection.appendChild(tooltip);
+}
+
+function removeElements(selector) {
+    for (const element of document.querySelectorAll(selector)) {
+        element.remove();
+    }
+}
+
 export function showMoveHints(actions) {
     clearHints();
     if (!actions) return;
@@ -12,72 +74,69 @@ export function showMoveHints(actions) {
         byPosition[key].push(action.type);
     }
 
-    for (const [key, types] of Object.entries(byPosition)) {
+    for (const [key, actionTypes] of Object.entries(byPosition)) {
         const [x, y] = key.split(',').map(Number);
         const intersection = getIntersection(x, y);
         if (!intersection) continue;
 
-        let className;
-        if (types.length > 1) {
-            className = 'hint-multi';
-        } else if (types.includes('draw')) {
-            className = 'hint-draw';
-        } else if (types.includes('capture')) {
-            className = 'hint-capture';
-        } else if (types.includes('push')) {
-            className = 'hint-push';
-        } else if (types.includes('divide')) {
-            className = 'hint-divide';
-        } else {
-            className = 'hint-move';
-        }
-        intersection.classList.add(className);
+        const types = uniqueTypes(actionTypes);
+        const multiple = types.length > 1;
+        intersection.classList.add('hint-target');
+        if (multiple) intersection.classList.add('hint-multi');
 
-        if (types.length > 1) {
+        if (multiple) {
             intersection.dataset.hintTypes = types.join(',');
         } else {
             intersection.dataset.hintType = types[0];
         }
+
+        addTargetMarker(intersection, 'legal', multiple);
+        const labels = types.map(actionLabel);
+        addTooltip(intersection, multiple ? `可选：${labels.join(' · ')}` : labels[0], 'legal');
     }
 }
 
 export function clearHints() {
-    for (const element of document.querySelectorAll('.intersection')) {
-        element.classList.remove(
-            'hint-move',
-            'hint-capture',
-            'hint-push',
-            'hint-draw',
-            'hint-multi',
-            'hint-divide',
-        );
+    for (const element of document.querySelectorAll('.intersection.hint-target, .intersection.hint-multi')) {
+        element.classList.remove('hint-target', 'hint-multi');
         delete element.dataset.hintType;
         delete element.dataset.hintTypes;
     }
+    removeElements('.marker-legal, .tooltip-legal');
 }
 
 export function clearSelection() {
     for (const element of document.querySelectorAll('.intersection.selected')) {
         element.classList.remove('selected');
     }
+    removeElements('.marker-selected');
 }
 
 export function setSelected(x, y) {
     clearSelection();
     clearHints();
     const intersection = getIntersection(x, y);
-    if (intersection) intersection.classList.add('selected');
+    if (!intersection) return;
+    intersection.classList.add('selected');
+    addOriginMarker(intersection, 'selected');
 }
 
 export function previewAction(action) {
     clearCandidatePreview();
     if (action.from) {
         const from = getIntersection(action.from[0], action.from[1]);
-        if (from) from.classList.add('candidate-from');
+        if (from) {
+            from.classList.add('candidate-from');
+            addOriginMarker(from, 'candidate');
+        }
     }
     if (action.to) {
         const to = getIntersection(action.to[0], action.to[1]);
-        if (to) to.classList.add('candidate-to');
+        if (to) {
+            to.classList.add('candidate-to');
+            addTargetMarker(to, 'candidate');
+            addTooltip(to, `AI 推荐：${actionLabel(action.type)}`, 'candidate');
+        }
     }
 }
 
@@ -85,17 +144,25 @@ export function clearCandidatePreview() {
     for (const element of document.querySelectorAll('.candidate-from, .candidate-to')) {
         element.classList.remove('candidate-from', 'candidate-to');
     }
+    removeElements('.marker-candidate, .tooltip-candidate');
 }
 
 export function showPlayedAction(action) {
     clearPlayedAction();
     if (action.from) {
         const from = getIntersection(action.from[0], action.from[1]);
-        if (from) from.classList.add('played-from');
+        if (from) {
+            from.classList.add('played-from');
+            addOriginMarker(from, 'played');
+        }
     }
     if (action.to) {
         const to = getIntersection(action.to[0], action.to[1]);
-        if (to) to.classList.add('played-to');
+        if (to) {
+            to.classList.add('played-to');
+            addTargetMarker(to, 'played');
+            addTooltip(to, `上一步：${actionLabel(action.type)}`, 'played');
+        }
     }
 }
 
@@ -103,4 +170,5 @@ export function clearPlayedAction() {
     for (const element of document.querySelectorAll('.played-from, .played-to')) {
         element.classList.remove('played-from', 'played-to');
     }
+    removeElements('.marker-played, .tooltip-played');
 }

@@ -1,3 +1,5 @@
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
 export function getShapeClass(formation) {
     switch (formation) {
         case 165: return 'shape-square';
@@ -8,9 +10,45 @@ export function getShapeClass(formation) {
     }
 }
 
+function createShapeElement(shapeClass) {
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.classList.add('piece-shape');
+    svg.setAttribute('viewBox', '0 0 100 100');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+
+    let shape;
+    if (shapeClass === 'shape-square') {
+        shape = document.createElementNS(SVG_NS, 'rect');
+        shape.setAttribute('x', '6');
+        shape.setAttribute('y', '6');
+        shape.setAttribute('width', '88');
+        shape.setAttribute('height', '88');
+        shape.setAttribute('rx', '2');
+    } else if (shapeClass === 'shape-circle') {
+        shape = document.createElementNS(SVG_NS, 'circle');
+        shape.setAttribute('cx', '50');
+        shape.setAttribute('cy', '50');
+        shape.setAttribute('r', '44');
+    } else {
+        shape = document.createElementNS(SVG_NS, 'polygon');
+        const points = {
+            'shape-diamond': '50,6 94,50 50,94 6,50',
+            'shape-triangle-up': '50,6 94,94 6,94',
+            'shape-triangle-down': '6,6 94,6 50,94',
+        };
+        shape.setAttribute('points', points[shapeClass]);
+    }
+    shape.classList.add('piece-shape-surface');
+    svg.appendChild(shape);
+    return svg;
+}
+
 export function createPieceElement(piece, pool = false) {
     const element = document.createElement('div');
-    element.className = `piece piece-${piece.color.toLowerCase()} ${getShapeClass(piece.formation)}`;
+    const shapeClass = getShapeClass(piece.formation);
+    element.className = `piece piece-${piece.color.toLowerCase()} ${shapeClass}`;
+    element.appendChild(createShapeElement(shapeClass));
 
     const text = document.createElement('span');
     text.className = 'piece-text';
