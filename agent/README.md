@@ -19,10 +19,13 @@ The framework prepares phase-specific AgentInput values:
   legal movement action plus Pass. Resign is excluded and remains a
   higher-level policy decision.
 
-analyze_agent validates the returned count, ordering, uniqueness, scores, and
-legality without modifying the game. play_agent_turn calls the same analysis
-path with top_k equal to one and executes the first candidate through the core
-engine.
+prepare_turn creates a PreparedTurn that borrows the exact immutable Game and
+owns any enumerated movement actions. Orchestrators can inspect and reuse this
+prepared input without enumerating legal actions a second time.
+analyze_prepared validates an agent against that prepared input. analyze_agent
+is the convenience wrapper that prepares and analyzes in one call, while
+play_agent_turn requests top_k equal to one and executes the first candidate
+through the core engine.
 
 ## Placement area
 

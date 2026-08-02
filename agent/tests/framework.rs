@@ -3,11 +3,14 @@ use std::num::NonZeroU8;
 use formation_chess_agent::Agent;
 use formation_chess_agent::AgentError;
 use formation_chess_agent::AgentInput;
+use formation_chess_agent::PreparedInput;
 use formation_chess_agent::ScoredAction;
 use formation_chess_agent::analyze_agent;
+use formation_chess_agent::analyze_prepared;
 use formation_chess_agent::legal_movement_actions;
 use formation_chess_agent::placement_area;
 use formation_chess_agent::play_agent_turn;
+use formation_chess_agent::prepare_turn;
 use formation_chess_core::action::Action;
 use formation_chess_core::action::GameResult;
 use formation_chess_core::action::Place;
@@ -184,6 +187,23 @@ fn every_enumerated_movement_action_is_accepted_by_core() {
 }
 
 #[test]
+fn prepared_placement_turn_exposes_compact_area() {
+    let game = Game::new(GameConfig::default()).expect("standard game");
+    let prepared = prepare_turn(&game).expect("prepared placement turn");
+
+    assert!(std::ptr::eq(prepared.game(), &game));
+    assert_eq!(prepared.player(), Player::Red);
+    assert_eq!(prepared.phase(), formation_chess_core::game::Phase::Place);
+    assert_eq!(prepared.legal_action_count(), None);
+
+    let PreparedInput::Placement { area } = prepared.input() else {
+        panic!("expected placement input");
+    };
+    assert_eq!(area.x_range(), 0 .. 9);
+    assert_eq!(area.y_range(), 5 .. 10);
+}
+
+#[test]
 fn analysis_dispatches_placement_without_action_enumeration() {
     let game = Game::new(GameConfig::default()).expect("standard game");
     let before = game.to_string();
@@ -206,16 +226,24 @@ fn analysis_dispatches_placement_without_action_enumeration() {
 }
 
 #[test]
-fn analysis_dispatches_movement_with_explicit_candidates() {
+fn analysis_dispatches_prepared_movement_candidates() {
     let game = movement_game();
-    let expected_count = legal_movement_actions(&game).len();
+    let expected_actions = legal_movement_actions(&game);
+    let expected_count = expected_actions.len();
+    let prepared = prepare_turn(&game).expect("prepared movement turn");
+    let PreparedInput::Movement { legal_actions } = prepared.input() else {
+        panic!("expected movement input");
+    };
+    assert_eq!(legal_actions, &expected_actions);
+    assert_eq!(prepared.legal_action_count(), Some(expected_count));
+
     let pass = Action::Pass(Player::Red);
     let mut agent = TestAgent::new(
         vec![scored(Action::Place(Place { piece: Piece::RED_GENERAL, to: (0, 4) }), 1.0)],
         vec![scored(pass, 2.0)],
     );
 
-    let analysis = analyze_agent(&game, &mut agent, top_k(2)).expect("movement analysis");
+    let analysis = analyze_prepared(&prepared, &mut agent, top_k(2)).expect("movement analysis");
 
     assert_eq!(agent.placement_calls, 0);
     assert_eq!(agent.movement_calls, 1);
@@ -333,6 +361,9 @@ fn analysis_rejects_finished_game_without_calling_agent() {
         vec![scored(Action::Place(Place { piece: Piece::BLACK_GENERAL, to: (0, 0) }), 1.0)],
         vec![scored(Action::Pass(Player::Black), 1.0)],
     );
+
+    let prepare_error = prepare_turn(&game).expect_err("finished game cannot be prepared");
+    assert!(matches!(prepare_error, AgentError::GameState(_)));
 
     let error = analyze_agent(&game, &mut agent, NonZeroU8::MIN).expect_err("finished game");
 

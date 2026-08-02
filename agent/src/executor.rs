@@ -16,6 +16,66 @@ use crate::ScoredAction;
 use crate::legal_movement_actions;
 use crate::placement_area;
 
+/// Owned phase-specific data prepared for one immutable game position.
+#[derive(Debug, Clone)]
+pub enum PreparedInput {
+    /// Compact placement geometry; the borrowed game supplies pools and occupancy.
+    Placement { area: crate::PlacementArea },
+    /// The exact legal movement actions supplied to the agent.
+    Movement { legal_actions: Vec<Action> },
+}
+
+/// A prepared agent turn tied to the exact game position that produced it.
+///
+/// The immutable game borrow prevents the position from changing while the
+/// prepared movement-action list is inspected or passed to an agent.
+#[derive(Debug)]
+pub struct PreparedTurn<'game> {
+    game: &'game Game,
+    player: Player,
+    input: PreparedInput,
+}
+
+impl PreparedTurn<'_> {
+    /// The immutable game position used to prepare this turn.
+    pub fn game(&self) -> &Game {
+        self.game
+    }
+
+    /// The player whose turn was prepared.
+    pub fn player(&self) -> Player {
+        self.player
+    }
+
+    /// The phase encoded by the prepared input.
+    pub fn phase(&self) -> Phase {
+        match &self.input {
+            PreparedInput::Placement { .. } => Phase::Place,
+            PreparedInput::Movement { .. } => Phase::Move,
+        }
+    }
+
+    /// Inspect the owned phase-specific input.
+    pub fn input(&self) -> &PreparedInput {
+        &self.input
+    }
+
+    /// Number of enumerated movement actions, or None for placement.
+    pub fn legal_action_count(&self) -> Option<usize> {
+        match &self.input {
+            PreparedInput::Placement { .. } => None,
+            PreparedInput::Movement { legal_actions } => Some(legal_actions.len()),
+        }
+    }
+
+    fn agent_input(&self) -> AgentInput<'_> {
+        match &self.input {
+            PreparedInput::Placement { area } => AgentInput::Placement { area: *area },
+            PreparedInput::Movement { legal_actions } => AgentInput::Movement { legal_actions },
+        }
+    }
+}
+
 /// A validated, read-only agent analysis for the current position.
 #[derive(Debug, Clone, PartialEq)]
 pub struct AgentAnalysis {
@@ -39,43 +99,55 @@ pub struct AgentTurn {
     pub legal_action_count: Option<usize>,
 }
 
-/// Ask an agent for up to top_k ranked candidates without changing the game.
+/// Prepare phase-specific data for the current unfinished game position.
 ///
-/// The framework prepares phase-specific input and verifies that the returned
-/// list is nonempty, bounded, sorted, unique, finite-scored, and legal.
-pub fn analyze_agent(
-    game: &Game, agent: &mut dyn Agent, top_k: NonZeroU8,
-) -> Result<AgentAnalysis, AgentError> {
+/// Movement actions are enumerated exactly once and owned by the returned
+/// value. Placement retains only the compact geometric area.
+pub fn prepare_turn(game: &Game) -> Result<PreparedTurn<'_>, AgentError> {
     if game.result() != GameResult::Unfinished {
         return Err(AgentError::GameState(format!("game result is {}", game.result())));
     }
 
-    let player = game.player();
-    let (candidates, decision_time, legal_action_count) = match game.phase() {
+    let input = match game.phase() {
         Phase::Place => {
             let area = placement_area(game).ok_or_else(|| {
                 AgentError::GameState("placement input is unavailable".to_owned())
             })?;
-            let input = AgentInput::Placement { area };
-            let started = Instant::now();
-            let candidates = agent.analyze(game, input, top_k)?;
-            let decision_time = started.elapsed();
-            validate_analysis(game, input, top_k, &candidates)?;
-            (candidates, decision_time, None)
+            PreparedInput::Placement { area }
         },
-        Phase::Move => {
-            let legal_actions = legal_movement_actions(game);
-            let legal_action_count = legal_actions.len();
-            let input = AgentInput::Movement { legal_actions: &legal_actions };
-            let started = Instant::now();
-            let candidates = agent.analyze(game, input, top_k)?;
-            let decision_time = started.elapsed();
-            validate_analysis(game, input, top_k, &candidates)?;
-            (candidates, decision_time, Some(legal_action_count))
-        },
+        Phase::Move => PreparedInput::Movement { legal_actions: legal_movement_actions(game) },
     };
 
-    Ok(AgentAnalysis { player, candidates, decision_time, legal_action_count })
+    Ok(PreparedTurn { game, player: game.player(), input })
+}
+
+/// Ask an agent to analyze one previously prepared game position.
+///
+/// The returned list is verified to be nonempty, bounded, sorted, unique,
+/// finite-scored, and legal against the prepared input.
+pub fn analyze_prepared(
+    prepared: &PreparedTurn<'_>, agent: &mut dyn Agent, top_k: NonZeroU8,
+) -> Result<AgentAnalysis, AgentError> {
+    let input = prepared.agent_input();
+    let started = Instant::now();
+    let candidates = agent.analyze(prepared.game(), input, top_k)?;
+    let decision_time = started.elapsed();
+    validate_analysis(prepared.game(), input, top_k, &candidates)?;
+
+    Ok(AgentAnalysis {
+        player: prepared.player(),
+        candidates,
+        decision_time,
+        legal_action_count: prepared.legal_action_count(),
+    })
+}
+
+/// Prepare the current position and ask an agent for up to top_k candidates.
+pub fn analyze_agent(
+    game: &Game, agent: &mut dyn Agent, top_k: NonZeroU8,
+) -> Result<AgentAnalysis, AgentError> {
+    let prepared = prepare_turn(game)?;
+    analyze_prepared(&prepared, agent, top_k)
 }
 
 /// Analyze one candidate and execute the best result through Game::action.
