@@ -183,3 +183,36 @@ percentiles do not require retaining every integer observation. Only one finite
 unique-state ratio per game is retained for its floating-point distribution.
 Like GameMetrics, the summary is descriptive and does not infer game quality,
 position value, fairness, difficulty, or interestingness.
+
+## Command-line interface
+
+The `formation-chess-arena` binary exposes the complete Arena MVP workflow:
+
+- `run` executes a deterministic Random-vs-Random schedule and creates a new
+  dataset directory;
+- `verify` structurally validates the complete dataset and strictly replays every
+  game without writing files; and
+- `stats` performs the same replay-backed validation and creates
+  `game_metrics.csv` plus `summary.json`.
+
+A fixed-seat run uses `--fixed <GAMES>`. A color-swapped run uses
+`--paired <PAIRS>` and writes two games per pair. Exactly one mode is required.
+Both seats currently use `RandomAgentFactory`; distinct participant IDs preserve
+participant identity even though both descriptors name the same implementation.
+
+```text
+cargo run -p formation-chess-arena -- run --output <new-dataset-dir> --seed 42 --paired 100 --movement-limit 500 --participant-a random_a --participant-b random_b --flush-every 10
+cargo run -p formation-chess-arena -- verify <dataset-dir>
+cargo run -p formation-chess-arena -- stats <dataset-dir>
+```
+
+`--output`, `--seed`, the schedule count, `--movement-limit`, and both participant
+IDs are required. Participant IDs must be distinct, non-empty, and contain no
+whitespace. `--flush-every` is optional and defaults to one game, retaining the
+most recent complete JSONL prefix if execution is interrupted. The output
+directory must not already exist, and `stats` refuses to overwrite either
+derived output.
+
+Use `--help` for the complete option list and `--version` for the Arena package
+version. Argument errors exit with status 2; dataset, replay, execution, and
+analysis failures exit with status 1.
