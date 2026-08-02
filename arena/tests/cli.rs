@@ -1,4 +1,6 @@
 use std::fs;
+use std::num::NonZeroU8;
+use std::num::NonZeroU32;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -6,10 +8,13 @@ use std::process::Output;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 
+use formation_chess_agent::MinConfig;
 use formation_chess_arena::ActionSelectionPolicyRecord;
 use formation_chess_arena::DatasetSummary;
 use formation_chess_arena::GAME_METRICS_FILE_NAME;
 use formation_chess_arena::JsonlDatasetReader;
+use formation_chess_arena::LEAGUE_MANIFEST_FILE_NAME;
+use formation_chess_arena::LeagueManifest;
 use formation_chess_arena::MANIFEST_FILE_NAME;
 use formation_chess_arena::ReplayVerifier;
 use formation_chess_arena::SUMMARY_FILE_NAME;
@@ -57,10 +62,31 @@ fn assert_success(output: &Output, command: &str) {
     );
 }
 
+fn write_shallow_min_config(directory: &TestDirectory, config_id: &str) -> PathBuf {
+    let mut config = MinConfig::best();
+    config_id.clone_into(&mut config.config_id);
+    config.placement_search.max_depth = NonZeroU8::MIN;
+    config.placement_search.max_nodes = NonZeroU32::new(64).expect("nonzero node budget");
+    config.placement_search.root_width = NonZeroU8::MIN;
+    config.placement_search.opponent_width = NonZeroU8::MIN;
+    config.placement_search.response_width = NonZeroU8::MIN;
+    config.movement_search.max_depth = NonZeroU8::MIN;
+    config.movement_search.max_nodes = NonZeroU32::new(64).expect("nonzero node budget");
+    config.movement_search.opponent_width = NonZeroU8::MIN;
+    config.movement_search.response_width = NonZeroU8::MIN;
+    config.validate().expect("valid shallow Min config");
+
+    let path = directory.path().join(format!("{config_id}.json"));
+    fs::write(&path, serde_json::to_vec_pretty(&config).expect("serialize shallow Min config"))
+        .expect("write shallow Min config");
+    path
+}
+
 #[test]
-fn cli_runs_verifies_and_analyzes_a_random_dataset() {
+fn cli_runs_verifies_and_analyzes_a_configured_dataset() {
     let directory = TestDirectory::new("end-to-end");
     let dataset_root = directory.path().join("dataset");
+    let min_config_path = write_shallow_min_config(&directory, "cli");
 
     let run_output = arena_command()
         .arg("run")
@@ -75,7 +101,11 @@ fn cli_runs_verifies_and_analyzes_a_random_dataset() {
         .arg("--participant-a")
         .arg("random_a")
         .arg("--participant-b")
-        .arg("random_b")
+        .arg("min_b")
+        .arg("--agent-a")
+        .arg("random")
+        .arg("--agent-b")
+        .arg(format!("min:{}", min_config_path.display()))
         .output()
         .expect("run arena CLI");
     assert_success(&run_output, "run");
@@ -94,9 +124,17 @@ fn cli_runs_verifies_and_analyzes_a_random_dataset() {
         ActionSelectionPolicyRecord::RankSoftmax { top_k: 4, temperature: 0.5 }
     );
     assert_eq!(reader.manifest().participant_a.id, "random_a");
-    assert_eq!(reader.manifest().participant_b.id, "random_b");
+    assert_eq!(reader.manifest().participant_b.id, "min_b");
     assert_eq!(reader.manifest().participant_a.agent.kind, "random");
-    assert_eq!(reader.manifest().participant_b.agent.kind, "random");
+    assert_eq!(reader.manifest().participant_b.agent.kind, "min");
+    assert_eq!(reader.manifest().participant_b.agent.display_name, "Min AI cli-v1");
+    assert_eq!(reader.manifest().participant_b.agent.parameters["config"]["config_id"], "cli");
+    assert!(
+        reader.manifest().participant_b.agent.parameters["config_sha256"]
+            .as_str()
+            .is_some_and(|hash| hash.len() == 64),
+        "Min descriptor must retain the complete config identity"
+    );
     let record = reader.next().expect("one game record").expect("valid game record");
     assert!(record.actions.iter().all(|action| (1 ..= 4).contains(&action.candidate_rank)));
     ReplayVerifier::verify(&record).expect("CLI game must replay");
@@ -128,6 +166,66 @@ fn cli_runs_verifies_and_analyzes_a_random_dataset() {
     )
     .expect("parse CLI summary");
     assert_eq!(summary.games, 1);
+}
+#[test]
+fn cli_runs_random_and_min_configs_as_a_round_robin_league() {
+    let directory = TestDirectory::new("league");
+    let league_root = directory.path().join("league");
+    let alpha_config_path = write_shallow_min_config(&directory, "alpha");
+    let beta_config_path = write_shallow_min_config(&directory, "beta");
+
+    let output = arena_command()
+        .arg("league")
+        .arg("--output")
+        .arg(&league_root)
+        .arg("--seed")
+        .arg("101")
+        .arg("--paired")
+        .arg("1")
+        .arg("--movement-limit")
+        .arg("1")
+        .arg("--participant")
+        .arg("random=random")
+        .arg("--participant")
+        .arg(format!("alpha=min:{}", alpha_config_path.display()))
+        .arg("--participant")
+        .arg(format!("beta=min:{}", beta_config_path.display()))
+        .output()
+        .expect("run Arena league CLI");
+    assert_success(&output, "league");
+    assert!(
+        String::from_utf8_lossy(&output.stdout).contains("wrote 3 matchups and 6 games"),
+        "league output must report matchup and game counts"
+    );
+
+    let manifest = serde_json::from_slice::<LeagueManifest>(
+        &fs::read(league_root.join(LEAGUE_MANIFEST_FILE_NAME)).expect("read league manifest"),
+    )
+    .expect("parse league manifest");
+    assert_eq!(manifest.root_seed, 101);
+    assert_eq!(manifest.pairs_per_matchup, 1);
+    assert_eq!(manifest.matchup_count, 3);
+    assert_eq!(manifest.total_games, 6);
+    assert_eq!(manifest.participants.len(), 3);
+    assert_eq!(manifest.participants[0].agent.kind, "random");
+    assert_eq!(manifest.participants[1].agent.kind, "min");
+    assert_eq!(manifest.participants[1].agent.parameters["config"]["config_id"], "alpha");
+    assert_eq!(manifest.participants[2].agent.parameters["config"]["config_id"], "beta");
+    assert_eq!(manifest.matchups.len(), 3);
+    assert_ne!(manifest.matchups[0].root_seed, manifest.matchups[1].root_seed);
+
+    for matchup in &manifest.matchups {
+        let dataset_root = league_root.join(&matchup.dataset_directory);
+        let mut reader = JsonlDatasetReader::open(&dataset_root).expect("open league dataset");
+        assert_eq!(reader.manifest().root_seed, matchup.root_seed);
+        assert_eq!(reader.manifest().participant_a.id, matchup.participant_a);
+        assert_eq!(reader.manifest().participant_b.id, matchup.participant_b);
+        for record in &mut reader {
+            ReplayVerifier::verify(&record.expect("valid league game record"))
+                .expect("league game must replay");
+        }
+        assert_eq!(reader.read_games(), 2);
+    }
 }
 
 #[test]

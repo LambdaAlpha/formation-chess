@@ -1,21 +1,27 @@
 use std::error::Error;
 use std::ffi::OsStr;
 use std::ffi::OsString;
+use std::fs;
 use std::num::NonZeroU32;
 use std::num::NonZeroU64;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 use formation_chess_agent::ActionSelectionPolicy;
+use formation_chess_agent::MinConfig;
+use formation_chess_arena::AgentFactory;
 use formation_chess_arena::BatchHarness;
 use formation_chess_arena::DatasetAnalyzer;
 use formation_chess_arena::GameRunConfig;
 use formation_chess_arena::JsonlDatasetReader;
 use formation_chess_arena::MatchRunner;
 use formation_chess_arena::Matchup;
+use formation_chess_arena::MinAgentFactory;
 use formation_chess_arena::ParticipantId;
 use formation_chess_arena::RandomAgentFactory;
 use formation_chess_arena::ReplayVerifier;
+use formation_chess_arena::RoundRobinLeague;
+use formation_chess_arena::RoundRobinParticipant;
 use formation_chess_arena::Schedule;
 use formation_chess_arena::ScheduleMode;
 
@@ -24,14 +30,16 @@ const DEFAULT_FLUSH_EVERY_GAMES: NonZeroU64 = NonZeroU64::MIN;
 const HELP: &str = "Formation Chess Arena
 
 Usage:
-  formation-chess-arena run --output <DIR> --seed <U64> (--fixed <GAMES> | --paired <PAIRS>) --movement-limit <ACTIONS> --participant-a <ID> --participant-b <ID> [--flush-every <GAMES>]
+  formation-chess-arena run --output <DIR> --seed <U64> (--fixed <GAMES> | --paired <PAIRS>) --movement-limit <ACTIONS> --participant-a <ID> --participant-b <ID> [--agent-a <SPEC>] [--agent-b <SPEC>] [--flush-every <GAMES>]
+  formation-chess-arena league --output <DIR> --seed <U64> --paired <PAIRS> --movement-limit <ACTIONS> --participant <ID>=<SPEC> --participant <ID>=<SPEC> [--participant <ID>=<SPEC> ...] [--flush-every <GAMES>]
   formation-chess-arena verify <DATASET_DIR>
   formation-chess-arena stats <DATASET_DIR>
   formation-chess-arena --help
   formation-chess-arena --version
 
 Commands:
-  run       Run a deterministic Random-vs-Random schedule and write a dataset.
+  run       Run one seeded matchup and write an Arena dataset.
+  league    Run every unordered participant pair as a color-swapped dataset.
   verify    Structurally validate and strictly replay every recorded game.
   stats     Verify the dataset and write game_metrics.csv plus summary.json.
 
@@ -43,10 +51,25 @@ Run options:
   --movement-limit <N>    Nonzero maximum movement actions per game.
   --participant-a <ID>    First participant identity.
   --participant-b <ID>    Second, distinct participant identity.
+  --agent-a <SPEC>        Agent for participant A; defaults to random.
+  --agent-b <SPEC>        Agent for participant B; defaults to random.
   --flush-every <GAMES>   Nonzero flush interval; defaults to 1.
 
-Participant IDs must be non-empty and contain no whitespace. The current CLI
-registers only the deterministic RandomAgent implementation.
+League options:
+  --output <DIR>          New league root containing league.json and child datasets.
+  --seed <U64>            League root seed used to derive each matchup seed.
+  --paired <PAIRS>        Color-swapped pairs to run for every unordered pair.
+  --movement-limit <N>    Nonzero maximum movement actions per game.
+  --participant <ID>=<SPEC>
+                          Repeat for every league participant; at least 2 required.
+  --flush-every <GAMES>   Per-dataset nonzero flush interval; defaults to 1.
+
+Agent specs:
+  random                  Seeded RandomAgent baseline.
+  min                     Current built-in Min best configuration.
+  min:<CONFIG.json>       Min configuration loaded from a JSON file and validated.
+
+Participant IDs must be distinct, non-empty, and contain no whitespace.
 ";
 
 enum Invocation {
@@ -57,6 +80,7 @@ enum Invocation {
 
 enum Command {
     Run(RunOptions),
+    League(LeagueOptions),
     Verify(PathBuf),
     Stats(PathBuf),
 }
@@ -67,6 +91,17 @@ struct RunOptions {
     schedule: ScheduleSelection,
     movement_limit: NonZeroU32,
     matchup: Matchup,
+    participant_a_factory: Box<dyn AgentFactory>,
+    participant_b_factory: Box<dyn AgentFactory>,
+    flush_every_games: NonZeroU64,
+}
+
+struct LeagueOptions {
+    output_root: PathBuf,
+    root_seed: u64,
+    pairs_per_matchup: NonZeroU32,
+    movement_limit: NonZeroU32,
+    participants: Vec<RoundRobinParticipant>,
     flush_every_games: NonZeroU64,
 }
 
@@ -119,6 +154,15 @@ fn parse_invocation(arguments: &[OsString]) -> Result<Invocation, String> {
                     .map(|options| Invocation::Command(Command::Run(options)))
             }
         },
+        "league" => {
+            let command_arguments = &arguments[1 ..];
+            if contains_help(command_arguments) {
+                Ok(Invocation::Help)
+            } else {
+                parse_league(command_arguments)
+                    .map(|options| Invocation::Command(Command::League(options)))
+            }
+        },
         "verify" => parse_dataset_command(arguments, Command::Verify),
         "stats" => parse_dataset_command(arguments, Command::Stats),
         _ => Err(format!("unknown command `{command}`")),
@@ -160,6 +204,8 @@ fn parse_run(arguments: &[OsString]) -> Result<RunOptions, String> {
     let mut movement_limit = None;
     let mut participant_a = None;
     let mut participant_b = None;
+    let mut participant_a_factory = None;
+    let mut participant_b_factory = None;
     let mut flush_every_games = None;
     let mut index = 0;
 
@@ -196,6 +242,16 @@ fn parse_run(arguments: &[OsString]) -> Result<RunOptions, String> {
                 utf8_argument(value, "--participant-b value")?.to_owned(),
                 "--participant-b",
             )?,
+            "--agent-a" => set_once(
+                &mut participant_a_factory,
+                parse_agent_factory(value, "--agent-a")?,
+                "--agent-a",
+            )?,
+            "--agent-b" => set_once(
+                &mut participant_b_factory,
+                parse_agent_factory(value, "--agent-b")?,
+                "--agent-b",
+            )?,
             "--flush-every" => set_once(
                 &mut flush_every_games,
                 parse_nonzero_u64(value, "--flush-every")?,
@@ -219,10 +275,128 @@ fn parse_run(arguments: &[OsString]) -> Result<RunOptions, String> {
         schedule: schedule.ok_or_else(|| "missing one of `--fixed` or `--paired`".to_owned())?,
         movement_limit: required(movement_limit, "--movement-limit")?,
         matchup,
+        participant_a_factory: participant_a_factory
+            .unwrap_or_else(|| Box::new(RandomAgentFactory)),
+        participant_b_factory: participant_b_factory
+            .unwrap_or_else(|| Box::new(RandomAgentFactory)),
         flush_every_games: flush_every_games.unwrap_or(DEFAULT_FLUSH_EVERY_GAMES),
     })
 }
 
+fn parse_league(arguments: &[OsString]) -> Result<LeagueOptions, String> {
+    let mut output_root = None;
+    let mut root_seed = None;
+    let mut pairs_per_matchup = None;
+    let mut movement_limit = None;
+    let mut participants = Vec::new();
+    let mut flush_every_games = None;
+    let mut index = 0;
+
+    while index < arguments.len() {
+        let option = utf8_argument(&arguments[index], "league option")?;
+        let value = next_option_value(arguments, &mut index, option)?;
+        match option {
+            "--output" => {
+                set_once(&mut output_root, nonempty_path(value, "--output")?, "--output")?;
+            },
+            "--seed" => {
+                set_once(&mut root_seed, parse_u64(value, "--seed")?, "--seed")?;
+            },
+            "--paired" => {
+                set_once(
+                    &mut pairs_per_matchup,
+                    parse_nonzero_u32(value, "--paired")?,
+                    "--paired",
+                )?;
+            },
+            "--movement-limit" => set_once(
+                &mut movement_limit,
+                parse_nonzero_u32(value, "--movement-limit")?,
+                "--movement-limit",
+            )?,
+            "--participant" => {
+                let participant = parse_league_participant(value)?;
+                if participants
+                    .iter()
+                    .any(|existing: &RoundRobinParticipant| existing.id() == participant.id())
+                {
+                    return Err(format!(
+                        "league participant `{}` was supplied more than once",
+                        participant.id()
+                    ));
+                }
+                participants.push(participant);
+            },
+            "--flush-every" => set_once(
+                &mut flush_every_games,
+                parse_nonzero_u64(value, "--flush-every")?,
+                "--flush-every",
+            )?,
+            _ => return Err(format!("unknown league option `{option}`")),
+        }
+        index += 1;
+    }
+
+    if participants.len() < 2 {
+        return Err(format!(
+            "league requires at least 2 `--participant` values, got {}",
+            participants.len()
+        ));
+    }
+
+    Ok(LeagueOptions {
+        output_root: required(output_root, "--output")?,
+        root_seed: required(root_seed, "--seed")?,
+        pairs_per_matchup: required(pairs_per_matchup, "--paired")?,
+        movement_limit: required(movement_limit, "--movement-limit")?,
+        participants,
+        flush_every_games: flush_every_games.unwrap_or(DEFAULT_FLUSH_EVERY_GAMES),
+    })
+}
+
+fn parse_league_participant(value: &OsStr) -> Result<RoundRobinParticipant, String> {
+    let value = utf8_argument(value, "--participant value")?;
+    let (participant_id, agent_spec) =
+        value.split_once('=').ok_or_else(|| "`--participant` must use `<ID>=<SPEC>`".to_owned())?;
+    let participant_id = parse_participant(participant_id.to_owned(), "--participant")?;
+    let factory = parse_agent_factory(OsStr::new(agent_spec), "--participant")?;
+    Ok(RoundRobinParticipant::new(participant_id, factory))
+}
+
+fn parse_agent_factory(value: &OsStr, option: &str) -> Result<Box<dyn AgentFactory>, String> {
+    let specification = utf8_argument(value, option)?;
+    match specification {
+        "random" => Ok(Box::new(RandomAgentFactory)),
+        "min" => Ok(Box::new(MinAgentFactory::best())),
+        _ => {
+            let Some(config_path) = specification.strip_prefix("min:") else {
+                return Err(format!(
+                    "invalid agent spec for `{option}`: {specification:?}; expected random, min, or min:<CONFIG.json>"
+                ));
+            };
+            if config_path.is_empty() {
+                return Err(format!("Min config path for `{option}` cannot be empty"));
+            }
+            let config_path = PathBuf::from(config_path);
+            let config_json = fs::read(&config_path).map_err(|error| {
+                format!(
+                    "failed to read Min config for `{option}` from {}: {error}",
+                    config_path.display()
+                )
+            })?;
+            let config = serde_json::from_slice::<MinConfig>(&config_json).map_err(|error| {
+                format!(
+                    "failed to parse Min config for `{option}` from {}: {error}",
+                    config_path.display()
+                )
+            })?;
+            let factory = MinAgentFactory::new(config).map_err(|error| {
+                format!("invalid Min config for `{option}` from {}: {error}", config_path.display())
+            })?;
+            Ok(Box::new(factory))
+        },
+    }
+}
 fn contains_help(arguments: &[OsString]) -> bool {
     arguments.iter().any(|argument| {
         argument.as_os_str() == OsStr::new("-h") || argument.as_os_str() == OsStr::new("--help")
@@ -301,6 +475,7 @@ fn parse_nonzero_u64(value: &OsStr, option: &str) -> Result<NonZeroU64, String> 
 fn execute(command: Command) -> Result<(), Box<dyn Error>> {
     match command {
         Command::Run(options) => run_batch(options),
+        Command::League(options) => run_league(options),
         Command::Verify(dataset_root) => verify_dataset(dataset_root),
         Command::Stats(dataset_root) => analyze_dataset(dataset_root),
     }
@@ -312,22 +487,41 @@ fn run_batch(options: RunOptions) -> Result<(), Box<dyn Error>> {
         ScheduleSelection::Paired(pairs) => ScheduleMode::Paired { pairs },
     };
     let schedule = Schedule::new(options.matchup.clone(), schedule_mode, options.root_seed);
-    let participant_a_factory = RandomAgentFactory;
-    let participant_b_factory = RandomAgentFactory;
     let runner = MatchRunner::new(
         options.matchup,
-        &participant_a_factory,
-        &participant_b_factory,
-        GameRunConfig::with_action_selection(
-            options.movement_limit,
-            ActionSelectionPolicy::standard_rank_softmax(),
-        ),
+        options.participant_a_factory.as_ref(),
+        options.participant_b_factory.as_ref(),
+        standard_game_run_config(options.movement_limit),
     );
     let report =
         BatchHarness::new(schedule, runner).run(&options.output_root, options.flush_every_games)?;
 
     println!("wrote {} games to {}", report.games_written, report.output_root.display());
     Ok(())
+}
+
+fn run_league(options: LeagueOptions) -> Result<(), Box<dyn Error>> {
+    let league = RoundRobinLeague::new(
+        options.participants,
+        options.pairs_per_matchup,
+        options.root_seed,
+        standard_game_run_config(options.movement_limit),
+    )?;
+    let report = league.run(&options.output_root, options.flush_every_games)?;
+    println!(
+        "wrote {} matchups and {} games to {}",
+        report.matchups_written,
+        report.games_written,
+        report.output_root.display()
+    );
+    Ok(())
+}
+
+fn standard_game_run_config(movement_limit: NonZeroU32) -> GameRunConfig {
+    GameRunConfig::with_action_selection(
+        movement_limit,
+        ActionSelectionPolicy::standard_rank_softmax(),
+    )
 }
 
 fn verify_dataset(dataset_root: PathBuf) -> Result<(), Box<dyn Error>> {

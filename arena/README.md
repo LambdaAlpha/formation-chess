@@ -13,7 +13,10 @@ and configuration parameters. Two participants may use identical descriptors
 while retaining distinct participant IDs.
 
 RandomAgentFactory wraps the bundled RandomAgent baseline and forwards the
-arena-provided seed to RandomAgent::with_seed.
+arena-provided seed to RandomAgent::with_seed. MinAgentFactory validates one
+complete MinConfig before use and records the versioned config ID, full
+serialized configuration, canonical SHA-256, hash-format metadata, config schema
+version, and evaluation-model version in every descriptor.
 
 ## Schedules
 
@@ -189,33 +192,56 @@ position value, fairness, difficulty, or interestingness.
 
 ## Command-line interface
 
-The `formation-chess-arena` binary exposes the complete Arena MVP workflow:
+The `formation-chess-arena` binary exposes single-matchup, round-robin, replay,
+and analysis workflows:
 
-- `run` executes a seeded Random-vs-Random schedule with the standard
-  rank-Softmax selection policy and creates a new dataset directory;
-- `verify` structurally validates the complete dataset and strictly replays every
+- `run` executes one seeded matchup with independently selected Random or Min
+  factories and creates a new Arena dataset directory;
+- `league` executes every unordered participant pair as a color-swapped matchup,
+  writing one independently verifiable Arena dataset per pair;
+- `verify` structurally validates one complete dataset and strictly replays every
   game without writing files; and
 - `stats` performs the same replay-backed validation and creates
   `game_metrics.csv` plus `summary.json`.
 
+Agent specs are `random`, `min` for the source-defined `MinConfig::best()`, or
+`min:<CONFIG.json>` for a serialized Min configuration. File-backed configs are
+deserialized with unknown fields denied and must pass all Min validation limits
+before any output directory is created. The descriptor records the resolved
+configuration rather than only its source path.
+
 A fixed-seat run uses `--fixed <GAMES>`. A color-swapped run uses
 `--paired <PAIRS>` and writes two games per pair. Exactly one mode is required.
-Both seats currently use `RandomAgentFactory`; distinct participant IDs preserve
-participant identity even though both descriptors name the same implementation.
+`--agent-a` and `--agent-b` default to `random` when omitted.
 
 ```text
-cargo run -p formation-chess-arena -- run --output <new-dataset-dir> --seed 42 --paired 100 --movement-limit 500 --participant-a random_a --participant-b random_b --flush-every 10
+cargo run -p formation-chess-arena -- run --output <new-dataset-dir> --seed 42 --paired 100 --movement-limit 500 --participant-a random --agent-a random --participant-b best --agent-b min --flush-every 10
+cargo run -p formation-chess-arena -- run --output <new-dataset-dir> --seed 42 --paired 100 --movement-limit 500 --participant-a random --agent-a random --participant-b candidate --agent-b min:<candidate.json>
 cargo run -p formation-chess-arena -- verify <dataset-dir>
 cargo run -p formation-chess-arena -- stats <dataset-dir>
 ```
 
-`--output`, `--seed`, the schedule count, `--movement-limit`, and both participant
-IDs are required. Participant IDs must be distinct, non-empty, and contain no
-whitespace. `--flush-every` is optional and defaults to one game, retaining the
-most recent complete JSONL prefix if execution is interrupted. The output
-directory must not already exist, and `stats` refuses to overwrite either
-derived output.
+A league requires at least two repeated `--participant <ID>=<SPEC>` values and a
+paired count applied to every matchup. Participant order defines stable matchup
+indices and per-matchup seed derivation. The league root is new and contains:
 
-Use `--help` for the complete option list and `--version` for the Arena package
+- `league.json`: league schema and package versions, root seed, seed-derivation
+  version, pairs per matchup, game-run configuration, complete participant
+  descriptors, matchup seeds, and child dataset directory names;
+- `matchup-000000/`, `matchup-000001/`, ...: ordinary Arena datasets containing
+  `manifest.json` and `games.jsonl`.
+
+Index-only child directory names prevent participant IDs from becoming path
+components. Completed earlier matchups and the current dataset's flushed JSONL
+prefix remain on disk if execution is interrupted.
+
+```text
+cargo run -p formation-chess-arena -- league --output <new-league-dir> --seed 42 --paired 100 --movement-limit 500 --participant random=random --participant best=min --participant candidate=min:<candidate.json> --flush-every 10
+```
+
+Participant IDs must be distinct, non-empty, and contain no whitespace.
+`--flush-every` is optional and defaults to one game. Every output directory must
+not already exist, and `stats` refuses to overwrite either derived output. Use
+`--help` for the complete option list and `--version` for the Arena package
 version. Argument errors exit with status 2; dataset, replay, execution, and
 analysis failures exit with status 1.
