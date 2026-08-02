@@ -67,12 +67,24 @@ the configuration before hashing it. Arena records should store the versioned
 ID, the complete serialized configuration, the hash format version, and the
 SHA-256 instead of storing only the moving best alias.
 
-This configuration contract does not yet implement MinAgent search or static
-evaluation.
+MinEvaluator implements the deterministic static evaluator used at future search
+leaves. It evaluates both players from the same board, normalizes every feature
+group to a fixed signed range, exposes each weighted contribution, and performs
+all aggregation with integer arithmetic. Finished games receive exact utility;
+non-terminal utility remains strictly inside that bound.
+
+The evaluator covers vital safety, current abilities, formation changes,
+control, safe mobility, concrete capture/push/divide opportunities, white-piece
+resources, low-weight material, side-to-move tempo, and explicit control ×
+ability × mobility interactions. Draw actions are detected but deliberately do
+not become a positive soft feature because their value depends on whether the
+position is favorable or unfavorable; search compares their exact zero utility.
+
+MinAgent action selection and search are not implemented yet.
 
 ## Scope
 
-This crate contains the agent framework, random baseline, and versioned Min
-configuration. Web integration, arena orchestration, recording, and statistics
-belong to their respective crates. Min search and evaluation are added in
-separate reviewable changes.
+This crate contains the agent framework, random baseline, versioned Min
+configuration, and static evaluator. Web integration, arena orchestration,
+recording, and statistics belong to their respective crates. Min action
+selection and search remain separate reviewable changes.

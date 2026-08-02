@@ -1,8 +1,15 @@
+mod evaluator;
+
 use std::fmt::Display;
 use std::num::NonZeroU8;
 use std::num::NonZeroU16;
 use std::num::NonZeroU32;
 
+pub use evaluator::MIN_FEATURE_SCALE;
+pub use evaluator::MinEvaluation;
+pub use evaluator::MinEvaluator;
+pub use evaluator::MinFeatureContributions;
+pub use evaluator::MinFeatureVector;
 use serde::Deserialize;
 use serde::Serialize;
 use sha2::Digest;
