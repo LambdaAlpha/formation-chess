@@ -113,6 +113,10 @@ impl<'factory> MatchRunner<'factory> {
         self.config
     }
 
+    pub(crate) fn participant_descriptors(&self) -> (AgentDescriptor, AgentDescriptor) {
+        (self.participant_a.descriptor(), self.participant_b.descriptor())
+    }
+
     /// Execute one plan from an explicitly supplied initial game position.
     ///
     /// The caller may derive randomized scenarios from `plan.scenario_seed`

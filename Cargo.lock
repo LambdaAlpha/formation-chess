@@ -209,7 +209,9 @@ version = "0.2.0"
 dependencies = [
  "formation-chess-agent",
  "formation-chess-core",
+ "serde",
  "serde_json",
+ "sha2",
 ]
 
 [[package]]

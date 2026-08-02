@@ -3,6 +3,9 @@
 //! docs/rules.md (repo root) for the rules and docs/notation.md for
 //! the protocol.
 
+/// Package version of the rules engine.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 pub mod notation;
 
 pub mod game;

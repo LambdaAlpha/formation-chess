@@ -38,3 +38,36 @@ movement legal-action count. Technical decision timing is intentionally omitted.
 A run ends with a core game result, a configured movement-action limit, or the
 exact AgentError produced by a failed analysis. Persistent recording, replay,
 and statistics belong to subsequent layers.
+
+## Persistent records
+
+JsonlDatasetWriter writes to an explicit caller-selected directory and refuses
+to reuse an existing path. The crate therefore does not place generated data in
+the source repository unless the caller deliberately chooses such a path.
+
+Each dataset contains:
+
+- `manifest.json`: schema, Arena and Core versions, seed-derivation version,
+  SHA-256 state-hash algorithm, root seed, schedule, movement limit, participant
+  IDs, and full agent descriptors.
+- `games.jsonl`: one complete game per JSON line. Each line contains plan and
+  seat seeds, canonical initial/final states and hashes, final result,
+  termination or exact agent error, separate Red/Black action counts, and the
+  ordered action list.
+
+Each executed action records its zero-based index, player, phase, structured
+0-based coordinates, human-readable notation, agent score, movement legal-action
+count, structured reaction, reaction notation, and post-action state hash. The
+full movement legal-action list is deterministic from the recorded state and is
+therefore recomputed during analysis rather than duplicated in the dataset;
+placement records have no legal-action count. The initial hash plus each
+post-action hash verifies deterministic replay without duplicating full state at
+every step; hashes are integrity metadata, not gameplay metrics. JSON
+serialization handles quotes, newlines, and other escaping inside agent error
+messages.
+
+JsonlDatasetReader validates the manifest when opened and then streams one
+`games.jsonl` record at a time without loading the dataset into memory. It
+reports one-based JSON line numbers, requires the current record schema and
+zero-based contiguous game IDs, and checks the declared game count at EOF. It
+does not replay actions or calculate statistics; those remain separate stages.

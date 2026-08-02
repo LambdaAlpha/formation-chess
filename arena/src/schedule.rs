@@ -111,6 +111,10 @@ impl Schedule {
         self.mode
     }
 
+    pub(crate) fn matchup(&self) -> &Matchup {
+        &self.matchup
+    }
+
     pub fn root_seed(&self) -> u64 {
         self.root_seed
     }
