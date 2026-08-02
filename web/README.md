@@ -5,11 +5,12 @@
 and Chinese rule text directly from the compiled binary; no frontend build
 step is required.
 
-The server binds to `127.0.0.1` and keeps one in-memory game session. The
-session owns one Agent instance and one action selector for Red and Black. A
-side's control mode decides whether its Agent only analyzes deterministic
-candidates or also executes one candidate through the standard rank-Softmax
-policy.
+The server binds to `127.0.0.1` and keeps one in-memory game session. Red and
+Black each own an independent `MinAgent::best()` instance. The resolved
+`MinConfig::versioned_id()` is exposed as a display name such as
+`Min AI best-v1`; the Web application exposes no random baseline. A side's
+control mode decides whether its Min agent only analyzes candidates or also
+executes the top-one candidate.
 
 ## Run from the workspace
 
@@ -32,7 +33,7 @@ current in-memory game.
 ## UI features
 
 - independent Human or AI control for Red and Black;
-- one Agent per side, also available as a top-five hint provider on human turns;
+- one current Min best instance per side, also available as a top-five hint provider on human turns;
 - manual one-action advancement when the current side is AI;
 - automatic single AI replies after a human action in mixed Human/AI games;
 - AI-vs-AI games that advance only when the user clicks `下一步`;
@@ -75,13 +76,13 @@ name:
   "player": "Red",
   "phase": "movement",
   "controllers": {
-    "red": { "control": "agent", "agent": "Random" },
-    "black": { "control": "agent", "agent": "Random" }
+    "red": { "control": "agent", "agent": "Min AI best-v1" },
+    "black": { "control": "agent", "agent": "Min AI best-v1" }
   },
   "current_controller": {
     "side": "Red",
     "control": "agent",
-    "agent": "Random"
+    "agent": "Min AI best-v1"
   }
 }
 ```
@@ -106,7 +107,9 @@ uses `{ "type": "place", "piece": { ... }, "to": [x, y] }`.
 ```
 
 Candidates are ordered best-first. Each candidate contains the complete action,
-its notation, and its finite Agent score. Array order is the rank.
+its notation, and its finite Agent score. Array order is the rank. The hint
+endpoint preserves caller-selected top-K analysis; the step endpoint has no
+`top_k` field and executes Min's top-one candidate.
 
 ### New games and random placement
 
@@ -120,6 +123,8 @@ its notation, and its finite Agent score. Array order is the rank.
 }
 ```
 
-When `random_placement` is true, the backend alternates the two Agents until
-the placement phase is complete and atomically replaces the session with the
-final layout. No intermediate placements are returned.
+When `random_placement` is true, the backend alternates the two Min best agents
+until the placement phase is complete and atomically replaces the session with
+the final layout. This setup-only path uses independent standard rank-Softmax
+selectors to retain layout variation; normal Agent steps remain top-one. No
+intermediate placements are returned.

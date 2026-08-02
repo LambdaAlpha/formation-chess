@@ -3,8 +3,12 @@ import {
     render,
     setStatus,
     showAnalysis,
+    showAnalysisLoading,
+    hideAnalysisLoading,
     clearAnalysis,
     setBusy,
+    showLoading,
+    hideLoading,
     showPlayedAction,
 } from './ui.js';
 import {
@@ -18,6 +22,7 @@ import {
 
 let currentState = null;
 let requestInFlight = false;
+let analysisRequestId = 0;
 
 async function main() {
     init(handleCommand);
@@ -42,8 +47,20 @@ function versionedRequest() {
     return { revision: currentState.revision, side: currentState.player };
 }
 
+function invalidateAnalysis() {
+    analysisRequestId += 1;
+    clearAnalysis();
+}
+
 async function handleCommand(command) {
-    if (requestInFlight || !currentState) return;
+    if (!currentState) return;
+    if (command.type === 'agent_analyze') {
+        if (!requestInFlight) void analyze();
+        return;
+    }
+    if (requestInFlight) return;
+
+    invalidateAnalysis();
     requestInFlight = true;
     setBusy(true);
 
@@ -52,10 +69,7 @@ async function handleCommand(command) {
             await createNewGame(command);
         } else if (command.type === 'undo') {
             await undo();
-        } else if (command.type === 'agent_analyze') {
-            await analyze();
         } else if (command.type === 'agent_step') {
-            clearAnalysis();
             await runAgentStep(false);
         } else if (command.type === 'submit_action') {
             await submitAction(command.action);
@@ -71,9 +85,18 @@ async function handleCommand(command) {
 async function createNewGame(command) {
     clearAnalysis();
     const { type, ...config } = command;
-    const state = await postNew({ ...versionedRequest(), ...config });
+    const loading = Boolean(config.random_placement);
+    if (loading) showLoading('Min AI 正在生成随机布局…');
+
+    let state;
+    try {
+        state = await postNew({ ...versionedRequest(), ...config });
+    } finally {
+        if (loading) hideLoading();
+    }
+
     renderState(state);
-    setStatus(config.random_placement ? '随机布局已生成' : '新棋局已创建');
+    setStatus(loading ? '随机布局已生成' : '新棋局已创建');
     await maybeRunAutomaticAgent();
 }
 
@@ -89,10 +112,26 @@ async function undo() {
 }
 
 async function analyze() {
-    const response = await postAgentAnalyze({ ...versionedRequest(), top_k: 5 });
-    if (!currentState || response.revision !== currentState.revision) return;
-    showAnalysis(response);
-    setStatus('已生成 ' + response.candidates.length + ' 个候选');
+    const requestId = ++analysisRequestId;
+    const request = versionedRequest();
+    showAnalysisLoading();
+
+    try {
+        const response = await postAgentAnalyze({ ...request, top_k: 5 });
+        if (
+            requestId !== analysisRequestId ||
+            !currentState ||
+            response.revision !== currentState.revision
+        ) return;
+        showAnalysis(response);
+        setStatus('已生成 ' + response.candidates.length + ' 个候选');
+    } catch (error) {
+        if (requestId !== analysisRequestId) return;
+        clearAnalysis();
+        setStatus('网络错误：' + error.message, true);
+    } finally {
+        if (requestId === analysisRequestId) hideAnalysisLoading();
+    }
 }
 
 async function submitAction(action) {

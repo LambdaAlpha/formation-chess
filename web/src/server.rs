@@ -15,8 +15,7 @@ use axum::routing::get;
 use axum::routing::post;
 use formation_chess_agent::ActionSelectionPolicy;
 use formation_chess_agent::ActionSelector;
-use formation_chess_agent::Agent;
-use formation_chess_agent::RandomAgent;
+use formation_chess_agent::MinAgent;
 use formation_chess_agent::analyze_agent;
 use formation_chess_agent::play_agent_turn;
 use formation_chess_core::game::Game;
@@ -34,21 +33,58 @@ struct Assets;
 
 struct PlayerRuntime {
     control: ApiControl,
-    agent: Box<dyn Agent>,
+    agent: MinAgent,
+    agent_display_name: String,
     selector: ActionSelector,
 }
 
 impl PlayerRuntime {
-    fn random(control: ApiControl) -> Self {
+    fn best(control: ApiControl) -> Self {
+        let agent = MinAgent::best();
+        let agent_display_name = format!("Min AI {}", agent.config().versioned_id());
         Self {
             control,
-            agent: Box::new(RandomAgent::new()),
-            selector: ActionSelector::new(ActionSelectionPolicy::standard_rank_softmax()),
+            agent,
+            agent_display_name,
+            selector: ActionSelector::new(ActionSelectionPolicy::Best),
         }
     }
 
     fn info(&self) -> ApiControllerInfo {
-        ApiControllerInfo { control: self.control, agent: self.agent.name().to_owned() }
+        ApiControllerInfo { control: self.control, agent: self.agent_display_name.clone() }
+    }
+}
+
+struct PreparedAgentAnalysis {
+    game: Game,
+    revision: u64,
+    side: String,
+    agent: MinAgent,
+    agent_display_name: String,
+    top_k: NonZeroU8,
+}
+
+impl PreparedAgentAnalysis {
+    fn run(mut self) -> Result<ApiAgentAnalyzeResponse, String> {
+        let analysis = analyze_agent(&self.game, &mut self.agent, self.top_k)
+            .map_err(|error| error.to_string())?;
+        let resolver = NotationResolver::new(self.game.board(), self.game.phase());
+        let candidates = analysis
+            .candidates
+            .into_iter()
+            .map(|candidate| ApiAgentCandidate {
+                action: ApiAction::from_action(candidate.action),
+                notation: resolver.fmt_action(&candidate.action),
+                score: candidate.score,
+            })
+            .collect();
+
+        Ok(ApiAgentAnalyzeResponse {
+            revision: self.revision,
+            side: self.side,
+            agent: self.agent_display_name,
+            candidates,
+        })
     }
 }
 
@@ -76,8 +112,8 @@ impl GameSession {
             game,
             history: Vec::new(),
             revision,
-            red: PlayerRuntime::random(controllers.red),
-            black: PlayerRuntime::random(controllers.black),
+            red: PlayerRuntime::best(controllers.red),
+            black: PlayerRuntime::best(controllers.black),
         }
     }
 
@@ -90,13 +126,6 @@ impl GameSession {
         match player {
             Player::Red => self.red.control,
             Player::Black => self.black.control,
-        }
-    }
-
-    fn agent_name(&self, player: Player) -> String {
-        match player {
-            Player::Red => self.red.agent.name().to_owned(),
-            Player::Black => self.black.agent.name().to_owned(),
         }
     }
 
@@ -145,34 +174,24 @@ impl GameSession {
         })
     }
 
-    fn analyze(
-        &mut self, request: &ApiAgentAnalyzeRequest,
-    ) -> Result<ApiAgentAnalyzeResponse, String> {
+    fn prepare_analysis(
+        &self, request: &ApiAgentAnalyzeRequest,
+    ) -> Result<PreparedAgentAnalysis, String> {
         let player = self.validate_request(request.revision, &request.side)?;
         let top_k = NonZeroU8::new(request.top_k)
             .ok_or_else(|| "top_k must be greater than zero".to_owned())?;
-        let game = self.game.clone();
-        let analysis = match player {
-            Player::Red => analyze_agent(&game, self.red.agent.as_mut(), top_k),
-            Player::Black => analyze_agent(&game, self.black.agent.as_mut(), top_k),
-        }
-        .map_err(|error| error.to_string())?;
-        let resolver = NotationResolver::new(game.board(), game.phase());
-        let candidates = analysis
-            .candidates
-            .into_iter()
-            .map(|candidate| ApiAgentCandidate {
-                action: ApiAction::from_action(candidate.action),
-                notation: resolver.fmt_action(&candidate.action),
-                score: candidate.score,
-            })
-            .collect();
+        let runtime = match player {
+            Player::Red => &self.red,
+            Player::Black => &self.black,
+        };
 
-        Ok(ApiAgentAnalyzeResponse {
+        Ok(PreparedAgentAnalysis {
+            game: self.game.clone(),
             revision: self.revision,
             side: player_to_str(player),
-            agent: self.agent_name(player),
-            candidates,
+            agent: runtime.agent.clone(),
+            agent_display_name: runtime.agent_display_name.clone(),
+            top_k,
         })
     }
 
@@ -188,10 +207,10 @@ impl GameSession {
         let resolver = NotationResolver::new(snapshot.board(), snapshot.phase());
         let turn = match player {
             Player::Red => {
-                play_agent_turn(&mut self.game, self.red.agent.as_mut(), &mut self.red.selector)
+                play_agent_turn(&mut self.game, &mut self.red.agent, &mut self.red.selector)
             },
             Player::Black => {
-                play_agent_turn(&mut self.game, self.black.agent.as_mut(), &mut self.black.selector)
+                play_agent_turn(&mut self.game, &mut self.black.agent, &mut self.black.selector)
             },
         }
         .map_err(|error| error.to_string())?;
@@ -315,9 +334,20 @@ async fn legal_actions_handler(
 async fn agent_analyze_handler(
     State(state): State<SharedState>, Json(request): Json<ApiAgentAnalyzeRequest>,
 ) -> ApiResult<ApiAgentAnalyzeResponse> {
-    let mut session = state.session.lock().unwrap();
-    session
-        .analyze(&request)
+    let prepared = {
+        let session = state.session.lock().unwrap();
+        session.prepare_analysis(&request)
+    }
+    .map_err(|error| api_error(StatusCode::UNPROCESSABLE_ENTITY, error))?;
+
+    tokio::task::spawn_blocking(move || prepared.run())
+        .await
+        .map_err(|error| {
+            api_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("AI analysis task failed: {error}"),
+            )
+        })?
         .map(Json)
         .map_err(|error| api_error(StatusCode::UNPROCESSABLE_ENTITY, error))
 }
@@ -351,8 +381,8 @@ async fn new_handler(
     let config =
         request.to_game_config().map_err(|error| api_error(StatusCode::BAD_REQUEST, error))?;
     let mut game = Game::new(config).map_err(|error| api_error(StatusCode::BAD_REQUEST, error))?;
-    let mut red = PlayerRuntime::random(request.controllers.red);
-    let mut black = PlayerRuntime::random(request.controllers.black);
+    let mut red = PlayerRuntime::best(request.controllers.red);
+    let mut black = PlayerRuntime::best(request.controllers.black);
     if request.random_placement {
         complete_random_placement(&mut game, &mut red, &mut black)
             .map_err(|error| api_error(StatusCode::UNPROCESSABLE_ENTITY, error))?;
@@ -366,14 +396,17 @@ async fn new_handler(
 fn complete_random_placement(
     game: &mut Game, red: &mut PlayerRuntime, black: &mut PlayerRuntime,
 ) -> Result<(), String> {
+    let policy = ActionSelectionPolicy::standard_rank_softmax();
+    let mut red_selector = ActionSelector::new(policy);
+    let mut black_selector = ActionSelector::new(policy);
     let placement_count = game.red_pool().len() + game.black_pool().len();
     for _ in 0 .. placement_count {
         if game.phase() == Phase::Move {
             return Ok(());
         }
         let result = match game.player() {
-            Player::Red => play_agent_turn(game, red.agent.as_mut(), &mut red.selector),
-            Player::Black => play_agent_turn(game, black.agent.as_mut(), &mut black.selector),
+            Player::Red => play_agent_turn(game, &mut red.agent, &mut red_selector),
+            Player::Black => play_agent_turn(game, &mut black.agent, &mut black_selector),
         };
         result.map_err(|error| error.to_string())?;
     }
@@ -415,17 +448,24 @@ mod tests {
         let session = GameSession::new(game, controllers, 17);
         let state = session.state();
 
+        let expected_agent = format!("Min AI {}", MinAgent::best().config().versioned_id());
         assert_eq!(state.revision, 17, "revision should be preserved");
         assert_eq!(state.current_controller.side, "Red", "side must identify the runtime");
-        assert_eq!(state.controllers.red.agent, "Random", "red agent should be named");
-        assert_eq!(state.controllers.black.agent, "Random", "black agent should be named");
+        assert_eq!(state.controllers.red.agent, expected_agent, "red agent should be versioned");
+        assert_eq!(
+            state.controllers.black.agent, expected_agent,
+            "black agent should be versioned"
+        );
+        assert_eq!(state.current_controller.agent, expected_agent);
+        assert_eq!(session.red.selector.top_k(), NonZeroU8::MIN, "step must request top one");
+        assert_eq!(session.black.selector.top_k(), NonZeroU8::MIN, "step must request top one");
     }
 
     #[test]
-    fn random_agents_complete_standard_placement() {
+    fn min_best_agents_complete_standard_random_placement() {
         let mut game = Game::new(GameConfig::default()).expect("default game must be valid");
-        let mut red = PlayerRuntime::random(ApiControl::Agent);
-        let mut black = PlayerRuntime::random(ApiControl::Agent);
+        let mut red = PlayerRuntime::best(ApiControl::Agent);
+        let mut black = PlayerRuntime::best(ApiControl::Agent);
 
         complete_random_placement(&mut game, &mut red, &mut black)
             .expect("standard placement should complete");
@@ -433,6 +473,32 @@ mod tests {
         assert_eq!(game.phase(), Phase::Move, "placement should be complete");
         assert!(game.red_pool().is_empty(), "red pool should be empty");
         assert!(game.black_pool().is_empty(), "black pool should be empty");
+    }
+
+    #[test]
+    fn prepared_analysis_remains_bound_to_its_original_revision() {
+        let game = Game::new(GameConfig::default()).expect("default game must be valid");
+        let controllers =
+            ApiControllerSettings { red: ApiControl::Human, black: ApiControl::Agent };
+        let mut session = GameSession::new(game, controllers, 0);
+        let request = ApiAgentAnalyzeRequest { revision: 0, side: "Red".to_owned(), top_k: 1 };
+        let prepared = session.prepare_analysis(&request).expect("prepare red analysis snapshot");
+
+        let action = ApiActionRequest {
+            revision: 0,
+            side: "Red".to_owned(),
+            action: ApiAction::Place {
+                piece: ApiPieceRef::from_piece(Piece::RED_PLAYER_PIECES[0]),
+                to: [0, 5],
+            },
+        };
+        session.apply_human_action(&action).expect("red placement should succeed");
+        let response = prepared.run().expect("snapshot analysis should complete");
+
+        assert_eq!(response.revision, 0, "analysis must retain its snapshot revision");
+        assert_eq!(session.revision, 1, "the live session should advance independently");
+        assert_eq!(response.side, "Red");
+        assert_eq!(response.candidates.len(), 1);
     }
 
     #[test]

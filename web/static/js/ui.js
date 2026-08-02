@@ -16,6 +16,7 @@ let gameState = null;
 let selection = { type: null };
 let onCommand = null;
 let busy = false;
+let analysisBusy = false;
 let analysisCandidates = [];
 let selectedCandidateIndex = null;
 
@@ -94,7 +95,7 @@ function bindAnalysis() {
 
 function bindOverlay() {
     document.getElementById('overlay').addEventListener('click', (event) => {
-        if (event.target === event.currentTarget) closeAllPanels();
+        if (!busy && event.target === event.currentTarget) closeAllPanels();
     });
     for (const button of document.querySelectorAll('.panel-close')) {
         button.addEventListener('click', closeAllPanels);
@@ -229,7 +230,7 @@ function refreshInteractivity() {
 
     document.getElementById('btn-new').disabled = busy;
     document.getElementById('btn-custom').disabled = busy;
-    document.getElementById('btn-agent-hint').disabled = busy || !unfinished;
+    document.getElementById('btn-agent-hint').disabled = busy || analysisBusy || !unfinished;
     document.getElementById('btn-agent-step').classList.toggle('hidden', !canStep);
     document.getElementById('btn-agent-step').disabled = busy || !canStep;
     document.getElementById('btn-pass').classList.toggle('hidden', !movement || !unfinished);
@@ -246,6 +247,19 @@ export function setBusy(value) {
     busy = value;
     document.getElementById('app').classList.toggle('is-busy', busy);
     refreshInteractivity();
+}
+
+export function showLoading(message) {
+    document.getElementById('loading-message').textContent = message;
+    document.getElementById('overlay').classList.remove('hidden');
+    document.getElementById('panel-custom').classList.add('hidden');
+    document.getElementById('panel-rules').classList.add('hidden');
+    document.getElementById('panel-loading').classList.remove('hidden');
+}
+
+export function hideLoading() {
+    document.getElementById('panel-loading').classList.add('hidden');
+    document.getElementById('overlay').classList.add('hidden');
 }
 
 let statusTimeout = null;
@@ -424,16 +438,49 @@ export function hidePopup() {
     document.getElementById('popup-choose').classList.add('hidden');
 }
 
+export function showAnalysisLoading() {
+    analysisBusy = true;
+    analysisCandidates = [];
+    selectedCandidateIndex = null;
+    clearCandidatePreview();
+
+    document.getElementById('analysis-meta').textContent = 'Min AI 正在分析局面…';
+    const container = document.getElementById('analysis-candidates');
+    container.innerHTML = '';
+    const loading = document.createElement('div');
+    loading.className = 'analysis-loading';
+    const spinner = document.createElement('span');
+    spinner.className = 'loading-spinner';
+    spinner.setAttribute('aria-hidden', 'true');
+    const text = document.createElement('span');
+    text.textContent = '正在计算候选';
+    loading.append(spinner, text);
+    container.appendChild(loading);
+    refreshInteractivity();
+}
+
+export function hideAnalysisLoading() {
+    if (!analysisBusy) return;
+    analysisBusy = false;
+    const container = document.getElementById('analysis-candidates');
+    if (container.querySelector('.analysis-loading')) {
+        document.getElementById('analysis-meta').textContent = '点击“AI 提示”获取当前局面的候选。';
+        container.innerHTML = '';
+    }
+    refreshInteractivity();
+}
+
 export function showAnalysis(response) {
     if (!gameState || response.revision !== gameState.revision) return;
+    analysisBusy = false;
     analysisCandidates = response.candidates || [];
     selectedCandidateIndex = null;
     clearCandidatePreview();
-    clearPoolSelection();
 
     const meta = document.getElementById('analysis-meta');
     meta.textContent = response.agent + ' · ' + analysisCandidates.length + ' 个候选';
     renderAnalysisCandidates();
+    refreshInteractivity();
 }
 
 function renderAnalysisCandidates() {
@@ -508,19 +555,20 @@ function clearAnalysisSelection() {
 }
 
 export function clearAnalysis() {
+    analysisBusy = false;
     analysisCandidates = [];
     selectedCandidateIndex = null;
     clearCandidatePreview();
     document.getElementById('analysis-meta').textContent = '点击“AI 提示”获取当前局面的候选。';
     document.getElementById('analysis-candidates').innerHTML = '';
-    updateApplyButton();
+    refreshInteractivity();
 }
 
 function updateApplyButton() {
     const button = document.getElementById('btn-apply-candidate');
     const human = Boolean(gameState && gameState.can_human_act);
     button.classList.toggle('hidden', !human);
-    button.disabled = busy || !human || selectedCandidateIndex === null;
+    button.disabled = busy || analysisBusy || !human || selectedCandidateIndex === null;
 }
 
 function openCustomPanel() {
@@ -591,6 +639,7 @@ function closeAllPanels() {
     document.getElementById('overlay').classList.add('hidden');
     document.getElementById('panel-custom').classList.add('hidden');
     document.getElementById('panel-rules').classList.add('hidden');
+    document.getElementById('panel-loading').classList.add('hidden');
 }
 
 function clampSize(value, min, max) {
