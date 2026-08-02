@@ -2,14 +2,15 @@
 //!
 //! The crate defines stable participant identities, seeded agent factories,
 //! deterministic fixed or color-paired schedules, bounded single-game
-//! execution, and versioned JSON Lines datasets. Replay and statistics are
-//! added later.
+//! execution, versioned JSON Lines datasets, and strict replay verification.
+//! Descriptive statistics are added later.
 
 /// Package version of the Arena framework.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 mod agent_factory;
 pub mod record;
+mod replay;
 mod runner;
 mod schedule;
 mod storage;
@@ -22,6 +23,8 @@ pub use record::GameRecord;
 pub use record::RECORD_SCHEMA_VERSION;
 pub use record::RecordError;
 pub use record::STATE_HASH_ALGORITHM;
+pub use replay::ReplayError;
+pub use replay::ReplayVerifier;
 pub use runner::ExecutedAction;
 pub use runner::GameRun;
 pub use runner::GameRunConfig;

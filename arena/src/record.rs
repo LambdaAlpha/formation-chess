@@ -498,14 +498,14 @@ pub struct ActionCountsBySide {
 }
 
 impl ActionCountsBySide {
-    fn record(&mut self, player: Player, phase: Phase, action: Action) {
+    pub(crate) fn record(&mut self, player: Player, phase: Phase, action: Action) {
         match player {
             Player::Red => self.red.record(phase, action),
             Player::Black => self.black.record(phase, action),
         }
     }
 
-    fn movement_actions(&self) -> u64 {
+    pub(crate) fn movement_actions(&self) -> u64 {
         self.red.movement_phase_actions + self.black.movement_phase_actions
     }
 }

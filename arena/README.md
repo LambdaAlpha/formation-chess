@@ -36,8 +36,8 @@ to the runner.
 Every successful action retains its player, phase, action, score, reaction, and
 movement legal-action count. Technical decision timing is intentionally omitted.
 A run ends with a core game result, a configured movement-action limit, or the
-exact AgentError produced by a failed analysis. Persistent recording, replay,
-and statistics belong to subsequent layers.
+exact AgentError produced by a failed analysis. Persistent recording and strict
+replay verification are provided below; statistics remain a subsequent layer.
 
 ## Persistent records
 
@@ -71,3 +71,16 @@ JsonlDatasetReader validates the manifest when opened and then streams one
 reports one-based JSON line numbers, requires the current record schema and
 zero-based contiguous game IDs, and checks the declared game count at EOF. It
 does not replay actions or calculate statistics; those remain separate stages.
+## Replay verification
+
+ReplayVerifier strictly replays an immutable GameRecord from its canonical
+initial state. It verifies the record schema, initial and final state hashes,
+zero-based action indices, player and phase, finite scores, movement legal-action
+counts, core action legality, action and reaction notation, structured reactions,
+post-action hashes, Red/Black action counts, final state and result, and the
+recorded termination context.
+
+Verification returns the first ReplayError with game and optional action context.
+It never repairs or migrates data. Agent scores are not reproducible and are only
+checked for finiteness; an AgentFailure payload is retained verbatim while its
+player and phase are checked against the final replay state.
