@@ -45,6 +45,7 @@ pub use min::MIN_MAX_NODE_BUDGET;
 pub use min::MIN_MAX_SEARCH_DEPTH;
 pub use min::MIN_MAX_SEARCH_WIDTH;
 pub use min::MIN_TERMINAL_UTILITY;
+pub use min::MinAgent;
 pub use min::MinConfig;
 pub use min::MinConfigError;
 pub use min::MinEvaluation;

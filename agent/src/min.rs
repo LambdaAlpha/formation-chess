@@ -1,10 +1,13 @@
+mod agent;
 mod evaluator;
+mod placement;
 
 use std::fmt::Display;
 use std::num::NonZeroU8;
 use std::num::NonZeroU16;
 use std::num::NonZeroU32;
 
+pub use agent::MinAgent;
 pub use evaluator::MIN_FEATURE_SCALE;
 pub use evaluator::MinEvaluation;
 pub use evaluator::MinEvaluator;

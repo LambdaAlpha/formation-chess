@@ -80,11 +80,24 @@ ability × mobility interactions. Draw actions are detected but deliberately do
 not become a positive soft feature because their value depends on whether the
 position is favorable or unfavorable; search compares their exact zero utility.
 
-MinAgent action selection and search are not implemented yet.
+MinAgent now implements deterministic placement analysis. It scans unique
+piece-position combinations lazily rather than materializing the Cartesian
+product, statically orders a bounded root beam, minimizes selected opponent
+placements, and maximizes selected third-ply responses. Every simulated
+placement probe consumes the configured node budget. When a budget cannot scan
+the full candidate space, deterministic spread sampling covers the complete
+Cartesian range instead of exhausting one piece or board region first. The
+remaining budget is divided across retained branches, favoring the current
+static ordering only when indivisible remainder nodes exist.
+
+Placement search stops when the configured depth is reached, the node budget is
+exhausted, or the game enters movement. Exact terminal utility and bounded
+static leaf utility remain shared with MinEvaluator. Movement analysis is still
+an explicit follow-up and currently returns a decision error.
 
 ## Scope
 
 This crate contains the agent framework, random baseline, versioned Min
-configuration, and static evaluator. Web integration, arena orchestration,
-recording, and statistics belong to their respective crates. Min action
-selection and search remain separate reviewable changes.
+configuration, static evaluator, and placement search. Web integration, arena
+orchestration, recording, and statistics belong to their respective crates. Min
+movement search remains a separate reviewable change.
