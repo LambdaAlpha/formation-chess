@@ -9,6 +9,7 @@
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 mod agent_factory;
+mod batch;
 pub mod record;
 mod replay;
 mod runner;
@@ -18,6 +19,12 @@ mod storage;
 pub use agent_factory::AgentDescriptor;
 pub use agent_factory::AgentFactory;
 pub use agent_factory::RandomAgentFactory;
+pub use batch::BatchError;
+pub use batch::BatchHarness;
+pub use batch::BatchReport;
+pub use batch::DefaultScenarioFactory;
+pub use batch::ScenarioError;
+pub use batch::ScenarioFactory;
 pub use record::ArenaManifest;
 pub use record::GameRecord;
 pub use record::RECORD_SCHEMA_VERSION;

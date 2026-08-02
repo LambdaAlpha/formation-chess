@@ -84,3 +84,22 @@ Verification returns the first ReplayError with game and optional action context
 It never repairs or migrates data. Agent scores are not reproducible and are only
 checked for finiteness; an AgentFailure payload is retained verbatim while its
 player and phase are checked against the final replay state.
+
+## Batch execution
+
+BatchHarness consumes a fresh Schedule, a matching MatchRunner, and a
+ScenarioFactory, then executes and writes games sequentially. BatchHarness::new
+uses DefaultScenarioFactory, which returns Game::default() for every scenario
+seed; BatchHarness::with_scenario accepts a deterministic custom factory.
+
+BatchHarness::run requires a nonzero game flush interval and calls the dataset
+writer's flush method after every N successfully written games. Successful
+completion also flushes the final shorter interval. If the process is interrupted,
+complete records through the latest flush checkpoint remain available; later
+buffered data may be absent. The resulting prefix is intentionally not resumable
+and will fail the reader's final game-count validation.
+
+AgentFailure is a recorded game termination, so the harness writes that game and
+continues with the next plan. Scenario generation, matchup, record conversion,
+and dataset I/O errors stop the batch immediately. The harness does not run
+matches in parallel.
