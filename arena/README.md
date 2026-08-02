@@ -36,8 +36,8 @@ to the runner.
 Every successful action retains its player, phase, action, score, reaction, and
 movement legal-action count. Technical decision timing is intentionally omitted.
 A run ends with a core game result, a configured movement-action limit, or the
-exact AgentError produced by a failed analysis. Persistent recording and strict
-replay verification are provided below; statistics remain a subsequent layer.
+exact AgentError produced by a failed analysis. Persistent recording, strict
+replay verification, and per-game descriptive metrics are provided below.
 
 ## Persistent records
 
@@ -103,3 +103,39 @@ AgentFailure is a recorded game termination, so the harness writes that game and
 continues with the next plan. Scenario generation, matchup, record conversion,
 and dataset I/O errors stop the batch immediately. The harness does not run
 matches in parallel.
+
+## Per-game metrics
+
+GameMetrics::from_record strictly replays the complete GameRecord before
+returning any values. Invalid or tampered records return MetricsError instead of
+producing partial metrics. Agent failure diagnostic text remains in the raw
+record and is deliberately excluded from metrics; its termination category,
+player, and phase are retained.
+
+Each GameMetrics value contains:
+
+- game, pair, seat, participant, result, termination, and last-action dimensions;
+- separate Red and Black placement/movement action counts;
+- counts and all-action ratios for placement, move, capture, push, draw, divide,
+  pass, and resignation actions;
+- count, minimum, maximum, mean, median, P25, P75, P90, and P95 of movement
+  legal-action counts;
+- occupancy additions, removals, and replacements across reactions;
+- final board counts by color plus Red, Black, and White pool counts; and
+- total state visits, unique states, repeated visits, and unique-state ratio.
+
+Action-type ratios use all actions in the game as their denominator. A zero-action
+game stores null ratios instead of claiming that every action type occurred at
+zero percent. Empty legal-action distributions likewise store null summary
+values. Percentiles use the Type-7 definition with index `(n - 1) * p` and linear
+interpolation between adjacent sorted observations.
+
+State visits include the initial state and every post-action state. Unique states
+are identified by replay-verified SHA-256 state hashes, repeated visits equal
+total visits minus unique states, and the unique-state ratio divides unique
+states by total visits. Reaction counts classify each verified position change
+from its pre-action occupancy to its resulting occupancy.
+
+These metrics are descriptive. They do not estimate position value, advantage,
+fairness, difficulty, depth, quality, or interestingness, and they contain no
+technical timing, stability, or human-player measurements.

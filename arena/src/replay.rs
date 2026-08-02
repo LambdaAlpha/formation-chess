@@ -6,6 +6,7 @@ use formation_chess_core::action::Action;
 use formation_chess_core::action::GameResult;
 use formation_chess_core::action::Move;
 use formation_chess_core::action::Place;
+use formation_chess_core::action::Reaction;
 use formation_chess_core::game::Game;
 use formation_chess_core::game::Phase;
 use formation_chess_core::notation::NotationResolver;
@@ -39,40 +40,53 @@ impl ReplayVerifier {
     /// finiteness. Agent failure text is retained data; its player and phase are
     /// verified against the final replay state.
     pub fn verify(record: &GameRecord) -> Result<(), ReplayError> {
-        if record.schema_version != RECORD_SCHEMA_VERSION {
-            return Err(game_error(
-                record,
-                format!("unsupported schema version {}", record.schema_version),
-            ));
-        }
-        verify_state_hash(record, "initial", &record.initial_state, &record.initial_state_sha256)?;
-        let mut replay = record.initial_state.parse::<Game>().map_err(|message| {
-            game_error(record, format!("initial state cannot be parsed: {message}"))
-        })?;
-        if replay.to_string() != record.initial_state {
-            return Err(game_error(record, "initial state is not canonical"));
-        }
-
-        let mut action_counts = ActionCountsBySide::default();
-        for (index, action_record) in record.actions.iter().enumerate() {
-            let action_index =
-                u64::try_from(index).map_err(|_| game_error(record, "action index exceeds u64"))?;
-            verify_action(record, &mut replay, &mut action_counts, action_index, action_record)?;
-        }
-
-        verify_state_hash(record, "final", &record.final_state, &record.final_state_sha256)?;
-        let replayed_final_state = replay.to_string();
-        if replayed_final_state != record.final_state {
-            return Err(game_error(record, "final state differs from replayed actions"));
-        }
-        if GameResultRecord::from(replay.result()) != record.final_game_result {
-            return Err(game_error(record, "final game result differs from replayed state"));
-        }
-        if action_counts != record.action_counts {
-            return Err(game_error(record, "action counts differ from replayed actions"));
-        }
-        verify_termination(record, &replay, &action_counts)
+        replay_with(record, |_, _, _, _| {}).map(|_| ())
     }
+}
+
+pub(crate) fn replay_with<F>(record: &GameRecord, mut observer: F) -> Result<Game, ReplayError>
+where F: FnMut(&Game, &ActionRecord, Action, &Reaction) {
+    if record.schema_version != RECORD_SCHEMA_VERSION {
+        return Err(game_error(
+            record,
+            format!("unsupported schema version {}", record.schema_version),
+        ));
+    }
+    verify_state_hash(record, "initial", &record.initial_state, &record.initial_state_sha256)?;
+    let mut replay = record.initial_state.parse::<Game>().map_err(|message| {
+        game_error(record, format!("initial state cannot be parsed: {message}"))
+    })?;
+    if replay.to_string() != record.initial_state {
+        return Err(game_error(record, "initial state is not canonical"));
+    }
+
+    let mut action_counts = ActionCountsBySide::default();
+    for (index, action_record) in record.actions.iter().enumerate() {
+        let action_index =
+            u64::try_from(index).map_err(|_| game_error(record, "action index exceeds u64"))?;
+        verify_action(
+            record,
+            &mut replay,
+            &mut action_counts,
+            action_index,
+            action_record,
+            &mut observer,
+        )?;
+    }
+
+    verify_state_hash(record, "final", &record.final_state, &record.final_state_sha256)?;
+    let replayed_final_state = replay.to_string();
+    if replayed_final_state != record.final_state {
+        return Err(game_error(record, "final state differs from replayed actions"));
+    }
+    if GameResultRecord::from(replay.result()) != record.final_game_result {
+        return Err(game_error(record, "final game result differs from replayed state"));
+    }
+    if action_counts != record.action_counts {
+        return Err(game_error(record, "action counts differ from replayed actions"));
+    }
+    verify_termination(record, &replay, &action_counts)?;
+    Ok(replay)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -97,10 +111,13 @@ impl Display for ReplayError {
 
 impl Error for ReplayError {}
 
-fn verify_action(
+fn verify_action<F>(
     record: &GameRecord, replay: &mut Game, action_counts: &mut ActionCountsBySide,
-    action_index: u64, stored: &ActionRecord,
-) -> Result<(), ReplayError> {
+    action_index: u64, stored: &ActionRecord, observer: &mut F,
+) -> Result<(), ReplayError>
+where
+    F: FnMut(&Game, &ActionRecord, Action, &Reaction),
+{
     if stored.action_index != action_index {
         return Err(action_error(
             record,
@@ -140,6 +157,7 @@ fn verify_action(
         return Err(action_error(record, action_index, "reaction notation differs from replay"));
     }
 
+    observer(replay, stored, action, &reaction);
     let applied_reaction = replay.action(action).map_err(|message| {
         action_error(record, action_index, format!("validated action failed execution: {message}"))
     })?;
