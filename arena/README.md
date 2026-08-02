@@ -139,3 +139,47 @@ from its pre-action occupancy to its resulting occupancy.
 These metrics are descriptive. They do not estimate position value, advantage,
 fairness, difficulty, depth, quality, or interestingness, and they contain no
 technical timing, stability, or human-player measurements.
+## Dataset analysis
+
+DatasetAnalyzer::analyze reads a complete persisted dataset, strictly replays
+all games through GameMetrics, and creates two deterministic derived files in
+the dataset directory:
+
+- `game_metrics.csv`: one flat row per game, ordered by `game_id`;
+- `summary.json`: versioned aggregate metrics for the complete dataset.
+
+Analysis requires the game count declared by the manifest and rejects records
+whose pair fields or participant seats differ from the manifest schedule. It
+never modifies `manifest.json` or `games.jsonl`, never overwrites existing
+derived outputs, and writes through temporary files that are removed when a
+normal analysis error is returned. Derived files contain no timestamp, so the
+same records and Arena version produce byte-identical output.
+
+The CSV contains the game and pair dimensions, Red/Black participant IDs,
+result, flattened termination context, flattened last action, Red/Black phase
+action counts, every action-type count and ratio, the legal-movement
+distribution, reaction counts, final board/pool counts, and state-visit metrics.
+Numeric values are unquoted, missing optional values are empty, and text fields
+are quoted with embedded quotes doubled according to standard CSV escaping.
+Agent failure diagnostic text remains only in `games.jsonl`; the CSV retains the
+failure category, player, and phase without duplicating log text.
+
+The JSON summary contains:
+
+- Red-win, Black-win, draw, and unfinished counts and rates;
+- completed, movement-limit, and agent-failure counts and rates;
+- each participant's overall, Red-seat, and Black-seat win/loss/draw/unfinished
+  counts and rates, plus agent-failure count and rate;
+- exact per-game total/placement/movement action distributions for all actions
+  and for each color, global action-type counts and rates, and the exact
+  all-movement legal-action distribution;
+- reaction totals and per-game distributions;
+- per-game final board and pool material distributions; and
+- summed state visits plus per-game visit, uniqueness, repetition, and
+  unique-state-ratio distributions.
+
+Integer distributions are accumulated as frequency maps, so exact Type-7
+percentiles do not require retaining every integer observation. Only one finite
+unique-state ratio per game is retained for its floating-point distribution.
+Like GameMetrics, the summary is descriptive and does not infer game quality,
+position value, fairness, difficulty, or interestingness.

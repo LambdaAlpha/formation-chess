@@ -3,12 +3,13 @@
 //! The crate defines stable participant identities, seeded agent factories,
 //! deterministic fixed or color-paired schedules, bounded single-game
 //! execution, versioned JSON Lines datasets, and strict replay verification.
-//! Replay-verified per-game descriptive metrics are available for analysis.
+//! Replay-verified per-game and aggregate descriptive metrics are available for analysis.
 
 /// Package version of the Arena framework.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 mod agent_factory;
+mod analysis;
 mod batch;
 mod metrics;
 pub mod record;
@@ -20,6 +21,24 @@ mod storage;
 pub use agent_factory::AgentDescriptor;
 pub use agent_factory::AgentFactory;
 pub use agent_factory::RandomAgentFactory;
+pub use analysis::ANALYSIS_SCHEMA_VERSION;
+pub use analysis::ActionSummary;
+pub use analysis::AnalysisError;
+pub use analysis::AnalysisReport;
+pub use analysis::DatasetAnalyzer;
+pub use analysis::DatasetSummary;
+pub use analysis::FinalMaterialSummary;
+pub use analysis::FloatDistributionMetrics;
+pub use analysis::GAME_METRICS_FILE_NAME;
+pub use analysis::ParticipantOutcomeSummary;
+pub use analysis::ParticipantSummary;
+pub use analysis::PhaseActionDistributionSummary;
+pub use analysis::ReactionSummary;
+pub use analysis::ResultSummary;
+pub use analysis::SUMMARY_FILE_NAME;
+pub use analysis::StateSummary;
+pub use analysis::StateVisitTotals;
+pub use analysis::TerminationSummary;
 pub use batch::BatchError;
 pub use batch::BatchHarness;
 pub use batch::BatchReport;
