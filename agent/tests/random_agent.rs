@@ -1,5 +1,6 @@
 use std::num::NonZeroU8;
 
+use formation_chess_agent::ActionSelector;
 use formation_chess_agent::Agent;
 use formation_chess_agent::AgentError;
 use formation_chess_agent::AgentInput;
@@ -181,6 +182,7 @@ fn random_agent_returns_unique_legal_movement_top_k() {
 fn random_agent_completes_standard_placement_phase() {
     let mut game = Game::new(GameConfig::default()).expect("standard game");
     let mut agent = RandomAgent::with_seed(20260801);
+    let mut selector = ActionSelector::default();
 
     for _ in 0 .. 32 {
         let player = game.player();
@@ -195,7 +197,8 @@ fn random_agent_completes_standard_placement_phase() {
             .filter(|position| game.board().get(*position).is_none())
             .collect::<Vec<_>>();
 
-        let turn = play_agent_turn(&mut game, &mut agent).expect("random placement turn");
+        let turn =
+            play_agent_turn(&mut game, &mut agent, &mut selector).expect("random placement turn");
         let Action::Place(placement) = turn.action else {
             panic!("placement phase returned a movement action");
         };
@@ -218,8 +221,9 @@ fn random_movement_turn_uses_supplied_candidates() {
     let mut game = movement_game();
     let candidates = legal_movement_actions(&game);
     let mut agent = RandomAgent::with_seed(11);
+    let mut selector = ActionSelector::default();
 
-    let turn = play_agent_turn(&mut game, &mut agent).expect("random movement turn");
+    let turn = play_agent_turn(&mut game, &mut agent, &mut selector).expect("random movement turn");
 
     assert!(candidates.contains(&turn.action));
     assert_eq!(turn.score, 0.0);

@@ -9,6 +9,7 @@ use formation_chess_core::game::Game;
 use formation_chess_core::game::Phase;
 use formation_chess_core::piece::Player;
 
+use crate::ActionSelector;
 use crate::Agent;
 use crate::AgentError;
 use crate::AgentInput;
@@ -94,6 +95,8 @@ pub struct AgentTurn {
     pub player: Player,
     pub action: Action,
     pub score: f32,
+    /// One-based rank of the selected candidate in the validated analysis.
+    pub candidate_rank: NonZeroU8,
     pub reaction: Reaction,
     pub decision_time: Duration,
     pub legal_action_count: Option<usize>,
@@ -150,10 +153,13 @@ pub fn analyze_agent(
     analyze_prepared(&prepared, agent, top_k)
 }
 
-/// Analyze one candidate and execute the best result through Game::action.
-pub fn play_agent_turn(game: &mut Game, agent: &mut dyn Agent) -> Result<AgentTurn, AgentError> {
-    let analysis = analyze_agent(game, agent, NonZeroU8::MIN)?;
-    let selected = analysis.candidates[0];
+/// Analyze candidates, select one through the supplied policy, and execute it.
+pub fn play_agent_turn(
+    game: &mut Game, agent: &mut dyn Agent, selector: &mut ActionSelector,
+) -> Result<AgentTurn, AgentError> {
+    let analysis = analyze_agent(game, agent, selector.top_k())?;
+    let selected_index = selector.select_index(analysis.candidates.len());
+    let selected = analysis.candidates[selected_index];
     let reaction = game.action(selected.action).map_err(|message| {
         AgentError::InvalidAnalysis(format!(
             "validated action {:?} failed execution: {message}",
@@ -165,6 +171,10 @@ pub fn play_agent_turn(game: &mut Game, agent: &mut dyn Agent) -> Result<AgentTu
         player: analysis.player,
         action: selected.action,
         score: selected.score,
+        candidate_rank: NonZeroU8::new(
+            u8::try_from(selected_index + 1).expect("validated candidate rank must fit NonZeroU8"),
+        )
+        .expect("selected candidate rank must be nonzero"),
         reaction,
         decision_time: analysis.decision_time,
         legal_action_count: analysis.legal_action_count,

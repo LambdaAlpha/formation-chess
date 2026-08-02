@@ -187,6 +187,7 @@ fn runner_maps_swapped_participants_to_factories_and_seeds() {
     assert_eq!(run.actions[0].player, Player::Red);
     assert_eq!(run.actions[0].phase, Phase::Move);
     assert_eq!(run.actions[0].action, Action::Pass(Player::Red));
+    assert_eq!(run.actions[0].candidate_rank, NonZeroU8::MIN);
     assert!(run.actions[0].legal_action_count.is_some_and(|count| count > 0));
     assert_eq!(run.final_game.player(), Player::Black);
     assert_eq!(run.termination, GameTermination::MovementActionLimit { limit: nonzero(1) });

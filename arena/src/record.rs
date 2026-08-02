@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::Display;
 
+use formation_chess_agent::ActionSelectionPolicy;
 use formation_chess_agent::AgentError;
 use formation_chess_agent::legal_movement_actions;
 use formation_chess_core::action::Action;
@@ -142,14 +143,50 @@ impl From<ScheduleMode> for ScheduleRecord {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GameRunConfigRecord {
     pub max_movement_actions: u32,
+    #[serde(default)]
+    pub action_selection: ActionSelectionPolicyRecord,
 }
 
 impl From<GameRunConfig> for GameRunConfigRecord {
     fn from(config: GameRunConfig) -> Self {
-        Self { max_movement_actions: config.max_movement_actions.get() }
+        Self {
+            max_movement_actions: config.max_movement_actions.get(),
+            action_selection: ActionSelectionPolicyRecord::from(config.action_selection),
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(tag = "mode", rename_all = "snake_case")]
+pub enum ActionSelectionPolicyRecord {
+    #[default]
+    Best,
+    RankSoftmax {
+        top_k: u8,
+        temperature: f32,
+    },
+}
+
+impl ActionSelectionPolicyRecord {
+    pub const fn top_k(self) -> u8 {
+        match self {
+            Self::Best => 1,
+            Self::RankSoftmax { top_k, .. } => top_k,
+        }
+    }
+}
+
+impl From<ActionSelectionPolicy> for ActionSelectionPolicyRecord {
+    fn from(policy: ActionSelectionPolicy) -> Self {
+        match policy {
+            ActionSelectionPolicy::Best => Self::Best,
+            ActionSelectionPolicy::RankSoftmax(policy) => {
+                Self::RankSoftmax { top_k: policy.top_k().get(), temperature: policy.temperature() }
+            },
+        }
     }
 }
 
@@ -224,6 +261,7 @@ impl GameRecord {
                 action: ActionData::from(executed.action),
                 notation,
                 score: executed.score,
+                candidate_rank: executed.candidate_rank.get(),
                 legal_action_count: executed
                     .legal_action_count
                     .map(u64::try_from)
@@ -289,6 +327,9 @@ pub struct ActionRecord {
     pub action: ActionData,
     pub notation: String,
     pub score: f32,
+    /// One-based rank of the selected candidate.
+    #[serde(default = "default_candidate_rank")]
+    pub candidate_rank: u8,
     /// Number of legal movement actions, or None during placement.
     pub legal_action_count: Option<u64>,
     pub reaction: ReactionRecord,
@@ -573,6 +614,10 @@ pub fn state_sha256(state: &str) -> String {
         output.push(HEX[usize::from(byte & 0x0f)] as char);
     }
     output
+}
+
+const fn default_candidate_rank() -> u8 {
+    1
 }
 
 fn validate_turn_context(

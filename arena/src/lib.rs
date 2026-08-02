@@ -59,6 +59,7 @@ pub use metrics::ReactionChangeMetrics;
 pub use metrics::SideActionMetrics;
 pub use metrics::StateVisitMetrics;
 pub use metrics::TerminationKind;
+pub use record::ActionSelectionPolicyRecord;
 pub use record::ArenaManifest;
 pub use record::GameRecord;
 pub use record::RECORD_SCHEMA_VERSION;

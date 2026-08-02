@@ -13,6 +13,8 @@ use axum::response::IntoResponse;
 use axum::response::Response;
 use axum::routing::get;
 use axum::routing::post;
+use formation_chess_agent::ActionSelectionPolicy;
+use formation_chess_agent::ActionSelector;
 use formation_chess_agent::Agent;
 use formation_chess_agent::RandomAgent;
 use formation_chess_agent::analyze_agent;
@@ -33,11 +35,16 @@ struct Assets;
 struct PlayerRuntime {
     control: ApiControl,
     agent: Box<dyn Agent>,
+    selector: ActionSelector,
 }
 
 impl PlayerRuntime {
     fn random(control: ApiControl) -> Self {
-        Self { control, agent: Box::new(RandomAgent::new()) }
+        Self {
+            control,
+            agent: Box::new(RandomAgent::new()),
+            selector: ActionSelector::new(ActionSelectionPolicy::standard_rank_softmax()),
+        }
     }
 
     fn info(&self) -> ApiControllerInfo {
@@ -180,8 +187,12 @@ impl GameSession {
         let snapshot = self.game.clone();
         let resolver = NotationResolver::new(snapshot.board(), snapshot.phase());
         let turn = match player {
-            Player::Red => play_agent_turn(&mut self.game, self.red.agent.as_mut()),
-            Player::Black => play_agent_turn(&mut self.game, self.black.agent.as_mut()),
+            Player::Red => {
+                play_agent_turn(&mut self.game, self.red.agent.as_mut(), &mut self.red.selector)
+            },
+            Player::Black => {
+                play_agent_turn(&mut self.game, self.black.agent.as_mut(), &mut self.black.selector)
+            },
         }
         .map_err(|error| error.to_string())?;
         let played = ApiAgentCandidate {
@@ -361,8 +372,8 @@ fn complete_random_placement(
             return Ok(());
         }
         let result = match game.player() {
-            Player::Red => play_agent_turn(game, red.agent.as_mut()),
-            Player::Black => play_agent_turn(game, black.agent.as_mut()),
+            Player::Red => play_agent_turn(game, red.agent.as_mut(), &mut red.selector),
+            Player::Black => play_agent_turn(game, black.agent.as_mut(), &mut black.selector),
         };
         result.map_err(|error| error.to_string())?;
     }

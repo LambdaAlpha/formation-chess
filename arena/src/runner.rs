@@ -1,7 +1,10 @@
 use std::error::Error;
 use std::fmt::Display;
+use std::num::NonZeroU8;
 use std::num::NonZeroU32;
 
+use formation_chess_agent::ActionSelectionPolicy;
+use formation_chess_agent::ActionSelector;
 use formation_chess_agent::AgentError;
 use formation_chess_agent::play_agent_turn;
 use formation_chess_core::action::Action;
@@ -24,11 +27,21 @@ pub struct GameRunConfig {
     /// this many movement actions have completed. Placement actions are finite
     /// and are not counted against this limit.
     pub max_movement_actions: NonZeroU32,
+    /// Policy used by both seats to select one analyzed candidate.
+    pub action_selection: ActionSelectionPolicy,
 }
 
 impl GameRunConfig {
+    /// Construct a deterministic run configuration.
     pub const fn new(max_movement_actions: NonZeroU32) -> Self {
-        Self { max_movement_actions }
+        Self { max_movement_actions, action_selection: ActionSelectionPolicy::Best }
+    }
+
+    /// Construct a run configuration with an explicit action-selection policy.
+    pub const fn with_action_selection(
+        max_movement_actions: NonZeroU32, action_selection: ActionSelectionPolicy,
+    ) -> Self {
+        Self { max_movement_actions, action_selection }
     }
 }
 
@@ -50,6 +63,8 @@ pub struct ExecutedAction {
     pub phase: Phase,
     pub action: Action,
     pub score: f32,
+    /// One-based rank of the selected candidate.
+    pub candidate_rank: NonZeroU8,
     pub reaction: Reaction,
     /// Number of enumerated legal movement actions, or None during placement.
     pub legal_action_count: Option<usize>,
@@ -133,6 +148,10 @@ impl<'factory> MatchRunner<'factory> {
         let black_agent = black_factory.descriptor();
         let mut red_instance = red_factory.create(plan.red_agent_seed);
         let mut black_instance = black_factory.create(plan.black_agent_seed);
+        let mut red_selector =
+            ActionSelector::with_seed(self.config.action_selection, plan.red_agent_seed);
+        let mut black_selector =
+            ActionSelector::with_seed(self.config.action_selection, plan.black_agent_seed);
         let initial_game = game.clone();
         let mut actions = Vec::new();
         let mut movement_action_count = 0_u32;
@@ -153,11 +172,11 @@ impl<'factory> MatchRunner<'factory> {
             }
 
             let player = game.player();
-            let instance = match player {
-                Player::Red => red_instance.as_mut(),
-                Player::Black => black_instance.as_mut(),
+            let (instance, selector) = match player {
+                Player::Red => (red_instance.as_mut(), &mut red_selector),
+                Player::Black => (black_instance.as_mut(), &mut black_selector),
             };
-            let agent_turn = match play_agent_turn(&mut game, instance) {
+            let agent_turn = match play_agent_turn(&mut game, instance, selector) {
                 Ok(agent_turn) => agent_turn,
                 Err(error) => {
                     break GameTermination::AgentFailure { player, phase, error };
@@ -172,6 +191,7 @@ impl<'factory> MatchRunner<'factory> {
                 phase,
                 action: agent_turn.action,
                 score: agent_turn.score,
+                candidate_rank: agent_turn.candidate_rank,
                 reaction: agent_turn.reaction,
                 legal_action_count: agent_turn.legal_action_count,
             });

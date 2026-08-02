@@ -15,6 +15,7 @@ use std::path::PathBuf;
 use crate::AgentDescriptor;
 use crate::GameRun;
 use crate::GameTermination;
+use crate::record::ActionSelectionPolicyRecord;
 use crate::record::AgentDescriptorRecord;
 use crate::record::ArenaManifest;
 use crate::record::GameRecord;
@@ -133,6 +134,19 @@ impl Iterator for JsonlDatasetReader {
         }
         if record.game_id != self.next_game_id {
             let message = format!("expected game id {}, got {}", self.next_game_id, record.game_id);
+            return Some(Err(self.invalid_line(line_number, message)));
+        }
+
+        let max_candidate_rank = self.manifest.game_run_config.action_selection.top_k();
+        if let Some(action) = record
+            .actions
+            .iter()
+            .find(|action| action.candidate_rank == 0 || action.candidate_rank > max_candidate_rank)
+        {
+            let message = format!(
+                "action {} candidate rank {} is outside 1..={max_candidate_rank}",
+                action.action_index, action.candidate_rank
+            );
             return Some(Err(self.invalid_line(line_number, message)));
         }
 
@@ -348,6 +362,21 @@ pub(crate) fn validate_manifest(manifest: &ArenaManifest) -> Result<(), DatasetE
         return Err(DatasetError::InvalidDataset(
             "movement-action limit must be nonzero".to_owned(),
         ));
+    }
+    match manifest.game_run_config.action_selection {
+        ActionSelectionPolicyRecord::Best => {},
+        ActionSelectionPolicyRecord::RankSoftmax { top_k, temperature } => {
+            if top_k == 0 {
+                return Err(DatasetError::InvalidDataset(
+                    "rank Softmax top_k must be nonzero".to_owned(),
+                ));
+            }
+            if !temperature.is_finite() || temperature <= 0.0 {
+                return Err(DatasetError::InvalidDataset(format!(
+                    "rank Softmax temperature must be finite and positive, got {temperature}"
+                )));
+            }
+        },
     }
     Ok(())
 }

@@ -797,6 +797,7 @@ mod tests {
     use super::MinFeatureVector;
     use super::analyze_action_outcome;
     use super::weighted_contributions;
+    use crate::ActionSelector;
     use crate::MinFeatureWeights;
     use crate::RandomAgent;
     use crate::legal_movement_actions;
@@ -846,8 +847,10 @@ mod tests {
     fn predicted_action_results_match_core_reactions() {
         let mut game = Game::default();
         let mut random = RandomAgent::with_seed(20260802);
+        let mut selector = ActionSelector::default();
         for _ in 0 .. 32 {
-            play_agent_turn(&mut game, &mut random).expect("complete deterministic placement");
+            play_agent_turn(&mut game, &mut random, &mut selector)
+                .expect("complete deterministic placement");
         }
 
         for _ in 0 .. 32 {
@@ -865,7 +868,8 @@ mod tests {
             if game.result() != GameResult::Unfinished {
                 break;
             }
-            play_agent_turn(&mut game, &mut random).expect("advance deterministic movement");
+            play_agent_turn(&mut game, &mut random, &mut selector)
+                .expect("advance deterministic movement");
         }
     }
 }

@@ -136,6 +136,9 @@ where
     if !stored.score.is_finite() {
         return Err(action_error(record, action_index, "score is not finite"));
     }
+    if stored.candidate_rank == 0 {
+        return Err(action_error(record, action_index, "candidate rank must be nonzero"));
+    }
     verify_legal_action_count(record, replay, action_index, stored.legal_action_count)?;
 
     let action = action_from_data(&stored.action)

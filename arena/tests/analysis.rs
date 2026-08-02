@@ -1,4 +1,5 @@
 use std::fs;
+use std::num::NonZeroU8;
 use std::num::NonZeroU32;
 use std::path::Path;
 use std::path::PathBuf;
@@ -137,6 +138,7 @@ fn game_run(
             phase,
             action,
             score: 0.5,
+            candidate_rank: NonZeroU8::MIN,
             reaction,
             legal_action_count,
         });

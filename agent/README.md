@@ -23,9 +23,12 @@ prepare_turn creates a PreparedTurn that borrows the exact immutable Game and
 owns any enumerated movement actions. Orchestrators can inspect and reuse this
 prepared input without enumerating legal actions a second time.
 analyze_prepared validates an agent against that prepared input. analyze_agent
-is the convenience wrapper that prepares and analyzes in one call, while
-play_agent_turn requests top_k equal to one and executes the first candidate
-through the core engine.
+is the convenience wrapper that prepares and analyzes in one call.
+play_agent_turn receives an ActionSelector, requests the selector's top_k, and
+executes the selected candidate through the core engine. ActionSelectionPolicy::Best
+preserves deterministic top-one play. RankSoftmax samples by candidate rank,
+leaving Agent analysis, scores, and hint ordering deterministic. Selectors can
+use process entropy for Web play or an explicit seed for reproducible Arena runs.
 
 ## Placement area
 

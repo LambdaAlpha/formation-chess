@@ -6,9 +6,10 @@ and Chinese rule text directly from the compiled binary; no frontend build
 step is required.
 
 The server binds to `127.0.0.1` and keeps one in-memory game session. The
-session owns one Agent instance for Red and one for Black. A side's control
-mode decides whether its Agent only analyzes candidates or also executes the
-best candidate.
+session owns one Agent instance and one action selector for Red and Black. A
+side's control mode decides whether its Agent only analyzes deterministic
+candidates or also executes one candidate through the standard rank-Softmax
+policy.
 
 ## Run from the workspace
 

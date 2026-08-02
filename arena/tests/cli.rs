@@ -6,6 +6,7 @@ use std::process::Output;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 
+use formation_chess_arena::ActionSelectionPolicyRecord;
 use formation_chess_arena::DatasetSummary;
 use formation_chess_arena::GAME_METRICS_FILE_NAME;
 use formation_chess_arena::JsonlDatasetReader;
@@ -88,11 +89,16 @@ fn cli_runs_verifies_and_analyzes_a_random_dataset() {
     assert_eq!(reader.manifest().root_seed, 73);
     assert_eq!(reader.manifest().schedule, ScheduleRecord::Fixed { games: 1 });
     assert_eq!(reader.manifest().game_run_config.max_movement_actions, 1);
+    assert_eq!(
+        reader.manifest().game_run_config.action_selection,
+        ActionSelectionPolicyRecord::RankSoftmax { top_k: 4, temperature: 0.5 }
+    );
     assert_eq!(reader.manifest().participant_a.id, "random_a");
     assert_eq!(reader.manifest().participant_b.id, "random_b");
     assert_eq!(reader.manifest().participant_a.agent.kind, "random");
     assert_eq!(reader.manifest().participant_b.agent.kind, "random");
     let record = reader.next().expect("one game record").expect("valid game record");
+    assert!(record.actions.iter().all(|action| (1 ..= 4).contains(&action.candidate_rank)));
     ReplayVerifier::verify(&record).expect("CLI game must replay");
     assert!(reader.next().is_none(), "dataset must contain exactly one game");
 

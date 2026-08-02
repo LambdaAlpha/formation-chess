@@ -6,8 +6,8 @@
 //! Every agent implements one Agent::analyze interface. Placement receives
 //! the current game plus a compact geometric PlacementArea; movement receives
 //! the current game plus an explicit legal-action slice. Analysis returns
-//! complete, scored actions ordered from best to worst. Turn execution requests
-//! one candidate and applies the first action through the core engine.
+//! complete, scored actions ordered from best to worst. Turn execution asks an
+//! explicit selector for its candidate count and applies the selected action.
 
 mod agent;
 mod error;
@@ -15,6 +15,7 @@ mod executor;
 mod legal_actions;
 mod min;
 mod random;
+mod selection;
 
 /// Package version of the agent framework and bundled agents.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -57,3 +58,7 @@ pub use min::MinFeatureWeights;
 pub use min::MinMovementSearchConfig;
 pub use min::MinPlacementSearchConfig;
 pub use random::RandomAgent;
+pub use selection::ActionSelectionError;
+pub use selection::ActionSelectionPolicy;
+pub use selection::ActionSelector;
+pub use selection::RankSoftmaxPolicy;

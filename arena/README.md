@@ -33,8 +33,10 @@ from the plan's color-specific seeds. The caller supplies the initial Game, so a
 future scenario generator can use the plan's scenario seed without coupling it
 to the runner.
 
-Every successful action retains its player, phase, action, score, reaction, and
-movement legal-action count. Technical decision timing is intentionally omitted.
+Every successful action retains its player, phase, action, score, selected
+candidate rank, reaction, and movement legal-action count. Each seat receives a
+separately seeded ActionSelector using the run's recorded selection policy.
+Technical decision timing is intentionally omitted.
 A run ends with a core game result, a configured movement-action limit, or the
 exact AgentError produced by a failed analysis. Persistent recording, strict
 replay verification, and per-game descriptive metrics are provided below.
@@ -48,16 +50,17 @@ the source repository unless the caller deliberately chooses such a path.
 Each dataset contains:
 
 - `manifest.json`: schema, Arena and Core versions, seed-derivation version,
-  SHA-256 state-hash algorithm, root seed, schedule, movement limit, participant
-  IDs, and full agent descriptors.
+  SHA-256 state-hash algorithm, root seed, schedule, movement limit, action
+  selection policy, participant IDs, and full agent descriptors.
 - `games.jsonl`: one complete game per JSON line. Each line contains plan and
   seat seeds, canonical initial/final states and hashes, final result,
   termination or exact agent error, separate Red/Black action counts, and the
   ordered action list.
 
 Each executed action records its zero-based index, player, phase, structured
-0-based coordinates, human-readable notation, agent score, movement legal-action
-count, structured reaction, reaction notation, and post-action state hash. The
+0-based coordinates, human-readable notation, agent score, one-based selected
+candidate rank, movement legal-action count, structured reaction, reaction
+notation, and post-action state hash. The
 full movement legal-action list is deterministic from the recorded state and is
 therefore recomputed during analysis rather than duplicated in the dataset;
 placement records have no legal-action count. The initial hash plus each
@@ -188,8 +191,8 @@ position value, fairness, difficulty, or interestingness.
 
 The `formation-chess-arena` binary exposes the complete Arena MVP workflow:
 
-- `run` executes a deterministic Random-vs-Random schedule and creates a new
-  dataset directory;
+- `run` executes a seeded Random-vs-Random schedule with the standard
+  rank-Softmax selection policy and creates a new dataset directory;
 - `verify` structurally validates the complete dataset and strictly replays every
   game without writing files; and
 - `stats` performs the same replay-backed validation and creates

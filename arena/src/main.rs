@@ -6,6 +6,7 @@ use std::num::NonZeroU64;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use formation_chess_agent::ActionSelectionPolicy;
 use formation_chess_arena::BatchHarness;
 use formation_chess_arena::DatasetAnalyzer;
 use formation_chess_arena::GameRunConfig;
@@ -317,7 +318,10 @@ fn run_batch(options: RunOptions) -> Result<(), Box<dyn Error>> {
         options.matchup,
         &participant_a_factory,
         &participant_b_factory,
-        GameRunConfig::new(options.movement_limit),
+        GameRunConfig::with_action_selection(
+            options.movement_limit,
+            ActionSelectionPolicy::standard_rank_softmax(),
+        ),
     );
     let report =
         BatchHarness::new(schedule, runner).run(&options.output_root, options.flush_every_games)?;

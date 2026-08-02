@@ -1,5 +1,6 @@
 use std::num::NonZeroU8;
 
+use formation_chess_agent::ActionSelector;
 use formation_chess_agent::Agent;
 use formation_chess_agent::AgentError;
 use formation_chess_agent::AgentInput;
@@ -258,13 +259,15 @@ fn turn_requests_top_one_and_executes_the_first_candidate() {
     let mut game = movement_game();
     let pass = Action::Pass(Player::Red);
     let mut agent = TestAgent::new(Vec::new(), vec![scored(pass, 7.0)]);
+    let mut selector = ActionSelector::default();
 
-    let turn = play_agent_turn(&mut game, &mut agent).expect("agent movement");
+    let turn = play_agent_turn(&mut game, &mut agent, &mut selector).expect("agent movement");
 
     assert_eq!(agent.observed_top_k, Some(NonZeroU8::MIN));
     assert_eq!(turn.player, Player::Red);
     assert_eq!(turn.action, pass);
     assert_eq!(turn.score, 7.0);
+    assert_eq!(turn.candidate_rank, NonZeroU8::MIN);
     assert_eq!(game.player(), Player::Black);
 }
 

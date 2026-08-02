@@ -1,3 +1,4 @@
+use std::num::NonZeroU8;
 use std::num::NonZeroU32;
 
 use formation_chess_agent::AgentError;
@@ -85,6 +86,7 @@ fn one_action_record(action: Action, termination: GameTermination) -> GameRecord
             phase,
             action,
             score: 0.5,
+            candidate_rank: NonZeroU8::MIN,
             reaction,
             legal_action_count,
         }],
