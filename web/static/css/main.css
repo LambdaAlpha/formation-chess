@@ -25,7 +25,9 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
   background: #f5f5f5; border-bottom: 1px solid var(--color-border); font-size: 14px; flex-shrink: 0;
 }
 .toolbar-row { display: flex; align-items: center; gap: 8px; }
-.toolbar-row-info { margin-left: auto; }
+.toolbar-row-actions { flex: 1; }
+.toolbar-row-info { justify-content: center; }
+.toolbar-row-game { flex: 1; justify-content: flex-end; }
 #toolbar button {
   padding: 4px 12px; border: 1px solid #bbb; border-radius: var(--radius);
   background: #fff; cursor: pointer; font-size: 13px;
@@ -50,13 +52,23 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 .pool-divider { height: 1px; background: var(--color-border); margin: 4px 0; flex-shrink: 0; }
 
 /* ---- board ---- */
-#board-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 16px; overflow: auto; }
+#board-wrap { flex: 1; display: flex; flex-direction: column; padding: 16px; overflow: auto; }
+#board-stack { position: relative; margin: auto; }
+#board-frame { position: relative; }
 #board { position: relative; background: var(--color-board-bg); border-radius: 4px; user-select: none; }
 
 .board-lines {
   position: absolute; top: 0; left: 0; pointer-events: none;
 }
 .board-lines line { stroke: var(--color-board-line); stroke-width: 1; }
+
+/* ---- board coordinates ---- */
+.board-coord {
+  position: absolute;
+  display: flex; align-items: center; justify-content: center;
+  color: #6b5b3e; font-weight: 600; line-height: 1;
+  user-select: none; pointer-events: none;
+}
 
 /* ---- intersections ---- */
 .intersection {
@@ -169,7 +181,10 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 }
 
 /* ---- status ---- */
-#status { padding: 6px 12px; background: #f5f5f5; border-top: 1px solid var(--color-border); font-size: 13px; min-height: 30px; flex-shrink: 0; }
+#status {
+  position: absolute; top: calc(100% + 2px); left: 50%; transform: translateX(-50%);
+  max-width: 100%; padding: 4px 12px; font-size: 13px; min-height: 24px; text-align: center;
+}
 #status.error { color: #222; font-weight: 600; }
 
 /* ---- overlay & panels ---- */
@@ -256,7 +271,7 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
     margin-left: 0; justify-content: flex-start; flex-wrap: wrap;
   }
   .toolbar-row-actions,
-  .toolbar-row-game { justify-content: center; flex-wrap: wrap; }
+  .toolbar-row-game { flex: none; justify-content: center; flex-wrap: wrap; }
   .toolbar-row-actions button,
   .toolbar-row-game button { flex: 1; }
   #toolbar button {
@@ -280,8 +295,9 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
   .pool .piece .piece-text { font-size: 14px; }
   .pool-piece-selected::after { --corner-size: 9px; --corner-width: 2px; }
 
-  #board-wrap { flex: none; overflow: visible; padding: 8px; }
+  #board-wrap { flex: none; overflow: visible; padding: 8px 8px 26px; }
   #board { border-radius: 2px; }
+  #status { font-size: 12px; }
 
   .piece-text { font-size: 14px; }
   .piece-shape-surface { stroke-width: 1.5px; }

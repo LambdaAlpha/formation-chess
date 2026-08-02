@@ -2,21 +2,33 @@ import { createPieceElement } from './pieces.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const boardEl = document.getElementById('board');
+const NUMERALS = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+
+function numeral(n) {
+    return NUMERALS[n] ?? '?';
+}
 
 function cellSize(cols) {
     const base = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell-size'), 10) || 52;
     const wrap = document.getElementById('board-wrap');
     const availW = Math.max(wrap.clientWidth, 200) - 32;
-    const fitW = Math.floor(availW / cols);
+    const fitW = Math.floor(availW / (cols + 2));
     return Math.min(base, Math.max(28, fitW));
 }
 
 export function renderBoard(state) {
     const { width, height, cells } = state.board;
     const cs = cellSize(width);
-    const padding = cs / 2;
-    const boardW = width * cs;
-    const boardH = height * cs;
+    const padding = cs;
+    const boardW = (width + 1) * cs;
+    const boardH = (height + 1) * cs;
+    const label = Math.max(16, Math.round(cs * 0.42));
+    const fontSize = Math.max(10, Math.round(cs * 0.26));
+
+    const frame = document.getElementById('board-frame');
+    frame.style.paddingTop = `${label}px`;
+    frame.style.paddingLeft = `${label}px`;
+    for (const el of frame.querySelectorAll('.board-coord')) el.remove();
 
     boardEl.innerHTML = '';
     boardEl.style.width = `${boardW}px`;
@@ -42,6 +54,29 @@ export function renderBoard(state) {
 
             boardEl.appendChild(intn);
         }
+    }
+
+    for (let x = 0; x < width; x++) {
+        const el = document.createElement('div');
+        el.className = 'board-coord board-coord-top';
+        el.style.width = `${cs}px`;
+        el.style.height = `${label}px`;
+        el.style.left = `${label + padding + x * cs - cs / 2}px`;
+        el.style.top = `${label}px`;
+        el.style.fontSize = `${fontSize}px`;
+        el.textContent = numeral(x + 1);
+        frame.appendChild(el);
+    }
+
+    for (let y = 0; y < height; y++) {
+        const el = document.createElement('div');
+        el.className = 'board-coord board-coord-left';
+        el.style.width = `${label}px`;
+        el.style.height = `${cs}px`;
+        el.style.top = `${label + padding + y * cs - cs / 2}px`;
+        el.style.fontSize = `${fontSize}px`;
+        el.textContent = numeral(y + 1);
+        frame.appendChild(el);
     }
 }
 

@@ -259,6 +259,10 @@ export function setStatus(message, error = false) {
     }
 }
 
+function clearStatus() {
+    setStatus('');
+}
+
 function clearInteraction() {
     selection = { type: null };
     clearHints();
@@ -285,6 +289,7 @@ function clearManualSelectionForPreview() {
 
 async function handleBoardClick(x, y) {
     if (!canHumanAct()) return;
+    clearStatus();
     clearAnalysisSelection();
 
     const currentPhase = phase();
@@ -357,6 +362,7 @@ function selectedBoardPosition() {
 
 function handlePoolClick(name, color) {
     if (!canHumanAct() || phase() !== 'placement') return;
+    clearStatus();
     if (color !== gameState.player) return;
 
     clearAnalysisSelection();
@@ -471,6 +477,7 @@ function formatScore(score) {
 function selectCandidate(index) {
     const candidate = analysisCandidates[index];
     if (!candidate) return;
+    clearStatus();
     clearManualSelectionForPreview();
     selectedCandidateIndex = index;
 

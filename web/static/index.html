@@ -40,7 +40,12 @@
       </div>
     </div>
     <div id="board-wrap">
-      <div id="board"></div>
+      <div id="board-stack">
+        <div id="board-frame">
+          <div id="board"></div>
+        </div>
+        <div id="status"></div>
+      </div>
     </div>
     <aside id="analysis-panel" aria-label="AI 候选">
       <div class="analysis-header">
@@ -51,7 +56,6 @@
       <button id="btn-apply-candidate" type="button" disabled>采用此步</button>
     </aside>
   </div>
-  <div id="status"></div>
 </div>
 
 <div id="overlay" class="overlay hidden">
