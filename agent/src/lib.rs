@@ -1,5 +1,8 @@
 //! Ranked agent analysis and turn execution for Formation Chess.
 //!
+//! The crate also defines the versioned, validated configuration contract for
+//! the fast depth-limited Min agent.
+//!
 //! Every agent implements one Agent::analyze interface. Placement receives
 //! the current game plus a compact geometric PlacementArea; movement receives
 //! the current game plus an explicit legal-action slice. Analysis returns
@@ -10,6 +13,7 @@ mod agent;
 mod error;
 mod executor;
 mod legal_actions;
+mod min;
 mod random;
 
 /// Package version of the agent framework and bundled agents.
@@ -30,4 +34,20 @@ pub use executor::prepare_turn;
 pub use legal_actions::PlacementArea;
 pub use legal_actions::legal_movement_actions;
 pub use legal_actions::placement_area;
+pub use min::MIN_BEST_CONFIG_ID;
+pub use min::MIN_BEST_CONFIG_VERSION;
+pub use min::MIN_CONFIG_HASH_ALGORITHM;
+pub use min::MIN_CONFIG_HASH_FORMAT_VERSION;
+pub use min::MIN_CONFIG_SCHEMA_VERSION;
+pub use min::MIN_EVALUATION_MODEL_VERSION;
+pub use min::MIN_MAX_NODE_BUDGET;
+pub use min::MIN_MAX_SEARCH_DEPTH;
+pub use min::MIN_MAX_SEARCH_WIDTH;
+pub use min::MIN_TERMINAL_UTILITY;
+pub use min::MinConfig;
+pub use min::MinConfigError;
+pub use min::MinEvaluationConfig;
+pub use min::MinFeatureWeights;
+pub use min::MinMovementSearchConfig;
+pub use min::MinPlacementSearchConfig;
 pub use random::RandomAgent;

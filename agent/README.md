@@ -47,8 +47,32 @@ order acting as their tie-break order.
 The random baseline validates analysis and execution paths; it does not evaluate
 positions or attempt to play well.
 
+## Min configuration
+
+MinConfig::best() is the only bundled Min profile. It carries a schema version,
+a frozen configuration version, deterministic placement and movement search
+limits, a static-evaluation model version, and relative weights for oriented
+feature groups. Config validation enforces the three-ply limit, bounded search
+widths and node budgets, and keeps every non-terminal heuristic value strictly
+inside the exact win/loss utility.
+
+Feature-group weights are not independent game scores. Terminal outcomes and
+searched tactical results remain non-compensable; the weights will combine
+normalized, conditional features only at non-terminal leaves. With draw utility
+fixed at zero, positive continuations naturally outrank a draw and a draw
+naturally outranks negative continuations.
+
+canonical_text() defines a stable, human-readable hash input. sha256() validates
+the configuration before hashing it. Arena records should store the versioned
+ID, the complete serialized configuration, the hash format version, and the
+SHA-256 instead of storing only the moving best alias.
+
+This configuration contract does not yet implement MinAgent search or static
+evaluation.
+
 ## Scope
 
-This crate contains the agent framework and random baseline. Web integration,
-arena orchestration, recording, statistics, and stronger AI implementations
-belong to later phases.
+This crate contains the agent framework, random baseline, and versioned Min
+configuration. Web integration, arena orchestration, recording, and statistics
+belong to their respective crates. Min search and evaluation are added in
+separate reviewable changes.

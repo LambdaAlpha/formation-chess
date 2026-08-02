@@ -201,6 +201,8 @@ version = "0.2.0"
 dependencies = [
  "formation-chess-core",
  "rand",
+ "serde",
+ "sha2",
 ]
 
 [[package]]
