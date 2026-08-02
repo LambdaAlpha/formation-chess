@@ -12,6 +12,9 @@ mod executor;
 mod legal_actions;
 mod random;
 
+/// Package version of the agent framework and bundled agents.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 pub use agent::Agent;
 pub use agent::AgentInput;
 pub use agent::ScoredAction;

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["core", "agent", "tui", "web"]
+members = ["core", "agent", "arena", "tui", "web"]
 
 [workspace.lints.rust]
 
