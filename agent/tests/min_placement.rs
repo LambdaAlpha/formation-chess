@@ -2,13 +2,11 @@ use std::num::NonZeroU8;
 use std::num::NonZeroU32;
 
 use formation_chess_agent::Agent;
-use formation_chess_agent::AgentError;
 use formation_chess_agent::MinAgent;
 use formation_chess_agent::MinConfig;
 use formation_chess_agent::MinEvaluator;
 use formation_chess_agent::ScoredAction;
 use formation_chess_agent::analyze_agent;
-use formation_chess_agent::legal_movement_actions;
 use formation_chess_agent::placement_area;
 use formation_chess_core::action::Action;
 use formation_chess_core::action::GameResult;
@@ -49,22 +47,6 @@ fn placement_game() -> Game {
         result: GameResult::Unfinished,
     })
     .expect("valid test placement game")
-}
-
-fn movement_game() -> Game {
-    let mut board = Board::new(3, 3);
-    board[(0, 2)] = Some(Piece::RED_GENERAL);
-    board[(2, 0)] = Some(Piece::BLACK_GENERAL);
-    Game::new(GameConfig {
-        player: Player::Red,
-        board,
-        red_pool: Vec::new(),
-        black_pool: Vec::new(),
-        white: Piece::WHITE,
-        white_pool: 0,
-        result: GameResult::Unfinished,
-    })
-    .expect("valid test movement game")
 }
 
 fn placements(game: &Game) -> Vec<Action> {
@@ -193,21 +175,4 @@ fn best_agent_analyzes_the_standard_initial_placement() {
     for candidate in &analysis.candidates {
         game.try_action(candidate.action).expect("best Min placement candidate must be legal");
     }
-}
-
-#[test]
-fn movement_search_remains_an_explicit_follow_up() {
-    let game = movement_game();
-    let legal_actions = legal_movement_actions(&game);
-    let mut agent = MinAgent::new(search_config(1, 100, 4)).expect("valid Min agent");
-
-    let error = agent
-        .analyze(
-            &game,
-            formation_chess_agent::AgentInput::Movement { legal_actions: &legal_actions },
-            NonZeroU8::MIN,
-        )
-        .expect_err("movement search is not implemented");
-
-    assert_eq!(error, AgentError::Decision("Min movement search is not implemented".to_owned()));
 }

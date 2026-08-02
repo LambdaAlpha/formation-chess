@@ -5,6 +5,7 @@ use formation_chess_core::game::Game;
 use super::MinConfig;
 use super::MinConfigError;
 use super::MinEvaluator;
+use super::movement::analyze_movements;
 use super::placement::analyze_placements;
 use crate::Agent;
 use crate::AgentError;
@@ -13,8 +14,8 @@ use crate::ScoredAction;
 
 /// Fast deterministic Min agent.
 ///
-/// Placement search is implemented. Movement analysis remains a separate
-/// reviewable change and currently returns an explicit decision error.
+/// Deterministic placement and selective three-ply movement search are
+/// implemented using the shared bounded static evaluator.
 #[derive(Debug, Clone)]
 pub struct MinAgent {
     config: MinConfig,
@@ -59,9 +60,13 @@ impl Agent for MinAgent {
             AgentInput::Placement { area } => {
                 analyze_placements(game, area, top_k, self.config.placement_search, self.evaluator)
             },
-            AgentInput::Movement { .. } => {
-                Err(AgentError::Decision("Min movement search is not implemented".to_owned()))
-            },
+            AgentInput::Movement { legal_actions } => analyze_movements(
+                game,
+                legal_actions,
+                top_k,
+                self.config.movement_search,
+                self.evaluator,
+            ),
         }
     }
 }

@@ -1,5 +1,6 @@
 mod agent;
 mod evaluator;
+mod movement;
 mod placement;
 
 use std::fmt::Display;
@@ -68,8 +69,9 @@ pub struct MinPlacementSearchConfig {
 
 /// Selective search limits for the movement phase.
 ///
-/// Movement always scans every legal root action. Width limits apply only to
-/// non-terminal opponent replies and third-ply responses.
+/// Movement always scans every legal root action outside the node budget.
+/// `max_nodes` bounds simulated opponent replies and third-ply responses;
+/// width limits retain only the configured number of non-terminal branches.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MinMovementSearchConfig {
