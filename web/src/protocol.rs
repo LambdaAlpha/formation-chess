@@ -8,6 +8,7 @@ use formation_chess_core::game::GameConfig;
 use formation_chess_core::game::Phase;
 use formation_chess_core::piece::Color;
 use formation_chess_core::piece::Piece;
+use formation_chess_core::piece::PieceId;
 use formation_chess_core::piece::Player;
 use serde::Deserialize;
 use serde::Serialize;
@@ -19,14 +20,24 @@ pub struct ApiPieceRef {
 }
 
 impl ApiPieceRef {
-    pub fn from_piece(piece: Piece) -> Self {
+    pub fn from_id(piece: PieceId) -> Self {
         Self { name: piece.name, color: color_to_str(piece.color) }
+    }
+
+    pub fn to_id(&self) -> Result<PieceId, String> {
+        let color = parse_color(&self.color)?;
+        let Some(piece) = Piece::lookup(self.name, color) else {
+            return Err(format!("unknown piece: {} {:?}", self.name, self.color));
+        };
+        Ok(piece.id())
     }
 
     pub fn to_piece(&self) -> Result<Piece, String> {
         let color = parse_color(&self.color)?;
-        Piece::lookup(self.name, color)
-            .ok_or_else(|| format!("unknown piece: {} {:?}", self.name, self.color))
+        let Some(piece) = Piece::lookup(self.name, color) else {
+            return Err(format!("unknown piece: {} {:?}", self.name, self.color));
+        };
+        Ok(piece)
     }
 }
 
@@ -176,7 +187,7 @@ impl ApiAction {
     pub fn from_action(action: Action) -> Self {
         match action {
             Action::Place(place) => {
-                Self::Place { piece: ApiPieceRef::from_piece(place.piece), to: pair(place.to) }
+                Self::Place { piece: ApiPieceRef::from_id(place.piece), to: pair(place.to) }
             },
             Action::Move(move_) => Self::Move { from: pair(move_.from), to: pair(move_.to) },
             Action::Capture(move_) => Self::Capture { from: pair(move_.from), to: pair(move_.to) },
@@ -191,7 +202,7 @@ impl ApiAction {
     pub fn to_action(&self, current_player: Player) -> Result<Action, String> {
         match self {
             Self::Place { piece, to } => {
-                Ok(Action::Place(Place { piece: piece.to_piece()?, to: tuple(*to) }))
+                Ok(Action::Place(Place { piece: piece.to_id()?, to: tuple(*to) }))
             },
             Self::Move { from, to } => {
                 Ok(Action::Move(Move { from: tuple(*from), to: tuple(*to) }))

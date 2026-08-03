@@ -172,8 +172,8 @@ fn create_dataset(label: &str) -> TestDirectory {
                 plan,
                 placement_game(),
                 vec![
-                    Action::Place(Place { piece: Piece::RED_ROOK, to: (1, 3) }),
-                    Action::Place(Place { piece: Piece::BLACK_ROOK, to: (1, 1) }),
+                    Action::Place(Place { piece: Piece::RED_ROOK.id(), to: (1, 3) }),
+                    Action::Place(Place { piece: Piece::BLACK_ROOK.id(), to: (1, 1) }),
                     Action::Move(Move { from: (1, 3), to: (1, 2) }),
                     Action::Capture(Move { from: (1, 1), to: (1, 2) }),
                     Action::Resign(Player::Red),

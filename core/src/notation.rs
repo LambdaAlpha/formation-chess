@@ -14,6 +14,7 @@ use crate::chinese_num::parse_num;
 use crate::game::Phase;
 use crate::piece::Color;
 use crate::piece::Piece;
+use crate::piece::PieceId;
 use crate::piece::Player;
 
 /// Resolves between 1‑based notation types and 0‑based API types, using a
@@ -71,10 +72,10 @@ pub enum ChangeNotation {
     Phase(PiecePosition),
 }
 
-/// A placement in notation: a canonical piece and a 1-based destination.
+/// A placement in notation: a piece identity and a 1-based destination.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PlaceNotation {
-    pub piece: Piece,
+    pub piece: PieceId,
     pub to: (u8, u8),
 }
 
@@ -90,7 +91,7 @@ pub struct PiecePosition {
 /// its current point (`一二`).
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum PieceNotation {
-    Name(Piece),
+    Name(PieceId),
     Coord(u8, u8),
 }
 
@@ -172,7 +173,10 @@ fn place_notation(p: Place) -> PlaceNotation {
 
 fn change_notation(change: PositionChange) -> ChangeNotation {
     if let Some(piece) = change.piece {
-        ChangeNotation::Place(PlaceNotation { piece, to: (change.at.0 + 1, change.at.1) })
+        ChangeNotation::Place(PlaceNotation {
+            piece: piece.id(),
+            to: (change.at.0 + 1, change.at.1),
+        })
     } else {
         ChangeNotation::Remove(PieceNotation::Coord(change.at.0 + 1, change.at.1 + 1))
     }
@@ -258,9 +262,10 @@ impl FromStr for ReactionNotation {
         let Some((changes_part, result_part)) = s.split_once('\n') else {
             return Err("missing result line".to_string());
         };
-        let Some(changes_str) =
-            changes_part.strip_prefix("变化：[").and_then(|s| s.strip_suffix(']'))
-        else {
+        let Some(changes_str) = changes_part.strip_prefix("变化：[") else {
+            return Err(format!("invalid changes prefix: {changes_part}"));
+        };
+        let Some(changes_str) = changes_str.strip_suffix(']') else {
             return Err(format!("invalid changes prefix: {changes_part}"));
         };
 
@@ -604,10 +609,7 @@ impl<'a> NotationResolver<'a> {
     /// position must then be absolute).
     pub fn resolve_change(&self, change: ChangeNotation) -> Result<Vec<PositionChange>, String> {
         match change {
-            ChangeNotation::Place(p) => {
-                let place = self.place(p)?;
-                Ok(vec![PositionChange { at: place.to, piece: Some(place.piece) }])
-            },
+            ChangeNotation::Place(p) => self.resolve_place_change(p),
             ChangeNotation::Remove(piece) => {
                 let from = match piece {
                     PieceNotation::Name(p) => self.find_unique(p)?,
@@ -620,8 +622,7 @@ impl<'a> NotationResolver<'a> {
                     && let PieceNotation::Name(piece) = pp.piece
                     && let Position::Absolute(col, row) = pp.position
                 {
-                    let place = self.place(PlaceNotation { piece, to: (col, row) })?;
-                    Ok(vec![PositionChange { at: place.to, piece: Some(place.piece) }])
+                    self.resolve_place_change(PlaceNotation { piece, to: (col, row) })
                 } else {
                     self.resolve_change_move(pp)
                 }
@@ -650,20 +651,25 @@ impl<'a> NotationResolver<'a> {
         let mut result: Vec<ChangeNotation> = Vec::new();
 
         for change in changes {
-            let idx = if let Some(p) = change.piece.or(self.board.get(change.at)) {
-                result.iter().position(|cn| Some(p) == self.piece_of(cn))
+            let idx = if let Some(piece) = change.piece {
+                let piece = piece.id();
+                result.iter().position(|cn| Some(piece) == self.piece_of(cn))
+            } else if let Some(piece) = self.board.get(change.at) {
+                let piece = piece.id();
+                result.iter().position(|cn| Some(piece) == self.piece_of(cn))
             } else {
                 None
             };
 
             let change_notation = match idx {
                 None => {
-                    if let Some(p) = change.piece {
-                        if let Ok(from) = self.board.find_unique(p) {
+                    if let Some(piece) = change.piece {
+                        let piece = piece.id();
+                        if let Ok(from) = self.board.find_unique(piece) {
                             ChangeNotation::Phase(self.piece_position(from, change.at))
                         } else {
                             let to = (change.at.0 + 1, change.at.1 + 1);
-                            ChangeNotation::Place(PlaceNotation { piece: p, to })
+                            ChangeNotation::Place(PlaceNotation { piece, to })
                         }
                     } else {
                         ChangeNotation::Remove(self.piece_notation(change.at))
@@ -673,7 +679,7 @@ impl<'a> NotationResolver<'a> {
                     let existing = result.swap_remove(i);
                     match existing {
                         ChangeNotation::Remove(ref pn) if change.piece.is_some() => {
-                            if let Some(from) = self.position_of(pn) {
+                            if let Some(from) = self.position_of(*pn) {
                                 ChangeNotation::Phase(self.piece_position(from, change.at))
                             } else {
                                 existing
@@ -693,23 +699,33 @@ impl<'a> NotationResolver<'a> {
         result
     }
 
-    fn piece_of(&self, cn: &ChangeNotation) -> Option<Piece> {
+    fn piece_of(&self, cn: &ChangeNotation) -> Option<PieceId> {
         match cn {
             ChangeNotation::Place(p) => Some(p.piece),
             ChangeNotation::Remove(pn) | ChangeNotation::Phase(PiecePosition { piece: pn, .. }) => {
                 match pn {
                     PieceNotation::Name(p) => Some(*p),
-                    PieceNotation::Coord(col, row) => self.board.get((col - 1, row - 1)),
+                    PieceNotation::Coord(col, row) => {
+                        self.board.get((col - 1, row - 1)).map(|piece| piece.id())
+                    },
                 }
             },
         }
     }
 
-    fn position_of(&self, pn: &PieceNotation) -> Option<(u8, u8)> {
+    fn position_of(&self, pn: PieceNotation) -> Option<(u8, u8)> {
         match pn {
             PieceNotation::Coord(col, row) => Some((col.saturating_sub(1), row.saturating_sub(1))),
-            PieceNotation::Name(p) => self.board.find_unique(*p).ok(),
+            PieceNotation::Name(p) => self.board.find_unique(p).ok(),
         }
+    }
+
+    fn resolve_place_change(&self, notation: PlaceNotation) -> Result<Vec<PositionChange>, String> {
+        let place = self.place(notation)?;
+        let Some(piece) = Piece::lookup(place.piece.name, place.piece.color) else {
+            return Err(format!("unknown piece: {}", place.piece));
+        };
+        Ok(vec![PositionChange { at: place.to, piece: Some(piece) }])
     }
 
     fn place(&self, place: PlaceNotation) -> Result<Place, String> {
@@ -736,9 +752,14 @@ impl<'a> NotationResolver<'a> {
     }
 
     fn piece_notation(&self, pos: (u8, u8)) -> PieceNotation {
-        match self.board.get(pos) {
-            Some(piece) if self.board.find_unique(piece).is_ok() => PieceNotation::Name(piece),
-            _ => PieceNotation::Coord(pos.0 + 1, pos.1 + 1),
+        let Some(piece) = self.board.get(pos) else {
+            return PieceNotation::Coord(pos.0 + 1, pos.1 + 1);
+        };
+        let piece = piece.id();
+        if self.board.find_unique(piece).is_ok() {
+            PieceNotation::Name(piece)
+        } else {
+            PieceNotation::Coord(pos.0 + 1, pos.1 + 1)
         }
     }
 
@@ -747,7 +768,7 @@ impl<'a> NotationResolver<'a> {
         Position::notation((from.0 + 1, from.1 + 1), color, (to.0 + 1, to.1 + 1))
     }
 
-    fn find_unique(&self, piece: Piece) -> Result<(u8, u8), String> {
+    fn find_unique(&self, piece: PieceId) -> Result<(u8, u8), String> {
         match self.board.find_unique(piece) {
             Ok(from) => Ok((from.0, from.1)),
             Err(false) => Err(format!("piece {piece} not on board")),

@@ -185,8 +185,8 @@ fn zero_action_failure_has_empty_action_metrics_and_preserves_final_material() {
 
 fn mixed_action_record() -> GameRecord {
     let actions = vec![
-        Action::Place(Place { piece: Piece::RED_ROOK, to: (1, 3) }),
-        Action::Place(Place { piece: Piece::BLACK_ROOK, to: (1, 1) }),
+        Action::Place(Place { piece: Piece::RED_ROOK.id(), to: (1, 3) }),
+        Action::Place(Place { piece: Piece::BLACK_ROOK.id(), to: (1, 1) }),
         Action::Move(Move { from: (1, 3), to: (1, 2) }),
         Action::Capture(Move { from: (1, 1), to: (1, 2) }),
         Action::Resign(Player::Red),

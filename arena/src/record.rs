@@ -13,6 +13,7 @@ use formation_chess_core::game::Phase;
 use formation_chess_core::notation::NotationResolver;
 use formation_chess_core::piece::Color;
 use formation_chess_core::piece::Piece;
+use formation_chess_core::piece::PieceId;
 use formation_chess_core::piece::Player;
 use serde::Deserialize;
 use serde::Serialize;
@@ -432,6 +433,12 @@ pub struct PieceRecord {
 
 impl From<Piece> for PieceRecord {
     fn from(piece: Piece) -> Self {
+        Self { name: piece.name, color: ColorRecord::from(piece.color) }
+    }
+}
+
+impl From<PieceId> for PieceRecord {
+    fn from(piece: PieceId) -> Self {
         Self { name: piece.name, color: ColorRecord::from(piece.color) }
     }
 }

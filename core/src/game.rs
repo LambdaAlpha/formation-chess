@@ -13,6 +13,7 @@ use crate::board::Board;
 use crate::board::parse_board_from_lines;
 use crate::piece::Color;
 use crate::piece::Piece;
+use crate::piece::PieceId;
 pub use crate::piece::Player;
 
 /// A running game: board, pools, player to move, and result. Constructed
@@ -81,7 +82,6 @@ impl Default for GameConfig {
 }
 
 struct PlaceResult {
-    piece: Piece,
     index: usize,
     changes: Vec<PositionChange>,
 }
@@ -147,8 +147,7 @@ impl Game {
             config.board.validate_halves()?;
             Self::validate_alternation(config)?;
         }
-        Self::validate_vital_result(config)?;
-        Ok(())
+        Self::validate_vital_result(config)
     }
 
     fn validate_pool(config: &GameConfig) -> Result<(), String> {
@@ -239,10 +238,18 @@ impl Game {
             Player::Red => &config.red_pool,
             Player::Black => &config.black_pool,
         };
-        let pool = pool.iter().filter(|p| p.ability.has(Ability::VITAL)).count();
-        let vital = |p: &Piece| p.color == player.color() && p.ability.has(Ability::VITAL);
-        let board = config.board.iter().map(|(_, piece)| piece).filter(vital).count();
-        pool + board
+        let mut count = 0;
+        for piece in pool {
+            if piece.ability.has(Ability::VITAL) {
+                count += 1;
+            }
+        }
+        for (_, piece) in config.board.iter() {
+            if piece.color == player.color() && piece.ability.has(Ability::VITAL) {
+                count += 1;
+            }
+        }
+        count
     }
 
     /// Execute an action for the player to move. On success the turn
@@ -256,7 +263,7 @@ impl Game {
         match action {
             Action::Place(place) => {
                 let pr = self.try_place(place)?;
-                self.apply_place(pr.piece, pr.index, pr.changes, GameResult::Unfinished)
+                self.apply_place(pr.index, pr.changes, GameResult::Unfinished)
             },
             Action::Move(move_) => self.apply_move(self.try_move(move_)?),
             Action::Capture(move_) => self.apply_move(self.try_capture(move_)?),
@@ -358,14 +365,14 @@ impl Game {
         }
         let (piece, index) = self.find_in_pool(place.piece)?;
         let changes = self.board.try_place(piece, place.to)?;
-        Ok(PlaceResult { piece, index, changes })
+        Ok(PlaceResult { index, changes })
     }
 
-    fn find_in_pool(&self, piece: Piece) -> Result<(Piece, usize), String> {
+    fn find_in_pool(&self, piece: PieceId) -> Result<(Piece, usize), String> {
         match piece.color {
             Color::Red => {
                 for (i, p) in self.red_pool.iter().enumerate() {
-                    if *p == piece {
+                    if p.id() == piece {
                         return Ok((self.red_pool[i], i));
                     }
                 }
@@ -373,7 +380,7 @@ impl Game {
             },
             Color::Black => {
                 for (i, p) in self.black_pool.iter().enumerate() {
-                    if *p == piece {
+                    if p.id() == piece {
                         return Ok((self.black_pool[i], i));
                     }
                 }
@@ -384,17 +391,16 @@ impl Game {
     }
 
     fn apply_place(
-        &mut self, piece: Piece, index: usize, changes: Vec<PositionChange>, result: GameResult,
+        &mut self, index: usize, changes: Vec<PositionChange>, result: GameResult,
     ) -> Result<Reaction, String> {
         self.board.apply(&changes);
-        match piece.color {
-            Color::Red => {
+        match self.player {
+            Player::Red => {
                 self.red_pool.remove(index);
             },
-            Color::Black => {
+            Player::Black => {
                 self.black_pool.remove(index);
             },
-            Color::White => self.white_pool -= 1,
         }
         self.switch_player();
         self.result = result;
@@ -651,34 +657,39 @@ impl FromStr for Game {
 }
 
 fn parse_pool(s: &str, color: Color) -> Result<Vec<Piece>, String> {
-    let Some(inner) = s.strip_prefix('[').and_then(|s| s.strip_suffix(']')) else {
+    let Some(inner) = s.strip_prefix('[') else {
+        return Err(format!("pool must be bracketed: {s}"));
+    };
+    let Some(inner) = inner.strip_suffix(']') else {
         return Err(format!("pool must be bracketed: {s}"));
     };
     if inner.is_empty() {
         return Ok(Vec::new());
     }
-    inner
-        .split_whitespace()
-        .map(|s| {
-            let mut chars = s.chars();
-            let Some(name) = chars.next() else {
-                return Err("empty piece name in pool".to_string());
-            };
-            if chars.next().is_some() {
-                return Err(format!("piece name in pool must be a single character: {s}"));
-            }
-            let Some(piece) = Piece::lookup(name, color) else {
-                return Err(format!("unknown piece in pool: {s}"));
-            };
-            Ok(piece)
-        })
-        .collect()
+    let mut pieces = Vec::new();
+    for piece_name in inner.split_whitespace() {
+        let mut chars = piece_name.chars();
+        let Some(name) = chars.next() else {
+            return Err("empty piece name in pool".to_string());
+        };
+        if chars.next().is_some() {
+            return Err(format!("piece name in pool must be a single character: {piece_name}"));
+        }
+        let Some(piece) = Piece::lookup(name, color) else {
+            return Err(format!("unknown piece in pool: {piece_name}"));
+        };
+        pieces.push(piece);
+    }
+    Ok(pieces)
 }
 
 fn parse_config(s: &str) -> Result<GameConfig, String> {
     let mut lines = s.lines();
     let player_line = lines.next().ok_or("missing player line")?;
-    let Some(player) = player_line.strip_prefix("行棋方：").and_then(|s| s.parse().ok()) else {
+    let Some(player) = player_line.strip_prefix("行棋方：") else {
+        return Err(format!("invalid player: {player_line}"));
+    };
+    let Ok(player) = player.parse() else {
         return Err(format!("invalid player: {player_line}"));
     };
 
@@ -690,14 +701,18 @@ fn parse_config(s: &str) -> Result<GameConfig, String> {
         parse_pool(black_line.strip_prefix("黑方：").ok_or("invalid black pool")?, Color::Black)?;
 
     let white_line = lines.next().ok_or("missing white count")?;
-    let Some(white_count) = white_line.strip_prefix("白方：").and_then(|s| s.parse().ok())
-    else {
+    let Some(white_count) = white_line.strip_prefix("白方：") else {
+        return Err(format!("invalid white count: {white_line}"));
+    };
+    let Ok(white_count) = white_count.parse::<u8>() else {
         return Err(format!("invalid white count: {white_line}"));
     };
 
     let result_line = lines.next().ok_or("missing result line")?;
-    let Some(result) = result_line.strip_prefix("胜负：").and_then(|s| s.trim().parse().ok())
-    else {
+    let Some(result) = result_line.strip_prefix("胜负：") else {
+        return Err(format!("invalid result: {result_line}"));
+    };
+    let Ok(result) = result.trim().parse() else {
         return Err(format!("invalid result: {result_line}"));
     };
 

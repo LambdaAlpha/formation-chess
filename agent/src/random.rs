@@ -59,7 +59,7 @@ impl RandomAgent {
             .flat_map(|piece| {
                 area.positions().filter(move |position| board.get(*position).is_none()).map(
                     move |to| ScoredAction {
-                        action: Action::Place(Place { piece, to }),
+                        action: Action::Place(Place { piece: piece.id(), to }),
                         score: 0.0,
                     },
                 )

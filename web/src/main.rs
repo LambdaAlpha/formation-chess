@@ -3,7 +3,8 @@ mod server;
 
 #[tokio::main]
 async fn main() {
-    let port = std::env::args().nth(1).and_then(|s| s.parse().ok()).unwrap_or(0u16);
+    let port =
+        if let Some(port) = std::env::args().nth(1) { port.parse().unwrap_or(0u16) } else { 0 };
 
     let listener =
         tokio::net::TcpListener::bind(("127.0.0.1", port)).await.expect("failed to bind");

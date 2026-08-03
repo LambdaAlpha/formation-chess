@@ -10,6 +10,7 @@ use formation_chess_core::board::Board;
 use formation_chess_core::game::Game;
 use formation_chess_core::game::GameConfig;
 use formation_chess_core::piece::Piece;
+use formation_chess_core::piece::PieceId;
 use formation_chess_core::piece::Player;
 
 mod support;
@@ -17,27 +18,42 @@ use support::api::SIMPLE;
 use support::api::game_one;
 
 #[test]
-fn placement_action_uses_the_canonical_pool_configuration() {
-    let state = "行棋方：红
-红方：[将]
-黑方：[卒]
-白方：0
-胜负：未分
-棋盘：
-零[一路 二路 三路 四路 五路]
-一[黑将 一一 一一 一一 一一]
-二[一一 一一 一一 一一 一一]
-三[一一 一一 一一 一一 一一]
-四[一一 一一 一一 一一 一一]
-五[一一 一一 一一 一一 一一]
-";
-    let mut game = Game::from_str(state).expect("parse");
-    let forged = Piece { ability: Piece::RED_ROOK.ability, ..Piece::RED_GENERAL };
-    game.action(Action::Place(Place { piece: forged, to: (0, 4) })).expect("place");
-    let placed = game.board()[(0, 4)].expect("piece placed");
-    assert!(placed.ability.has(Ability::VITAL));
-    assert_eq!(placed.ability, Piece::RED_GENERAL.ability);
+fn placement_action_uses_the_pool_piece_configuration() {
+    let custom_rook = Piece {
+        formation: Piece::RED_PAWN.formation,
+        ability: Piece::RED_PAWN.ability,
+        ..Piece::RED_ROOK
+    };
+    let mut board = Board::new(5, 5);
+    board[(0, 4)] = Some(Piece::RED_GENERAL);
+    board[(4, 0)] = Some(Piece::BLACK_GENERAL);
+    let mut game = Game::new(GameConfig {
+        player: Player::Red,
+        board,
+        red_pool: vec![custom_rook],
+        black_pool: vec![Piece::BLACK_PAWN],
+        white: Piece::WHITE,
+        white_pool: 0,
+        result: GameResult::Unfinished,
+    })
+    .expect("valid custom game");
+
+    let reaction = game
+        .action(Action::Place(Place { piece: Piece::RED_ROOK.id(), to: (1, 3) }))
+        .expect("place");
+    assert_eq!(reaction.changes, vec![PositionChange { at: (1, 3), piece: Some(custom_rook) }]);
+    let placed = game.board()[(1, 3)].expect("piece placed");
+    assert_eq!(placed.formation.points, custom_rook.formation.points);
+    assert_eq!(placed.ability, custom_rook.ability);
     assert_eq!(game.result(), GameResult::Unfinished);
+}
+
+#[test]
+fn piece_id_round_trips_the_canonical_piece_identity() {
+    let id = Piece::RED_ROOK.id();
+    assert_eq!(id.to_string(), "红车");
+    assert_eq!("红车".parse::<PieceId>(), Ok(id));
+    assert_eq!(Piece::lookup(id.name, id.color), Some(Piece::RED_ROOK));
 }
 
 #[test]
@@ -54,6 +70,8 @@ fn try_move_changes_keep_the_original_piece_configuration() {
         at: (1, 2),
         piece: Some(Piece::BLACK_ROOK)
     },]);
+    board.apply(&changes);
+    assert_eq!(board[(1, 2)].expect("moved piece").ability, Piece::BLACK_ROOK.ability);
 }
 
 #[test]
@@ -74,6 +92,8 @@ fn try_capture_changes_keep_the_original_mover_configuration() {
         at: (0, 0),
         piece: Some(Piece::RED_WIND)
     },]);
+    board.apply(&changes);
+    assert_eq!(board[(0, 0)].expect("capturing piece").ability, Piece::RED_WIND.ability);
 }
 
 #[test]
@@ -95,6 +115,9 @@ fn try_push_changes_keep_the_original_piece_configurations() {
         PositionChange { at: (3, 3), piece: Some(Piece::RED_WIND) },
         PositionChange { at: (4, 4), piece: Some(Piece::BLACK_SCHOLAR) },
     ]);
+    board.apply(&changes);
+    assert_eq!(board[(3, 3)].expect("pushing piece").ability, Piece::RED_WIND.ability);
+    assert_eq!(board[(4, 4)].expect("pushed piece").ability, Piece::BLACK_SCHOLAR.ability);
 }
 
 #[test]
@@ -149,7 +172,7 @@ fn placement_rejects_neutral_piece() {
 ";
     let mut game = Game::from_str(state).expect("parse");
     let err = game
-        .action(Action::Place(Place { piece: Piece::WHITE, to: (1, 2) }))
+        .action(Action::Place(Place { piece: Piece::WHITE.id(), to: (1, 2) }))
         .expect_err("white placement must fail");
     assert!(err.contains("cannot place piece of color"), "unexpected error: {err}");
 }
@@ -185,12 +208,13 @@ fn try_action_place_validates_without_mutating() {
         result: GameResult::Unfinished,
     })
     .expect("valid");
-    let reaction =
-        g.try_action(Action::Place(Place { piece: Piece::RED_ROOK, to: (0, 3) })).expect("valid");
+    let reaction = g
+        .try_action(Action::Place(Place { piece: Piece::RED_ROOK.id(), to: (0, 3) }))
+        .expect("valid");
     assert_eq!(reaction.changes, vec![PositionChange { at: (0, 3), piece: Some(Piece::RED_ROOK) }]);
     assert!(!g.red_pool().is_empty(), "pool unchanged");
     assert_eq!(g.player(), Player::Red);
-    g.action(Action::Place(Place { piece: Piece::RED_ROOK, to: (0, 3) })).expect("real");
+    g.action(Action::Place(Place { piece: Piece::RED_ROOK.id(), to: (0, 3) })).expect("real");
     assert!(g.red_pool().is_empty());
 }
 

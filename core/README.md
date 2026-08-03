@@ -140,9 +140,9 @@ The parser's snapshot example is also available as
 | Module | Main contents |
 |---|---|
 | `game` | `Game`, `GameConfig`, phases, turn flow, validation, and result tracking |
-| `action` | `Action`, `Move`, `Place`, `Reaction`, `PositionChange`, `GameResult` |
+| `action` | `Action`, `Move`, `Place`, `Reaction`, `PositionChange`, `GameResult`; placement actions use `PieceId`, while reaction changes carry complete `Piece` values |
 | `board` | board geometry, effective pieces, movement, push, capture, draw, divide, and legal-action enumeration |
-| `piece` | `Piece`, `Color`, `Player`, and canonical piece constants such as `Piece::RED_GENERAL` |
+| `piece` | `Piece`, lightweight `PieceId`, `Color`, `Player`, canonical `Piece` constants, and `Piece::id()` for identity conversion |
 | `formation` | active neighbor patterns and ability-rewriting effects |
 | `ability` | the ability bitmask and `AbilityConfig` builder |
 | `notation` | notation data types and `NotationResolver` |

@@ -132,7 +132,7 @@ fn standard_red_placement_area_matches_bottom_half() {
 #[test]
 fn black_placement_area_matches_top_half_after_red_places() {
     let mut game = Game::new(GameConfig::default()).expect("standard game");
-    game.action(Action::Place(Place { piece: Piece::RED_GENERAL, to: (0, 5) }))
+    game.action(Action::Place(Place { piece: Piece::RED_GENERAL.id(), to: (0, 5) }))
         .expect("red placement");
 
     let area = placement_area(&game).expect("black placement area");
@@ -149,7 +149,7 @@ fn odd_height_placement_area_excludes_middle_row() {
     assert_eq!(red_area.y_range(), 3 .. 5);
     assert!(!red_area.contains((1, 2)));
 
-    game.action(Action::Place(Place { piece: Piece::RED_GENERAL, to: (0, 3) }))
+    game.action(Action::Place(Place { piece: Piece::RED_GENERAL.id(), to: (0, 3) }))
         .expect("red placement");
     let black_area = placement_area(&game).expect("black placement area");
     assert_eq!(black_area.y_range(), 0 .. 2);
@@ -209,7 +209,7 @@ fn analysis_dispatches_placement_without_action_enumeration() {
     let game = Game::new(GameConfig::default()).expect("standard game");
     let before = game.to_string();
     let expected_pool = game.red_pool().to_vec();
-    let placement = Action::Place(Place { piece: Piece::RED_GENERAL, to: (0, 5) });
+    let placement = Action::Place(Place { piece: Piece::RED_GENERAL.id(), to: (0, 5) });
     let mut agent =
         TestAgent::new(vec![scored(placement, 3.0)], vec![scored(Action::Pass(Player::Red), 1.0)]);
 
@@ -240,7 +240,7 @@ fn analysis_dispatches_prepared_movement_candidates() {
 
     let pass = Action::Pass(Player::Red);
     let mut agent = TestAgent::new(
-        vec![scored(Action::Place(Place { piece: Piece::RED_GENERAL, to: (0, 4) }), 1.0)],
+        vec![scored(Action::Place(Place { piece: Piece::RED_GENERAL.id(), to: (0, 4) }), 1.0)],
         vec![scored(pass, 2.0)],
     );
 
@@ -345,7 +345,7 @@ fn analysis_rejects_movement_action_outside_supplied_list() {
 fn analysis_rejects_invalid_placement() {
     let game = Game::new(GameConfig::default()).expect("standard game");
     let before = game.to_string();
-    let invalid = Action::Place(Place { piece: Piece::BLACK_GENERAL, to: (0, 5) });
+    let invalid = Action::Place(Place { piece: Piece::BLACK_GENERAL.id(), to: (0, 5) });
     let mut agent = TestAgent::new(vec![scored(invalid, 1.0)], Vec::new());
 
     let error =
@@ -361,7 +361,7 @@ fn analysis_rejects_finished_game_without_calling_agent() {
     let mut game = movement_game();
     game.action(Action::Resign(Player::Red)).expect("finish game");
     let mut agent = TestAgent::new(
-        vec![scored(Action::Place(Place { piece: Piece::BLACK_GENERAL, to: (0, 0) }), 1.0)],
+        vec![scored(Action::Place(Place { piece: Piece::BLACK_GENERAL.id(), to: (0, 0) }), 1.0)],
         vec![scored(Action::Pass(Player::Black), 1.0)],
     );
 

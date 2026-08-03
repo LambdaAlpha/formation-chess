@@ -12,6 +12,7 @@ use formation_chess_core::game::Phase;
 use formation_chess_core::notation::NotationResolver;
 use formation_chess_core::piece::Color;
 use formation_chess_core::piece::Piece;
+use formation_chess_core::piece::PieceId;
 use formation_chess_core::piece::Player;
 
 use crate::record::ActionCountsBySide;
@@ -295,11 +296,15 @@ fn action_from_data(data: &ActionData) -> Result<Action, String> {
     })
 }
 
-fn piece_from_record(record: &PieceRecord) -> Result<Piece, String> {
+fn piece_from_record(record: &PieceRecord) -> Result<PieceId, String> {
     let color = color_from_record(record.color);
-    Piece::lookup(record.name, color).ok_or_else(|| {
-        format!("action references unknown piece {:?} with color {:?}", record.name, record.color)
-    })
+    let Some(piece) = Piece::lookup(record.name, color) else {
+        return Err(format!(
+            "action references unknown piece {:?} with color {:?}",
+            record.name, record.color
+        ));
+    };
+    Ok(piece.id())
 }
 
 const fn position_from_record(record: PositionRecord) -> (u8, u8) {

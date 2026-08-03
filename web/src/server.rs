@@ -488,7 +488,7 @@ mod tests {
             revision: 0,
             side: "Red".to_owned(),
             action: ApiAction::Place {
-                piece: ApiPieceRef::from_piece(Piece::RED_PLAYER_PIECES[0]),
+                piece: ApiPieceRef::from_id(Piece::RED_GENERAL.id()),
                 to: [0, 5],
             },
         };
@@ -511,7 +511,7 @@ mod tests {
             revision: 0,
             side: "Red".to_owned(),
             action: ApiAction::Place {
-                piece: ApiPieceRef::from_piece(Piece::RED_PLAYER_PIECES[0]),
+                piece: ApiPieceRef::from_id(Piece::RED_GENERAL.id()),
                 to: [0, 5],
             },
         };

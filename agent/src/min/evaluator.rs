@@ -496,14 +496,18 @@ fn vital_survives(board: &Board, changes: &[PositionChange], color: Color) -> bo
 }
 
 fn exchange_units(board: &Board, changes: &[PositionChange], player: Player) -> i64 {
-    changes
-        .iter()
-        .map(|change| {
-            let old = board.get(change.at).map_or(0, |piece| exchange_piece_units(piece, player));
-            let new = change.piece.map_or(0, |piece| exchange_piece_units(piece, player));
-            i64::from(new - old)
-        })
-        .sum()
+    let mut units = 0;
+    for change in changes {
+        let old = if let Some(piece) = board.get(change.at) {
+            exchange_piece_units(piece, player)
+        } else {
+            0
+        };
+        let new =
+            if let Some(piece) = change.piece { exchange_piece_units(piece, player) } else { 0 };
+        units += i64::from(new - old);
+    }
+    units
 }
 
 fn exchange_piece_units(piece: Piece, player: Player) -> i32 {

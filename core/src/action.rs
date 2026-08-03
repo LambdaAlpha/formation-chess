@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use crate::piece::Piece;
+use crate::piece::PieceId;
 use crate::piece::Player;
 
 /// A player action, expressed in 0-based board coordinates.
@@ -34,17 +35,17 @@ pub struct Reaction {
     pub game_result: GameResult,
 }
 
-/// The new content of a single point: a piece, or None for empty.
+/// The new content of a single point: a complete piece, or None for empty.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct PositionChange {
     pub at: (u8, u8),
     pub piece: Option<Piece>,
 }
 
-/// A piece arriving at `to` from outside the board.
+/// A piece identity arriving at `to` from outside the board.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Place {
-    pub piece: Piece,
+    pub piece: PieceId,
     pub to: (u8, u8),
 }
 

@@ -109,7 +109,7 @@ fn random_agent_avoids_occupied_placement_points() {
     let Action::Place(placement) = candidates[0].action else {
         panic!("placement analysis returned a movement action");
     };
-    assert_eq!(placement.piece, Piece::RED_GENERAL);
+    assert_eq!(placement.piece, Piece::RED_GENERAL.id());
     assert_eq!(placement.to, (0, 3));
     assert_eq!(candidates[0].score, 0.0);
 }
@@ -204,7 +204,7 @@ fn random_agent_completes_standard_placement_phase() {
         };
 
         assert_eq!(turn.player, player);
-        assert!(pool.contains(&placement.piece));
+        assert!(pool.iter().any(|piece| piece.id() == placement.piece));
         assert!(empty_positions.contains(&placement.to));
         assert_eq!(turn.score, 0.0);
         assert_eq!(turn.legal_action_count, None);

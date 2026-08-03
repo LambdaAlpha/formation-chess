@@ -60,7 +60,7 @@ fn placements(game: &Game) -> Vec<Action> {
         .flat_map(|piece| {
             area.positions()
                 .filter(|position| game.board().get(*position).is_none())
-                .map(move |to| Action::Place(Place { piece, to }))
+                .map(move |to| Action::Place(Place { piece: piece.id(), to }))
         })
         .collect()
 }

@@ -19,9 +19,16 @@ pub struct Piece {
     pub ability: Ability,
 }
 
+/// The stable identity of a piece: its name and color.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct PieceId {
+    pub name: char,
+    pub color: Color,
+}
+
 /// A piece color. Unlike [`Player`], this includes White, the color of
 /// captured-and-recycled pieces owned by neither player.
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Color {
     Red,
     Black,
@@ -36,6 +43,11 @@ pub enum Player {
 }
 
 impl Piece {
+    /// Return the stable name-and-color identity of this piece.
+    pub const fn id(&self) -> PieceId {
+        PieceId { name: self.name, color: self.color }
+    }
+
     /// (controlled_by_red, controlled_by_black) for a piece of `color`.
     const fn controlled(color: Color) -> (bool, bool) {
         match color {
@@ -791,6 +803,12 @@ impl Piece {
     }
 }
 
+impl From<Piece> for PieceId {
+    fn from(piece: Piece) -> Self {
+        piece.id()
+    }
+}
+
 /// Equality is **name and color only**; formation and abilities are
 /// ignored. Pool lookups and board searches rely on this.
 impl PartialEq for Piece {
@@ -802,6 +820,30 @@ impl PartialEq for Piece {
 impl Display for Piece {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}{}", self.color, self.name)
+    }
+}
+
+impl Display for PieceId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}{}", self.color, self.name)
+    }
+}
+
+impl FromStr for PieceId {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, String> {
+        let mut indices = s.char_indices();
+        let (Some(_), Some((name_start, name)), None) =
+            (indices.next(), indices.next(), indices.next())
+        else {
+            return Err(format!("invalid piece: {s}"));
+        };
+        let color: Color = s[.. name_start].parse()?;
+        let Some(piece) = Piece::lookup(name, color) else {
+            return Err(format!("unknown piece: {s}"));
+        };
+        Ok(Self::from(piece))
     }
 }
 

@@ -188,7 +188,7 @@ fn select_children(
         let ordinal = spread_index(sample_index, probes, total);
         let piece = pieces[ordinal / positions.len()];
         let to = positions[ordinal % positions.len()];
-        let action = Action::Place(Place { piece, to });
+        let action = Action::Place(Place { piece: piece.id(), to });
         let mut child_game = game.clone();
         child_game.action(action).map_err(|message| {
             AgentError::Decision(format!("generated Min placement was rejected: {message}"))

@@ -12,6 +12,7 @@ use crate::action::PositionChange;
 use crate::chinese_num::fmt_num;
 use crate::piece::Color;
 use crate::piece::Piece;
+use crate::piece::PieceId;
 use crate::piece::Player;
 
 /// A rectangular grid of points (at most 16×16), each empty or holding one
@@ -156,10 +157,10 @@ impl Board {
     /// * `Err(false)` — no copy on the board.
     /// * `Err(true)` — more than one copy; the caller must identify the
     ///   piece by coordinates.
-    pub fn find_unique(&self, piece: Piece) -> Result<(u8, u8), bool> {
+    pub fn find_unique(&self, piece: PieceId) -> Result<(u8, u8), bool> {
         let mut pos = None;
         for (i, cell) in self.pieces.iter().enumerate() {
-            if *cell == Some(piece) {
+            if cell.is_some_and(|candidate| candidate.id() == piece) {
                 if pos.is_some() {
                     return Err(true);
                 }
@@ -679,8 +680,8 @@ impl Board {
         }
     }
 
-    /// Write position-based changes onto the board. Panics when a change
-    /// lies outside the board.
+    /// Write position-based changes onto the board. Panics when a change is
+    /// outside the board.
     pub fn apply(&mut self, changes: &[PositionChange]) {
         for change in changes {
             self[change.at] = change.piece;
@@ -834,7 +835,10 @@ fn bracket_cells<'s>(line: &'s str, label: &str) -> Result<Vec<&'s str>, String>
     let Some(rest) = line.strip_prefix(label) else {
         return Err(format!("row must start with label {label}: {line}"));
     };
-    let Some(inner) = rest.strip_prefix('[').and_then(|s| s.strip_suffix(']')) else {
+    let Some(inner) = rest.strip_prefix('[') else {
+        return Err(format!("row must be bracketed: {line}"));
+    };
+    let Some(inner) = inner.strip_suffix(']') else {
         return Err(format!("row must be bracketed: {line}"));
     };
     if inner.is_empty() {
