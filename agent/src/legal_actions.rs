@@ -70,10 +70,7 @@ pub fn legal_movement_actions(game: &Game) -> Vec<Action> {
         return Vec::new();
     }
 
-    let mut actions = Vec::new();
-    for ((x, y), _) in game.board().iter() {
-        actions.extend(game.valid_moves(x, y));
-    }
+    let mut actions = game.all_valid_moves();
     actions.push(Action::Pass(game.player()));
     actions
 }

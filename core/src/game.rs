@@ -342,17 +342,39 @@ impl Game {
     /// when the position is empty, or when the piece is not controlled by
     /// the player to move.
     pub fn valid_moves(&self, x: u8, y: u8) -> Vec<Action> {
+        let mut actions = Vec::new();
         if self.phase() != Phase::Move || self.result != GameResult::Unfinished {
-            return vec![];
+            return actions;
         }
         let Some(piece) = self.board.effective((x, y)) else {
-            return vec![];
+            return actions;
         };
         if !piece.can_controlled_by(self.player) {
-            return vec![];
+            return actions;
         }
         let has_white = self.white_pool > 0;
-        self.board.valid_moves(self.player, (x, y), has_white)
+        self.board.valid_moves(self.player, (x, y), has_white, &mut actions);
+        actions
+    }
+
+    /// Enumerate all legal movement actions for the player to move.
+    /// Returns an empty list outside an unfinished movement phase.
+    pub fn all_valid_moves(&self) -> Vec<Action> {
+        if self.phase() != Phase::Move || self.result != GameResult::Unfinished {
+            return Vec::new();
+        }
+        let mut actions = Vec::with_capacity(128);
+        let has_white = self.white_pool > 0;
+        for (from, _) in self.board.iter() {
+            let Some(piece) = self.board.effective(from) else {
+                continue;
+            };
+            if !piece.can_controlled_by(self.player) {
+                continue;
+            }
+            self.board.valid_moves(self.player, from, has_white, &mut actions);
+        }
+        actions
     }
 
     /// Non‑mutating placement validation (handles colored pieces only).

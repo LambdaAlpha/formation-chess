@@ -16,6 +16,41 @@ use support::api::assert_pushes;
 use support::api::game_one;
 use support::api::game_with;
 
+// -- all_valid_moves ---------------------------------------------------------
+
+#[test]
+fn all_valid_moves_matches_controlled_piece_queries() {
+    let g = game_with(
+        Player::Red,
+        &[
+            (Piece::RED_ROOK, (0, 2)),
+            (Piece::BLACK_ROOK, (4, 2)),
+            (Piece::RED_PAWN, (2, 3)),
+            (Piece::RED_GENERAL, (0, 4)),
+            (Piece::BLACK_GENERAL, (4, 0)),
+        ],
+        5,
+        5,
+    );
+
+    let mut expected = g.valid_moves(0, 2);
+    expected.extend(g.valid_moves(2, 3));
+    expected.extend(g.valid_moves(0, 4));
+
+    let actions = g.all_valid_moves();
+    assert_eq!(actions, expected);
+    assert!(actions.capacity() >= 128);
+}
+
+#[test]
+fn all_valid_moves_outside_unfinished_movement_phase_returns_empty() {
+    assert!(Game::default().all_valid_moves().is_empty());
+
+    let mut g = game_one(Player::Red, Piece::RED_ROOK, (2, 2));
+    g.action(Action::Resign(Player::Red)).expect("resign");
+    assert!(g.all_valid_moves().is_empty());
+}
+
 // -- valid_moves: edge cases -------------------------------------------------
 
 #[test]

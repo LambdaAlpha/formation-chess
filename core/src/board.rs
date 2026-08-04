@@ -582,41 +582,41 @@ impl Board {
         }
     }
 
-    /// Enumerate all legal actions for the piece at `from`. The piece must
-    /// be present on the board. Actions are [`Action::Move`],
+    /// Append all legal actions for the piece at `from` to `actions`. The piece
+    /// must be present on the board. Actions are [`Action::Move`],
     /// [`Action::Capture`], [`Action::Push`], [`Action::Draw`], and
     /// [`Action::Divide`]; placement, pass, and resign are the caller's concern.
     ///
     /// `player` filters draw actions: only draws targeting the opponent's
-    /// colored pieces are returned.
-    pub fn valid_moves(&self, player: Player, from: (u8, u8), has_white: bool) -> Vec<Action> {
+    /// colored pieces are appended.
+    pub fn valid_moves(
+        &self, player: Player, from: (u8, u8), has_white: bool, actions: &mut Vec<Action>,
+    ) {
         let Some(piece) = self.effective(from) else {
-            return vec![];
+            return;
         };
         let max = if piece.ability.has(Ability::ANY_DISTANCE) {
             self.width.max(self.height) as i8
         } else {
             1
         };
-        let mut actions = Vec::new();
         if piece.ability.has(Ability::DIRECTION_CROSS) {
             for (dx, dy) in [(0i8, -1), (0, 1), (-1, 0), (1, 0)] {
-                self.enumerate_line(player, piece, from, dx, dy, max, has_white, &mut actions);
+                self.enumerate_line(player, piece, from, dx, dy, max, has_white, actions);
             }
         }
         if piece.ability.has(Ability::DIRECTION_DIAGONAL) {
             for (dx, dy) in [(-1i8, -1), (1, -1), (-1, 1), (1, 1)] {
-                self.enumerate_line(player, piece, from, dx, dy, max, has_white, &mut actions);
+                self.enumerate_line(player, piece, from, dx, dy, max, has_white, actions);
             }
         }
         if piece.ability.has(Ability::DIRECTION_SHAPE_L) {
             for (dx, dy) in
                 [(1i8, 2), (2, 1), (-1, 2), (-2, 1), (1, -2), (2, -1), (-1, -2), (-2, -1)]
             {
-                self.enumerate_line(player, piece, from, dx, dy, max, has_white, &mut actions);
+                self.enumerate_line(player, piece, from, dx, dy, max, has_white, actions);
             }
         }
-        actions
     }
 
     /// Scan from `from` along `(dx, dy)`, adding legal [`Action`]s for each

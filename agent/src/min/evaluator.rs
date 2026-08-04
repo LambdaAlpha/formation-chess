@@ -358,13 +358,15 @@ fn analyze_control(piece: Piece, analysis: &mut PositionAnalysis) {
 
 fn analyze_player_actions(game: &Game, player: Player, analysis: &mut ActionAnalysis) {
     let board = game.board();
+    let mut actions = Vec::new();
     for (position, piece) in board.iter() {
         let effective =
             board.effective(position).expect("occupied point must have an effective piece");
         if !effective.can_controlled_by(player) {
             continue;
         }
-        let actions = board.valid_moves(player, position, game.white_pool() > 0);
+        actions.clear();
+        board.valid_moves(player, position, game.white_pool() > 0, &mut actions);
         analyze_piece_actions(board, player, position, piece, &actions, analysis);
     }
     analysis.safe_movable_pieces = count_true(&analysis.safe_movers);
