@@ -32,7 +32,7 @@ pub const MIN_BEST_CONFIG_VERSION: u16 = 1;
 /// Static evaluation model understood by this agent version.
 pub const MIN_EVALUATION_MODEL_VERSION: u16 = 1;
 /// Hard maximum number of simulated actions from the root.
-pub const MIN_MAX_SEARCH_DEPTH: u8 = 3;
+pub const MIN_MAX_SEARCH_DEPTH: u8 = 2;
 /// Hard maximum for any selective-search width.
 pub const MIN_MAX_SEARCH_WIDTH: u8 = 64;
 /// Hard maximum number of simulated nodes per analysis.
@@ -70,7 +70,7 @@ pub struct MinPlacementSearchConfig {
 /// Selective search limits for the movement phase.
 ///
 /// Movement always scans every legal root action outside the node budget.
-/// `max_nodes` bounds simulated opponent replies and third-ply responses;
+/// `max_nodes` bounds simulated opponent replies;
 /// width limits retain only the configured number of non-terminal branches.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

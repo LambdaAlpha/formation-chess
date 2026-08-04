@@ -1,7 +1,7 @@
 //! Ranked agent analysis and turn execution for Formation Chess.
 //!
-//! The crate also defines the versioned, validated configuration contract for
-//! the fast depth-limited Min agent.
+//! The crate also defines versioned, validated configuration contracts for the
+//! pure UCT MCTS agent and the fast depth-limited Min agent.
 //!
 //! Every agent implements one Agent::analyze interface. Placement receives
 //! the current game plus a compact geometric PlacementArea; movement receives
@@ -13,6 +13,7 @@ mod agent;
 mod error;
 mod executor;
 mod legal_actions;
+mod mcts;
 mod min;
 mod random;
 mod selection;
@@ -35,6 +36,19 @@ pub use executor::prepare_turn;
 pub use legal_actions::PlacementArea;
 pub use legal_actions::legal_movement_actions;
 pub use legal_actions::placement_area;
+pub use mcts::MCTS_BASELINE_CONFIG_ID;
+pub use mcts::MCTS_BASELINE_CONFIG_VERSION;
+pub use mcts::MCTS_BASELINE_EXPLORATION;
+pub use mcts::MCTS_BASELINE_ITERATIONS;
+pub use mcts::MCTS_CONFIG_HASH_ALGORITHM;
+pub use mcts::MCTS_CONFIG_HASH_FORMAT_VERSION;
+pub use mcts::MCTS_CONFIG_SCHEMA_VERSION;
+pub use mcts::MCTS_MAX_ITERATIONS;
+pub use mcts::MCTS_MAX_SIMULATION_ACTIONS;
+pub use mcts::MctsAgent;
+pub use mcts::MctsConfig;
+pub use mcts::MctsConfigError;
+pub use mcts::MctsStats;
 pub use min::MIN_BEST_CONFIG_ID;
 pub use min::MIN_BEST_CONFIG_VERSION;
 pub use min::MIN_CONFIG_HASH_ALGORITHM;

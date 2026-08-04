@@ -153,7 +153,7 @@ fn random_factories_execute_standard_placement_and_movement() {
     let participant_a = RandomAgentFactory;
     let participant_b = RandomAgentFactory;
     let runner =
-        MatchRunner::new(matchup, &participant_a, &participant_b, GameRunConfig::new(nonzero(1)));
+        MatchRunner::new(matchup, &participant_a, &participant_b, GameRunConfig::new(nonzero(33)));
 
     let run = runner.run(plan, Game::default()).expect("valid game plan");
 
@@ -162,8 +162,38 @@ fn random_factories_execute_standard_placement_and_movement() {
     assert_eq!(run.actions[32].phase, Phase::Move);
     assert!(matches!(
         run.termination,
-        GameTermination::Completed { .. } | GameTermination::MovementActionLimit { .. }
+        GameTermination::Completed { .. } | GameTermination::ActionLimit { .. }
     ));
+}
+
+#[test]
+fn total_action_limit_counts_placement_actions() {
+    let matchup = matchup();
+    let plan = Schedule::new(matchup.clone(), ScheduleMode::Fixed { games: nonzero(1) }, 41)
+        .next()
+        .expect("first fixed game");
+    let participant_a = RandomAgentFactory;
+    let participant_b = RandomAgentFactory;
+    let runner =
+        MatchRunner::new(matchup, &participant_a, &participant_b, GameRunConfig::new(nonzero(1)));
+
+    let run = runner.run(plan, Game::default()).expect("valid game plan");
+
+    assert_eq!(run.actions.len(), 1);
+    assert_eq!(run.actions[0].phase, Phase::Place);
+    assert_eq!(run.final_game.phase(), Phase::Place);
+    assert_eq!(run.termination, GameTermination::ActionLimit { limit: nonzero(1) });
+}
+
+#[test]
+fn runner_caps_configured_action_limit_at_arena_maximum() {
+    let matchup = matchup();
+    let participant_a = RandomAgentFactory;
+    let participant_b = RandomAgentFactory;
+    let runner =
+        MatchRunner::new(matchup, &participant_a, &participant_b, GameRunConfig::new(nonzero(200)));
+
+    assert_eq!(runner.config().max_actions.get(), 128);
 }
 
 #[test]
@@ -190,7 +220,7 @@ fn runner_maps_swapped_participants_to_factories_and_seeds() {
     assert_eq!(run.actions[0].candidate_rank, NonZeroU8::MIN);
     assert!(run.actions[0].legal_action_count.is_some_and(|count| count > 0));
     assert_eq!(run.final_game.player(), Player::Black);
-    assert_eq!(run.termination, GameTermination::MovementActionLimit { limit: nonzero(1) });
+    assert_eq!(run.termination, GameTermination::ActionLimit { limit: nonzero(1) });
 }
 
 #[test]

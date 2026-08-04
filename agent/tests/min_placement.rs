@@ -125,9 +125,9 @@ fn one_ply_placement_scores_are_static_leaf_evaluations() {
 }
 
 #[test]
-fn three_ply_placement_matches_exhaustive_minimax_when_budget_covers_tree() {
+fn two_ply_placement_matches_exhaustive_minimax_when_budget_covers_tree() {
     let game = placement_game();
-    let config = search_config(3, 1_000, 64);
+    let config = search_config(2, 1_000, 64);
     let expected = exhaustive_roots(&game, &config);
     let mut agent = MinAgent::new(config).expect("valid Min agent");
 
@@ -139,7 +139,7 @@ fn three_ply_placement_matches_exhaustive_minimax_when_budget_covers_tree() {
 #[test]
 fn placement_search_is_deterministic_and_respects_a_tiny_budget() {
     let game = placement_game();
-    let config = search_config(3, 1, 64);
+    let config = search_config(2, 1, 64);
     let mut first = MinAgent::new(config.clone()).expect("first Min agent");
     let mut second = MinAgent::new(config).expect("second Min agent");
 

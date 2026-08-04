@@ -81,7 +81,7 @@ impl TryFrom<&GameRecord> for GameMetrics {
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum TerminationKind {
     Completed,
-    MovementActionLimit { limit: u32 },
+    ActionLimit { limit: u32 },
     AgentFailure { player: PlayerRecord, phase: PhaseRecord },
 }
 
@@ -89,9 +89,7 @@ impl From<&TerminationRecord> for TerminationKind {
     fn from(termination: &TerminationRecord) -> Self {
         match termination {
             TerminationRecord::Completed { .. } => Self::Completed,
-            TerminationRecord::MovementActionLimit { limit } => {
-                Self::MovementActionLimit { limit: *limit }
-            },
+            TerminationRecord::ActionLimit { limit } => Self::ActionLimit { limit: *limit },
             TerminationRecord::AgentFailure { player, phase, .. } => {
                 Self::AgentFailure { player: *player, phase: *phase }
             },

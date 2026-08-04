@@ -251,11 +251,11 @@ impl JsonlDatasetWriter {
         validate_plan_shape(&self.manifest, run)?;
         validate_seat(&self.manifest, run.plan.red.as_str(), &run.red_agent, "red")?;
         validate_seat(&self.manifest, run.plan.black.as_str(), &run.black_agent, "black")?;
-        if let GameTermination::MovementActionLimit { limit } = run.termination
-            && limit.get() != self.manifest.game_run_config.max_movement_actions
+        if let GameTermination::ActionLimit { limit } = run.termination
+            && limit.get() != self.manifest.game_run_config.max_actions
         {
             return Err(DatasetError::InvalidDataset(format!(
-                "game {} movement limit differs from manifest",
+                "game {} action limit differs from manifest",
                 run.plan.game_id
             )));
         }
@@ -358,10 +358,8 @@ pub(crate) fn validate_manifest(manifest: &ArenaManifest) -> Result<(), DatasetE
             "schedule must contain at least one game".to_owned(),
         ));
     }
-    if manifest.game_run_config.max_movement_actions == 0 {
-        return Err(DatasetError::InvalidDataset(
-            "movement-action limit must be nonzero".to_owned(),
-        ));
+    if manifest.game_run_config.max_actions == 0 {
+        return Err(DatasetError::InvalidDataset("action limit must be nonzero".to_owned()));
     }
     match manifest.game_run_config.action_selection {
         ActionSelectionPolicyRecord::Best => {},

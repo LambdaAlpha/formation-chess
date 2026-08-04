@@ -20,29 +20,40 @@ use crate::GamePlan;
 use crate::Matchup;
 use crate::ParticipantId;
 
+/// Hard maximum total actions accepted by Arena for one game.
+pub const MAX_GAME_ACTIONS: u32 = 128;
+
 /// Safety limits applied while executing one game.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct GameRunConfig {
-    /// Stop an unfinished game before requesting another movement action once
-    /// this many movement actions have completed. Placement actions are finite
-    /// and are not counted against this limit.
-    pub max_movement_actions: NonZeroU32,
+    /// Stop an unfinished game before requesting another action once this many
+    /// placement or movement actions have completed. Values above
+    /// [`MAX_GAME_ACTIONS`] are clamped.
+    pub max_actions: NonZeroU32,
     /// Policy used by both seats to select one analyzed candidate.
     pub action_selection: ActionSelectionPolicy,
 }
 
 impl GameRunConfig {
     /// Construct a deterministic run configuration.
-    pub const fn new(max_movement_actions: NonZeroU32) -> Self {
-        Self { max_movement_actions, action_selection: ActionSelectionPolicy::Best }
+    pub const fn new(max_actions: NonZeroU32) -> Self {
+        let max_actions = cap_actions(max_actions);
+        Self { max_actions, action_selection: ActionSelectionPolicy::Best }
     }
 
     /// Construct a run configuration with an explicit action-selection policy.
     pub const fn with_action_selection(
-        max_movement_actions: NonZeroU32, action_selection: ActionSelectionPolicy,
+        max_actions: NonZeroU32, action_selection: ActionSelectionPolicy,
     ) -> Self {
-        Self { max_movement_actions, action_selection }
+        let max_actions = cap_actions(max_actions);
+        Self { max_actions, action_selection }
     }
+}
+
+const fn cap_actions(max_actions: NonZeroU32) -> NonZeroU32 {
+    let value = max_actions.get();
+    let capped = if value > MAX_GAME_ACTIONS { MAX_GAME_ACTIONS } else { value };
+    NonZeroU32::new(capped).expect("Arena action cap must be nonzero")
 }
 
 /// Why a game run stopped.
@@ -50,8 +61,8 @@ impl GameRunConfig {
 pub enum GameTermination {
     /// The core rules engine produced a decided result.
     Completed { result: GameResult },
-    /// The game remained unfinished after the configured movement-action limit.
-    MovementActionLimit { limit: NonZeroU32 },
+    /// The game remained unfinished after the configured total-action limit.
+    ActionLimit { limit: NonZeroU32 },
     /// The current agent failed or returned an invalid analysis.
     AgentFailure { player: Player, phase: Phase, error: AgentError },
 }
@@ -154,7 +165,7 @@ impl<'factory> MatchRunner<'factory> {
             ActionSelector::with_seed(self.config.action_selection, plan.black_agent_seed);
         let initial_game = game.clone();
         let mut actions = Vec::new();
-        let mut movement_action_count = 0_u32;
+        let mut action_count = 0_u32;
 
         let termination = loop {
             let result = game.result();
@@ -162,15 +173,11 @@ impl<'factory> MatchRunner<'factory> {
                 break GameTermination::Completed { result };
             }
 
-            let phase = game.phase();
-            if phase == Phase::Move
-                && movement_action_count >= self.config.max_movement_actions.get()
-            {
-                break GameTermination::MovementActionLimit {
-                    limit: self.config.max_movement_actions,
-                };
+            if action_count >= self.config.max_actions.get() {
+                break GameTermination::ActionLimit { limit: self.config.max_actions };
             }
 
+            let phase = game.phase();
             let player = game.player();
             let (instance, selector) = match player {
                 Player::Red => (red_instance.as_mut(), &mut red_selector),
@@ -183,9 +190,7 @@ impl<'factory> MatchRunner<'factory> {
                 },
             };
 
-            if phase == Phase::Move {
-                movement_action_count += 1;
-            }
+            action_count += 1;
             actions.push(ExecutedAction {
                 player: agent_turn.player,
                 phase,

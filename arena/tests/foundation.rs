@@ -1,6 +1,9 @@
 use std::num::NonZeroU8;
 use std::num::NonZeroU32;
 
+use formation_chess_agent::MCTS_CONFIG_HASH_ALGORITHM;
+use formation_chess_agent::MCTS_CONFIG_HASH_FORMAT_VERSION;
+use formation_chess_agent::MCTS_CONFIG_SCHEMA_VERSION;
 use formation_chess_agent::MIN_CONFIG_HASH_ALGORITHM;
 use formation_chess_agent::MIN_CONFIG_HASH_FORMAT_VERSION;
 use formation_chess_agent::MIN_CONFIG_SCHEMA_VERSION;
@@ -9,6 +12,7 @@ use formation_chess_agent::analyze_prepared;
 use formation_chess_agent::prepare_turn;
 use formation_chess_arena::AgentFactory;
 use formation_chess_arena::Matchup;
+use formation_chess_arena::MctsAgentFactory;
 use formation_chess_arena::MinAgentFactory;
 use formation_chess_arena::ParticipantId;
 use formation_chess_arena::RandomAgentFactory;
@@ -45,6 +49,34 @@ fn random_factory_describes_and_reproduces_seeded_agents() {
         .expect("second seeded analysis");
 
     assert_eq!(first_analysis.candidates, second_analysis.candidates);
+}
+
+#[test]
+fn mcts_factory_records_the_complete_validated_configuration() {
+    let factory = MctsAgentFactory::baseline();
+    let descriptor = factory.descriptor();
+
+    assert_eq!(descriptor.kind, "mcts");
+    assert_eq!(descriptor.display_name, "MCTS baseline-v1");
+    assert_eq!(descriptor.implementation_version, formation_chess_agent::VERSION);
+    assert_eq!(descriptor.parameters.len(), 5);
+    assert_eq!(
+        descriptor.parameters["config"],
+        serde_json::to_value(factory.config()).expect("serialize MCTS config")
+    );
+    assert_eq!(
+        descriptor.parameters["config_sha256"],
+        factory.config().sha256().expect("hash MCTS config")
+    );
+    assert_eq!(descriptor.parameters["config_hash_algorithm"], MCTS_CONFIG_HASH_ALGORITHM);
+    assert_eq!(
+        descriptor.parameters["config_hash_format_version"],
+        MCTS_CONFIG_HASH_FORMAT_VERSION
+    );
+    assert_eq!(descriptor.parameters["config_schema_version"], MCTS_CONFIG_SCHEMA_VERSION);
+
+    let agent = factory.create(99);
+    assert_eq!(agent.name(), "MCTS baseline-v1");
 }
 
 #[test]

@@ -134,7 +134,7 @@ pub struct ResultSummary {
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct TerminationSummary {
     pub completed: CountRatio,
-    pub movement_action_limits: CountRatio,
+    pub action_limits: CountRatio,
     pub agent_failures: CountRatio,
 }
 
@@ -340,7 +340,7 @@ impl ResultAccumulator {
 #[derive(Default)]
 struct TerminationAccumulator {
     completed: u64,
-    movement_action_limits: u64,
+    action_limits: u64,
     agent_failures: u64,
 }
 
@@ -348,8 +348,8 @@ impl TerminationAccumulator {
     fn record(&mut self, termination: crate::TerminationKind) {
         match termination {
             crate::TerminationKind::Completed => self.completed += 1,
-            crate::TerminationKind::MovementActionLimit { .. } => {
-                self.movement_action_limits += 1;
+            crate::TerminationKind::ActionLimit { .. } => {
+                self.action_limits += 1;
             },
             crate::TerminationKind::AgentFailure { .. } => self.agent_failures += 1,
         }
@@ -358,7 +358,7 @@ impl TerminationAccumulator {
     fn finish(self, games: u64) -> TerminationSummary {
         TerminationSummary {
             completed: count_ratio(self.completed, games),
-            movement_action_limits: count_ratio(self.movement_action_limits, games),
+            action_limits: count_ratio(self.action_limits, games),
             agent_failures: count_ratio(self.agent_failures, games),
         }
     }
@@ -966,8 +966,8 @@ fn push_termination_fields(fields: &mut Vec<CsvField>, termination: crate::Termi
             fields.push(text("completed"));
             fields.extend([CsvField::Empty, CsvField::Empty, CsvField::Empty]);
         },
-        crate::TerminationKind::MovementActionLimit { limit } => {
-            fields.push(text("movement_action_limit"));
+        crate::TerminationKind::ActionLimit { limit } => {
+            fields.push(text("action_limit"));
             fields.push(raw(limit));
             fields.extend([CsvField::Empty, CsvField::Empty]);
         },

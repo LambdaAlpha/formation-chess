@@ -34,7 +34,7 @@ piece with the **Divide** ability can bring one back onto the board.
   interface.
 - **`agent/` — `formation-chess-agent`**: phase-specific agent interfaces,
   compact geometric placement input, legal movement enumeration, validated
-  turn execution, and a seedable random baseline agent.
+  turn execution, and seedable Random, pure MCTS, and Min agents.
 - **`tui/` — `formation-chess-tui`**: a small terminal client with standard,
   random-layout, and snapshot-loading modes.
 - **`web/` — `formation-chess-web`**: a local browser client and HTTP server.

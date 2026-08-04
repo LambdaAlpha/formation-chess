@@ -143,7 +143,7 @@ fn one_ply_movement_scores_static_leaves_and_scans_every_unique_root() {
 }
 
 #[test]
-fn two_and_three_ply_movement_match_exhaustive_minimax_with_full_budget() {
+fn two_ply_movement_matches_exhaustive_minimax_with_full_budget() {
     let game = movement_game_on(3, 3, Player::Red, &[
         ((0, 2), Piece::RED_GENERAL),
         ((2, 2), Piece::RED_ROOK),
@@ -151,18 +151,11 @@ fn two_and_three_ply_movement_match_exhaustive_minimax_with_full_budget() {
         ((2, 0), Piece::BLACK_ROOK),
     ]);
     let legal_actions = collected_movement_actions(&game);
-    let mut analyses = Vec::new();
+    let config = search_config(2, 100_000, 64);
+    let expected = exhaustive_roots(&game, &config);
+    let candidates = analyze(&game, config, &legal_actions);
 
-    for depth in [2, 3] {
-        let config = search_config(depth, 100_000, 64);
-        let expected = exhaustive_roots(&game, &config);
-        let candidates = analyze(&game, config, &legal_actions);
-
-        assert_eq!(candidates, expected);
-        analyses.push(candidates);
-    }
-
-    assert_ne!(analyses[0], analyses[1]);
+    assert_eq!(candidates, expected);
 }
 
 #[test]
@@ -198,7 +191,7 @@ fn movement_search_is_deterministic_and_scans_all_roots_with_a_tiny_budget() {
     let mut legal_actions = collected_movement_actions(&game);
     let unique_count = legal_actions.len();
     legal_actions.push(legal_actions[0]);
-    let config = search_config(3, 1, 64);
+    let config = search_config(2, 1, 64);
 
     let first = analyze(&game, config.clone(), &legal_actions);
     let second = analyze(&game, config, &legal_actions);

@@ -144,7 +144,7 @@ fn game_record_replays_actions_and_splits_counts_by_side() {
     let participant_a = RandomAgentFactory;
     let participant_b = RandomAgentFactory;
     let runner =
-        MatchRunner::new(matchup, &participant_a, &participant_b, GameRunConfig::new(nonzero(1)));
+        MatchRunner::new(matchup, &participant_a, &participant_b, GameRunConfig::new(nonzero(33)));
     let manifest = ArenaManifest::new(&schedule, &runner).expect("matching manifest");
     let plan = schedule.next().expect("first fixed game");
     let run = runner.run(plan, Game::default()).expect("valid game plan");
@@ -257,7 +257,7 @@ fn record_conversion_rejects_tampered_counts_and_state() {
     let participant_a = RandomAgentFactory;
     let participant_b = RandomAgentFactory;
     let runner =
-        MatchRunner::new(matchup, &participant_a, &participant_b, GameRunConfig::new(nonzero(1)));
+        MatchRunner::new(matchup, &participant_a, &participant_b, GameRunConfig::new(nonzero(33)));
     let plan = schedule.next().expect("first fixed game");
     let run = runner.run(plan, Game::default()).expect("valid game plan");
 

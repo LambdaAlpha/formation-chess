@@ -244,15 +244,14 @@ fn verify_termination(
                 ));
             }
         },
-        TerminationRecord::MovementActionLimit { limit } => {
+        TerminationRecord::ActionLimit { limit } => {
             if *limit == 0
                 || replay.result() != GameResult::Unfinished
-                || replay.phase() != Phase::Move
-                || action_counts.movement_actions() != u64::from(*limit)
+                || action_counts.total_actions() != u64::from(*limit)
             {
                 return Err(game_error(
                     record,
-                    "movement-limit termination differs from final replay state or counts",
+                    "action-limit termination differs from final replay state or counts",
                 ));
             }
         },

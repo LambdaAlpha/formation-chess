@@ -1,10 +1,16 @@
 use std::collections::BTreeMap;
 
 use formation_chess_agent::Agent;
+use formation_chess_agent::MCTS_CONFIG_HASH_ALGORITHM;
+use formation_chess_agent::MCTS_CONFIG_HASH_FORMAT_VERSION;
+use formation_chess_agent::MCTS_CONFIG_SCHEMA_VERSION;
 use formation_chess_agent::MIN_CONFIG_HASH_ALGORITHM;
 use formation_chess_agent::MIN_CONFIG_HASH_FORMAT_VERSION;
 use formation_chess_agent::MIN_CONFIG_SCHEMA_VERSION;
 use formation_chess_agent::MIN_EVALUATION_MODEL_VERSION;
+use formation_chess_agent::MctsAgent;
+use formation_chess_agent::MctsConfig;
+use formation_chess_agent::MctsConfigError;
 use formation_chess_agent::MinAgent;
 use formation_chess_agent::MinConfig;
 use formation_chess_agent::MinConfigError;
@@ -46,6 +52,73 @@ impl AgentFactory for RandomAgentFactory {
     }
 }
 
+/// Factory for one validated, fully described pure UCT configuration.
+#[derive(Debug, Clone)]
+pub struct MctsAgentFactory {
+    config: MctsConfig,
+}
+
+impl MctsAgentFactory {
+    /// Validate and retain one complete MCTS configuration.
+    pub fn new(config: MctsConfig) -> Result<Self, MctsConfigError> {
+        config.validate()?;
+        Ok(Self { config })
+    }
+
+    /// Factory for the current source-defined pure UCT baseline.
+    pub fn baseline() -> Self {
+        Self::new(MctsConfig::baseline()).expect("built-in MCTS baseline config must remain valid")
+    }
+
+    /// Complete immutable configuration created for every game.
+    pub fn config(&self) -> &MctsConfig {
+        &self.config
+    }
+}
+
+impl Default for MctsAgentFactory {
+    fn default() -> Self {
+        Self::baseline()
+    }
+}
+
+impl AgentFactory for MctsAgentFactory {
+    fn descriptor(&self) -> AgentDescriptor {
+        let mut parameters = BTreeMap::new();
+        parameters.insert(
+            "config".to_owned(),
+            serde_json::to_value(&self.config).expect("validated MCTS config must serialize"),
+        );
+        parameters.insert(
+            "config_sha256".to_owned(),
+            Value::String(self.config.sha256().expect("validated MCTS config must hash")),
+        );
+        parameters.insert(
+            "config_hash_algorithm".to_owned(),
+            Value::String(MCTS_CONFIG_HASH_ALGORITHM.to_owned()),
+        );
+        parameters.insert(
+            "config_hash_format_version".to_owned(),
+            Value::from(MCTS_CONFIG_HASH_FORMAT_VERSION),
+        );
+        parameters
+            .insert("config_schema_version".to_owned(), Value::from(MCTS_CONFIG_SCHEMA_VERSION));
+
+        AgentDescriptor {
+            kind: "mcts".to_owned(),
+            display_name: format!("MCTS {}", self.config.versioned_id()),
+            implementation_version: formation_chess_agent::VERSION.to_owned(),
+            parameters,
+        }
+    }
+
+    fn create(&self, seed: u64) -> Box<dyn Agent> {
+        Box::new(
+            MctsAgent::with_seed(self.config.clone(), seed)
+                .expect("MctsAgentFactory config must remain valid"),
+        )
+    }
+}
 /// Factory for one validated, fully described Min configuration.
 #[derive(Debug, Clone)]
 pub struct MinAgentFactory {

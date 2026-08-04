@@ -21,6 +21,7 @@ mod storage;
 
 pub use agent_factory::AgentDescriptor;
 pub use agent_factory::AgentFactory;
+pub use agent_factory::MctsAgentFactory;
 pub use agent_factory::MinAgentFactory;
 pub use agent_factory::RandomAgentFactory;
 pub use analysis::ANALYSIS_SCHEMA_VERSION;
@@ -86,6 +87,7 @@ pub use runner::GameRun;
 pub use runner::GameRunConfig;
 pub use runner::GameRunError;
 pub use runner::GameTermination;
+pub use runner::MAX_GAME_ACTIONS;
 pub use runner::MatchRunner;
 pub use schedule::GamePlan;
 pub use schedule::Matchup;

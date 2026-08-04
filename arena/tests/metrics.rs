@@ -284,12 +284,12 @@ fn repeated_state_visits_count_returns_to_an_earlier_state() {
     let record = game_record(
         movement_game(),
         vec![Action::Pass(Player::Red), Action::Pass(Player::Black)],
-        GameTermination::MovementActionLimit { limit: nonzero(2) },
+        GameTermination::ActionLimit { limit: nonzero(2) },
         ScheduleMode::Fixed { games: nonzero(1) },
     );
     let metrics = GameMetrics::from_record(&record).expect("valid metrics");
 
-    assert_eq!(metrics.termination, TerminationKind::MovementActionLimit { limit: 2 });
+    assert_eq!(metrics.termination, TerminationKind::ActionLimit { limit: 2 });
     assert_eq!(metrics.action_types.passes, CountRatio { count: 2, ratio: Some(1.0) });
     assert_eq!(metrics.state_visits.total_visits, 3);
     assert_eq!(metrics.state_visits.unique_states, 2);
@@ -302,7 +302,7 @@ fn metrics_reject_tampered_records_before_returning_values() {
     let mut record = game_record(
         movement_game(),
         vec![Action::Pass(Player::Red)],
-        GameTermination::MovementActionLimit { limit: nonzero(1) },
+        GameTermination::ActionLimit { limit: nonzero(1) },
         ScheduleMode::Fixed { games: nonzero(1) },
     );
     record.actions[0].state_after_sha256 = "0".repeat(64);

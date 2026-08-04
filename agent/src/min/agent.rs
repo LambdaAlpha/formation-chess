@@ -14,7 +14,7 @@ use crate::ScoredAction;
 
 /// Fast deterministic Min agent.
 ///
-/// Deterministic placement and selective three-ply movement search are
+/// Deterministic placement and selective two-ply movement search are
 /// implemented using the shared bounded static evaluator.
 #[derive(Debug, Clone)]
 pub struct MinAgent {

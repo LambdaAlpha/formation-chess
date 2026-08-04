@@ -213,7 +213,7 @@ fn create_dataset(label: &str) -> TestDirectory {
                     Action::Pass(Player::Black),
                     Action::Pass(Player::Red),
                 ],
-                GameTermination::MovementActionLimit { limit: nonzero(3) },
+                GameTermination::ActionLimit { limit: nonzero(3) },
                 &descriptor,
             ),
             game_id => panic!("unexpected game id {game_id}"),
@@ -320,7 +320,7 @@ fn summary_aggregates_results_terminations_and_participant_seats() {
     assert_eq!(summary.results.unfinished.count, 2);
     assert_close(summary.results.unfinished.ratio, 0.5);
     assert_eq!(summary.terminations.completed.count, 2);
-    assert_eq!(summary.terminations.movement_action_limits.count, 1);
+    assert_eq!(summary.terminations.action_limits.count, 1);
     assert_eq!(summary.terminations.agent_failures.count, 1);
 
     assert_eq!(summary.participant_a.participant_id, PARTICIPANT_A);

@@ -101,10 +101,8 @@ fn one_action_record(action: Action, termination: GameTermination) -> GameRecord
     GameRecord::from_game_run(&run).expect("valid game record")
 }
 
-fn movement_limit_record() -> GameRecord {
-    one_action_record(Action::Pass(Player::Red), GameTermination::MovementActionLimit {
-        limit: nonzero(1),
-    })
+fn action_limit_record() -> GameRecord {
+    one_action_record(Action::Pass(Player::Red), GameTermination::ActionLimit { limit: nonzero(1) })
 }
 
 fn completed_record() -> GameRecord {
@@ -151,14 +149,14 @@ fn assert_game_error(record: &GameRecord, expected: &str) {
 
 #[test]
 fn verifier_accepts_generated_termination_variants() {
-    for record in [movement_limit_record(), completed_record(), agent_failure_record()] {
+    for record in [action_limit_record(), completed_record(), agent_failure_record()] {
         ReplayVerifier::verify(&record).expect("generated record must replay");
     }
 }
 
 #[test]
 fn verifier_rejects_action_context_and_invalid_action_data() {
-    let valid = movement_limit_record();
+    let valid = action_limit_record();
 
     let mut record = valid.clone();
     record.actions[0].action_index = 1;
@@ -198,7 +196,7 @@ fn verifier_rejects_action_context_and_invalid_action_data() {
 
 #[test]
 fn verifier_rejects_notation_reaction_and_action_hash_tampering() {
-    let valid = movement_limit_record();
+    let valid = action_limit_record();
 
     let mut record = valid.clone();
     record.actions[0].notation.push_str(" tampered");
@@ -219,7 +217,7 @@ fn verifier_rejects_notation_reaction_and_action_hash_tampering() {
 
 #[test]
 fn verifier_rejects_game_state_counts_and_termination_tampering() {
-    let valid = movement_limit_record();
+    let valid = action_limit_record();
 
     let mut record = valid.clone();
     record.schema_version += 1;
@@ -252,8 +250,8 @@ fn verifier_rejects_game_state_counts_and_termination_tampering() {
     assert_game_error(&record, "action counts differ");
 
     let mut record = valid;
-    record.termination = TerminationRecord::MovementActionLimit { limit: 2 };
-    assert_game_error(&record, "movement-limit termination differs");
+    record.termination = TerminationRecord::ActionLimit { limit: 2 };
+    assert_game_error(&record, "action-limit termination differs");
 
     let mut record = completed_record();
     record.termination = TerminationRecord::Completed { result: GameResultRecord::RedWin };

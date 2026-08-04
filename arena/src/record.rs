@@ -146,7 +146,7 @@ impl From<ScheduleMode> for ScheduleRecord {
 
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GameRunConfigRecord {
-    pub max_movement_actions: u32,
+    pub max_actions: u32,
     #[serde(default)]
     pub action_selection: ActionSelectionPolicyRecord,
 }
@@ -154,7 +154,7 @@ pub struct GameRunConfigRecord {
 impl From<GameRunConfig> for GameRunConfigRecord {
     fn from(config: GameRunConfig) -> Self {
         Self {
-            max_movement_actions: config.max_movement_actions.get(),
+            max_actions: config.max_actions.get(),
             action_selection: ActionSelectionPolicyRecord::from(config.action_selection),
         }
     }
@@ -517,7 +517,7 @@ impl From<GameResult> for GameResultRecord {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum TerminationRecord {
     Completed { result: GameResultRecord },
-    MovementActionLimit { limit: u32 },
+    ActionLimit { limit: u32 },
     AgentFailure { player: PlayerRecord, phase: PhaseRecord, error: AgentErrorRecord },
 }
 
@@ -553,8 +553,8 @@ impl ActionCountsBySide {
         }
     }
 
-    pub(crate) fn movement_actions(&self) -> u64 {
-        self.red.movement_phase_actions + self.black.movement_phase_actions
+    pub(crate) fn total_actions(&self) -> u64 {
+        self.red.total_actions + self.black.total_actions
     }
 }
 
@@ -681,16 +681,15 @@ fn termination_record(
             }
             Ok(TerminationRecord::Completed { result: GameResultRecord::from(*result) })
         },
-        GameTermination::MovementActionLimit { limit } => {
+        GameTermination::ActionLimit { limit } => {
             if final_game.result() != GameResult::Unfinished
-                || final_game.phase() != Phase::Move
-                || action_counts.movement_actions() != u64::from(limit.get())
+                || action_counts.total_actions() != u64::from(limit.get())
             {
                 return Err(RecordError::InvalidGameRun(
-                    "movement limit termination disagrees with final state or counts".to_owned(),
+                    "action limit termination disagrees with final state or counts".to_owned(),
                 ));
             }
-            Ok(TerminationRecord::MovementActionLimit { limit: limit.get() })
+            Ok(TerminationRecord::ActionLimit { limit: limit.get() })
         },
         GameTermination::AgentFailure { player, phase, error } => {
             if final_game.result() != GameResult::Unfinished

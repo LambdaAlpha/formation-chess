@@ -13,10 +13,11 @@ and configuration parameters. Two participants may use identical descriptors
 while retaining distinct participant IDs.
 
 RandomAgentFactory wraps the bundled RandomAgent baseline and forwards the
-arena-provided seed to RandomAgent::with_seed. MinAgentFactory validates one
-complete MinConfig before use and records the versioned config ID, full
-serialized configuration, canonical SHA-256, hash-format metadata, config schema
-version, and evaluation-model version in every descriptor.
+arena-provided seed to RandomAgent::with_seed. MctsAgentFactory and
+MinAgentFactory validate complete configurations before use and record their
+versioned config IDs, serialized configurations, canonical SHA-256 hashes,
+hash-format metadata, and config schema versions. Min descriptors additionally
+record the evaluation-model version.
 
 ## Schedules
 
@@ -40,7 +41,7 @@ Every successful action retains its player, phase, action, score, selected
 candidate rank, reaction, and movement legal-action count. Each seat receives a
 separately seeded ActionSelector using the run's recorded selection policy.
 Technical decision timing is intentionally omitted.
-A run ends with a core game result, a configured movement-action limit, or the
+A run ends with a core game result, a configured total-action limit (capped at 128, including placement), or the
 exact AgentError produced by a failed analysis. Persistent recording, strict
 replay verification, and per-game descriptive metrics are provided below.
 
@@ -53,7 +54,7 @@ the source repository unless the caller deliberately chooses such a path.
 Each dataset contains:
 
 - `manifest.json`: schema, Arena and Core versions, seed-derivation version,
-  SHA-256 state-hash algorithm, root seed, schedule, movement limit, action
+  SHA-256 state-hash algorithm, root seed, schedule, total-action limit, action
   selection policy, participant IDs, and full agent descriptors.
 - `games.jsonl`: one complete game per JSON line. Each line contains plan and
   seat seeds, canonical initial/final states and hashes, final result,
@@ -173,7 +174,7 @@ failure category, player, and phase without duplicating log text.
 The JSON summary contains:
 
 - Red-win, Black-win, draw, and unfinished counts and rates;
-- completed, movement-limit, and agent-failure counts and rates;
+- completed, action-limit, and agent-failure counts and rates;
 - each participant's overall, Red-seat, and Black-seat win/loss/draw/unfinished
   counts and rates, plus agent-failure count and rate;
 - exact per-game total/placement/movement action distributions for all actions
@@ -195,8 +196,8 @@ position value, fairness, difficulty, or interestingness.
 The `formation-chess-arena` binary exposes single-matchup, round-robin, replay,
 and analysis workflows:
 
-- `run` executes one seeded matchup with independently selected Random or Min
-  factories and creates a new Arena dataset directory;
+- `run` executes one seeded matchup with independently selected Random, MCTS, or
+  Min factories and creates a new Arena dataset directory;
 - `league` executes every unordered participant pair as a color-swapped matchup,
   writing one independently verifiable Arena dataset per pair;
 - `verify` structurally validates one complete dataset and strictly replays every
@@ -204,19 +205,21 @@ and analysis workflows:
 - `stats` performs the same replay-backed validation and creates
   `game_metrics.csv` plus `summary.json`.
 
-Agent specs are `random`, `min` for the source-defined `MinConfig::best()`, or
-`min:<CONFIG.json>` for a serialized Min configuration. File-backed configs are
-deserialized with unknown fields denied and must pass all Min validation limits
-before any output directory is created. The descriptor records the resolved
-configuration rather than only its source path.
+Agent specs are `random`, `mcts` for the source-defined
+`MctsConfig::baseline()` (currently `baseline-v1`), `mcts:<CONFIG.json>` for a
+serialized MCTS configuration, `min` for `MinConfig::best()`, or
+`min:<CONFIG.json>` for a serialized Min configuration. File-backed configs deny
+unknown fields and must pass their agent's validation limits before any output
+directory is created. Descriptors record the resolved configuration rather than
+only its source path.
 
 A fixed-seat run uses `--fixed <GAMES>`. A color-swapped run uses
 `--paired <PAIRS>` and writes two games per pair. Exactly one mode is required.
 `--agent-a` and `--agent-b` default to `random` when omitted.
 
 ```text
-cargo run -p formation-chess-arena -- run --output <new-dataset-dir> --seed 42 --paired 100 --movement-limit 500 --participant-a random --agent-a random --participant-b best --agent-b min --flush-every 10
-cargo run -p formation-chess-arena -- run --output <new-dataset-dir> --seed 42 --paired 100 --movement-limit 500 --participant-a random --agent-a random --participant-b candidate --agent-b min:<candidate.json>
+cargo run -p formation-chess-arena -- run --output <new-dataset-dir> --seed 42 --paired 100 --action-limit 128 --participant-a random --agent-a random --participant-b mcts --agent-b mcts --flush-every 10
+cargo run -p formation-chess-arena -- run --output <new-dataset-dir> --seed 42 --paired 100 --action-limit 128 --participant-a mcts --agent-a mcts:<candidate.json> --participant-b min --agent-b min
 cargo run -p formation-chess-arena -- verify <dataset-dir>
 cargo run -p formation-chess-arena -- stats <dataset-dir>
 ```
@@ -236,7 +239,7 @@ components. Completed earlier matchups and the current dataset's flushed JSONL
 prefix remain on disk if execution is interrupted.
 
 ```text
-cargo run -p formation-chess-arena -- league --output <new-league-dir> --seed 42 --paired 100 --movement-limit 500 --participant random=random --participant best=min --participant candidate=min:<candidate.json> --flush-every 10
+cargo run -p formation-chess-arena -- league --output <new-league-dir> --seed 42 --paired 100 --action-limit 128 --participant random=random --participant best=min --participant candidate=min:<candidate.json> --flush-every 10
 ```
 
 Participant IDs must be distinct, non-empty, and contain no whitespace.

@@ -1,5 +1,6 @@
 use std::fs;
 use std::num::NonZeroU8;
+use std::num::NonZeroU16;
 use std::num::NonZeroU32;
 use std::path::Path;
 use std::path::PathBuf;
@@ -8,6 +9,7 @@ use std::process::Output;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 
+use formation_chess_agent::MctsConfig;
 use formation_chess_agent::MinConfig;
 use formation_chess_arena::ActionSelectionPolicyRecord;
 use formation_chess_arena::DatasetSummary;
@@ -82,6 +84,20 @@ fn write_shallow_min_config(directory: &TestDirectory, config_id: &str) -> PathB
     path
 }
 
+fn write_small_mcts_config(directory: &TestDirectory, config_id: &str) -> PathBuf {
+    let mut config = MctsConfig::baseline();
+    config_id.clone_into(&mut config.config_id);
+    config.iterations = NonZeroU32::new(4).expect("nonzero iteration budget");
+    config.max_simulation_actions = NonZeroU16::new(4).expect("nonzero simulation action limit");
+    config.exploration = 1.0;
+    config.validate().expect("valid small MCTS config");
+
+    let path = directory.path().join(format!("{config_id}.json"));
+    fs::write(&path, serde_json::to_vec_pretty(&config).expect("serialize small MCTS config"))
+        .expect("write small MCTS config");
+    path
+}
+
 #[test]
 fn cli_runs_verifies_and_analyzes_a_configured_dataset() {
     let directory = TestDirectory::new("end-to-end");
@@ -96,7 +112,7 @@ fn cli_runs_verifies_and_analyzes_a_configured_dataset() {
         .arg("73")
         .arg("--fixed")
         .arg("1")
-        .arg("--movement-limit")
+        .arg("--action-limit")
         .arg("1")
         .arg("--participant-a")
         .arg("random_a")
@@ -118,10 +134,10 @@ fn cli_runs_verifies_and_analyzes_a_configured_dataset() {
     let mut reader = JsonlDatasetReader::open(&dataset_root).expect("open CLI dataset");
     assert_eq!(reader.manifest().root_seed, 73);
     assert_eq!(reader.manifest().schedule, ScheduleRecord::Fixed { games: 1 });
-    assert_eq!(reader.manifest().game_run_config.max_movement_actions, 1);
+    assert_eq!(reader.manifest().game_run_config.max_actions, 1);
     assert_eq!(
         reader.manifest().game_run_config.action_selection,
-        ActionSelectionPolicyRecord::RankSoftmax { top_k: 4, temperature: 0.5 }
+        ActionSelectionPolicyRecord::Best
     );
     assert_eq!(reader.manifest().participant_a.id, "random_a");
     assert_eq!(reader.manifest().participant_b.id, "min_b");
@@ -136,7 +152,7 @@ fn cli_runs_verifies_and_analyzes_a_configured_dataset() {
         "Min descriptor must retain the complete config identity"
     );
     let record = reader.next().expect("one game record").expect("valid game record");
-    assert!(record.actions.iter().all(|action| (1 ..= 4).contains(&action.candidate_rank)));
+    assert!(record.actions.iter().all(|action| action.candidate_rank == 1));
     ReplayVerifier::verify(&record).expect("CLI game must replay");
     assert!(reader.next().is_none(), "dataset must contain exactly one game");
 
@@ -168,6 +184,46 @@ fn cli_runs_verifies_and_analyzes_a_configured_dataset() {
     assert_eq!(summary.games, 1);
 }
 #[test]
+fn cli_accepts_builtin_and_json_mcts_specs() {
+    let directory = TestDirectory::new("mcts-specs");
+    let dataset_root = directory.path().join("dataset");
+    let config_path = write_small_mcts_config(&directory, "small");
+
+    let output = arena_command()
+        .arg("run")
+        .arg("--output")
+        .arg(&dataset_root)
+        .arg("--seed")
+        .arg("89")
+        .arg("--fixed")
+        .arg("1")
+        .arg("--action-limit")
+        .arg("1")
+        .arg("--participant-a")
+        .arg("small")
+        .arg("--agent-a")
+        .arg(format!("mcts:{}", config_path.display()))
+        .arg("--participant-b")
+        .arg("baseline")
+        .arg("--agent-b")
+        .arg("mcts")
+        .output()
+        .expect("run Arena MCTS CLI");
+    assert_success(&output, "run MCTS specs");
+
+    let mut reader = JsonlDatasetReader::open(&dataset_root).expect("open MCTS CLI dataset");
+    assert_eq!(reader.manifest().participant_a.agent.kind, "mcts");
+    assert_eq!(reader.manifest().participant_a.agent.display_name, "MCTS small-v1");
+    assert_eq!(reader.manifest().participant_a.agent.parameters["config"]["iterations"], 4);
+    assert_eq!(reader.manifest().participant_b.agent.kind, "mcts");
+    assert_eq!(reader.manifest().participant_b.agent.display_name, "MCTS baseline-v1");
+    let record = reader.next().expect("one MCTS game record").expect("valid MCTS game record");
+    assert_eq!(record.actions.len(), 1);
+    ReplayVerifier::verify(&record).expect("MCTS CLI game must replay");
+    assert!(reader.next().is_none(), "dataset must contain exactly one game");
+}
+
+#[test]
 fn cli_runs_random_and_min_configs_as_a_round_robin_league() {
     let directory = TestDirectory::new("league");
     let league_root = directory.path().join("league");
@@ -182,7 +238,7 @@ fn cli_runs_random_and_min_configs_as_a_round_robin_league() {
         .arg("101")
         .arg("--paired")
         .arg("1")
-        .arg("--movement-limit")
+        .arg("--action-limit")
         .arg("1")
         .arg("--participant")
         .arg("random=random")
@@ -243,7 +299,7 @@ fn cli_rejects_fixed_and_paired_counts_together_before_writing() {
         .arg("1")
         .arg("--paired")
         .arg("1")
-        .arg("--movement-limit")
+        .arg("--action-limit")
         .arg("1")
         .arg("--participant-a")
         .arg("random_a")

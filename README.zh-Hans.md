@@ -17,7 +17,7 @@
 ## 仓库内容
 
 - **`core/` —— `formation-chess-core`**：无外部依赖的 Rust 规则引擎与文本记谱法实现。不包含 AI、持久化或用户界面。
-- **`agent/` —— `formation-chess-agent`**：按阶段拆分的 Agent 接口、紧凑的几何布阵区域、移动阶段合法行动枚举、经过规则引擎校验的回合执行，以及支持固定种子的随机基线 Agent。
+- **`agent/` —— `formation-chess-agent`**：按阶段拆分的 Agent 接口、紧凑的几何布阵区域、移动阶段合法行动枚举、经过规则引擎校验的回合执行，以及支持固定种子的随机、纯 MCTS 和 Min Agent。
 - **`tui/` —— `formation-chess-tui`**：终端客户端，提供标准模式、随机布局模式和加载快照模式。
 - **`web/` —— `formation-chess-web`**：本地浏览器客户端与 HTTP 服务端；前端资源嵌入二进制，服务端维护一局内存中的对局。
 - **`docs/`**：规则书与记谱法规范的源文档。

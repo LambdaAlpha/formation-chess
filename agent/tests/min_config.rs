@@ -41,12 +41,12 @@ fn best_config_canonical_text_and_hash_are_stable() {
         "schema_version=1\n",
         "config_id=best\n",
         "config_version=1\n",
-        "placement_search.max_depth=3\n",
+        "placement_search.max_depth=2\n",
         "placement_search.max_nodes=6000\n",
         "placement_search.root_width=32\n",
         "placement_search.opponent_width=8\n",
         "placement_search.response_width=4\n",
-        "movement_search.max_depth=3\n",
+        "movement_search.max_depth=2\n",
         "movement_search.max_nodes=20000\n",
         "movement_search.opponent_width=12\n",
         "movement_search.response_width=8\n",
@@ -78,7 +78,7 @@ fn best_config_canonical_text_and_hash_are_stable() {
     assert_eq!(config.canonical_text().expect("valid canonical text"), expected);
     assert_eq!(
         config.sha256().expect("valid hash"),
-        "c0eec6971d6112b012213885010170974e740a59c081bab820ffc1bc1d4c0e7d"
+        "c9e9eaac1b2edea2b0da5aa3eba983a6b412df1476b7a3eff3abe63ae0c17c2e"
     );
 }
 
