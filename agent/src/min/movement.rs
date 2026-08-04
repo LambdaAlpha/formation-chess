@@ -28,20 +28,22 @@ pub(super) fn analyze_movements(
     }
 
     let root_player = game.player();
+    let mut search_game = game.clone();
     let mut candidates = Vec::with_capacity(legal_actions.len());
     for (ordinal, &action) in legal_actions.iter().enumerate() {
         if candidates.iter().any(|candidate: &RootCandidate| candidate.action == action) {
             continue;
         }
 
-        let mut child = game.clone();
-        child.action(action).map_err(|message| {
+        let reaction = search_game.action(action).map_err(|message| {
             AgentError::Decision(format!("supplied Min movement action was rejected: {message}"))
         })?;
-        let ordering_utility = evaluator.evaluate(&child, root_player).utility;
+        let ordering_utility = evaluator.evaluate(&search_game, root_player).utility;
+        let game_result = reaction.game_result;
+        search_game.undo(reaction);
         candidates.push(RootCandidate {
             action,
-            game: child,
+            game_result,
             ordering_utility,
             utility: ordering_utility,
             ordinal,
@@ -58,27 +60,34 @@ pub(super) fn analyze_movements(
             .expect("validated Min node budget must fit usize");
         let mut branches_left = candidates
             .iter()
-            .filter(|candidate| candidate.game.result() == GameResult::Unfinished)
+            .filter(|candidate| candidate.game_result == GameResult::Unfinished)
             .count();
         for candidate in &mut candidates {
-            if candidate.game.result() != GameResult::Unfinished {
+            if candidate.game_result != GameResult::Unfinished {
                 continue;
             }
 
             let branch_budget = fair_share(remaining_nodes, branches_left);
             branches_left -= 1;
+            let reaction = search_game.action(candidate.action).map_err(|message| {
+                AgentError::Decision(format!(
+                    "supplied Min movement action was rejected during search: {message}"
+                ))
+            })?;
             let search = if branch_budget > 0 {
                 search_position(
-                    &candidate.game,
+                    &mut search_game,
                     root_player,
                     evaluator,
                     config,
                     max_depth - 1,
                     branch_budget,
-                )?
+                )
             } else {
-                SearchResult { utility: candidate.ordering_utility, nodes: 0 }
+                Ok(SearchResult { utility: candidate.ordering_utility, nodes: 0 })
             };
+            search_game.undo(reaction);
+            let search = search?;
             remaining_nodes -= search.nodes;
             candidate.utility = search.utility;
         }
@@ -103,7 +112,7 @@ pub(super) fn analyze_movements(
 }
 
 fn search_position(
-    game: &Game, root_player: Player, evaluator: MinEvaluator, config: MinMovementSearchConfig,
+    game: &mut Game, root_player: Player, evaluator: MinEvaluator, config: MinMovementSearchConfig,
     depth_remaining: u8, budget: usize,
 ) -> Result<SearchResult, AgentError> {
     if depth_remaining == 0 || budget == 0 || game.result() != GameResult::Unfinished {
@@ -141,18 +150,23 @@ fn search_position(
     for (index, child) in selection.children.into_iter().enumerate() {
         let branches_left = child_count - index;
         let branch_budget = fair_share(remaining_nodes, branches_left);
-        let child_search = if branch_budget > 0 && child.game.result() == GameResult::Unfinished {
+        let reaction = game.action(child.action).map_err(|message| {
+            AgentError::Decision(format!("generated Min movement was rejected: {message}"))
+        })?;
+        let child_search = if branch_budget > 0 && reaction.game_result == GameResult::Unfinished {
             search_position(
-                &child.game,
+                game,
                 root_player,
                 evaluator,
                 config,
                 depth_remaining - 1,
                 branch_budget,
-            )?
+            )
         } else {
-            SearchResult { utility: child.ordering_utility, nodes: 0 }
+            Ok(SearchResult { utility: child.ordering_utility, nodes: 0 })
         };
+        game.undo(reaction);
+        let child_search = child_search?;
         remaining_nodes -= child_search.nodes;
         nodes += child_search.nodes;
         utility = Some(match utility {
@@ -175,7 +189,7 @@ fn search_position(
 }
 
 fn select_children(
-    game: &Game, root_player: Player, evaluator: MinEvaluator, width: usize, maximizing: bool,
+    game: &mut Game, root_player: Player, evaluator: MinEvaluator, width: usize, maximizing: bool,
     probe_limit: usize,
 ) -> Result<ChildSelection, AgentError> {
     if width == 0 || probe_limit == 0 {
@@ -192,12 +206,12 @@ fn select_children(
     for sample_index in 0 .. probes {
         let ordinal = spread_index(sample_index, probes, actions.len());
         let action = actions[ordinal];
-        let mut child_game = game.clone();
-        child_game.action(action).map_err(|message| {
+        let reaction = game.action(action).map_err(|message| {
             AgentError::Decision(format!("generated Min movement was rejected: {message}"))
         })?;
-        let ordering_utility = evaluator.evaluate(&child_game, root_player).utility;
-        let child = SearchChild { game: child_game, ordering_utility, ordinal };
+        let ordering_utility = evaluator.evaluate(game, root_player).utility;
+        game.undo(reaction);
+        let child = SearchChild { action, ordering_utility, ordinal };
         if is_preferred_terminal_bound(ordering_utility, maximizing) {
             return Ok(ChildSelection { children: vec![child], probed: sample_index + 1 });
         }
@@ -276,7 +290,7 @@ fn fair_share(remaining: usize, branches_left: usize) -> usize {
 
 struct RootCandidate {
     action: Action,
-    game: Game,
+    game_result: GameResult,
     ordering_utility: i32,
     utility: i32,
     ordinal: usize,
@@ -289,7 +303,7 @@ struct ChildSelection {
 }
 
 struct SearchChild {
-    game: Game,
+    action: Action,
     ordering_utility: i32,
     ordinal: usize,
 }

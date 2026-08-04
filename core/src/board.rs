@@ -65,6 +65,10 @@ impl Board {
         if self.in_bounds(pos) { self[pos] } else { None }
     }
 
+    fn change(&self, at: (u8, u8), new: Option<Piece>) -> PositionChange {
+        PositionChange { at, old: self[at], new }
+    }
+
     fn index(&self, x: u8, y: u8) -> usize {
         assert!(x < self.width && y < self.height, "position out of bounds");
         y as usize * self.width as usize + x as usize
@@ -192,7 +196,7 @@ impl Board {
         if piece.color == Color::Black && to.1 >= half {
             return Err("black pieces can only be placed in the top half".into());
         }
-        Ok(vec![PositionChange { at: to, piece: Some(piece) }])
+        Ok(vec![self.change(to, Some(piece))])
     }
 
     /// Verify `to` is in bounds and empty, for placement.
@@ -220,10 +224,7 @@ impl Board {
         if self[to].is_some() {
             return Err(format!("cannot move onto occupied destination ({},{})", to.0, to.1));
         }
-        Ok(vec![PositionChange { at: from, piece: None }, PositionChange {
-            at: to,
-            piece: self[from],
-        }])
+        Ok(vec![self.change(from, None), self.change(to, self[from])])
     }
 
     /// Validate a divide action without modifying the board. Checks movement,
@@ -240,10 +241,7 @@ impl Board {
         if self[to].is_some() {
             return Err(format!("cannot move onto occupied destination ({},{})", to.0, to.1));
         }
-        Ok(vec![PositionChange { at: from, piece: Some(white) }, PositionChange {
-            at: to,
-            piece: self[from],
-        }])
+        Ok(vec![self.change(from, Some(white)), self.change(to, self[from])])
     }
 
     /// Execute a capture (normal or jump, including mutual destruction).
@@ -274,9 +272,9 @@ impl Board {
             && let Some(pt) = self.pushed_target(from, to)
         {
             return Ok(vec![
-                PositionChange { at: from, piece: None },
-                PositionChange { at: to, piece: self[from] },
-                PositionChange { at: pt, piece: self[to] },
+                self.change(from, None),
+                self.change(to, self[from]),
+                self.change(pt, self[to]),
             ]);
         }
         Ok(self.capture_result(piece, from, to, target))
@@ -306,9 +304,9 @@ impl Board {
         }
         if let Some(pt) = self.pushed_target(from, to) {
             return Ok(vec![
-                PositionChange { at: from, piece: None },
-                PositionChange { at: to, piece: self[from] },
-                PositionChange { at: pt, piece: self[to] },
+                self.change(from, None),
+                self.change(to, self[from]),
+                self.change(pt, self[to]),
             ]);
         }
         // Push is blocked. Escalate to capture if either piece has
@@ -341,10 +339,7 @@ impl Board {
         if !target.ability.has(Ability::VITAL) {
             return Err(format!("{} at ({},{}) is not a vital piece", target, to.0, to.1));
         }
-        Ok(vec![PositionChange { at: from, piece: None }, PositionChange {
-            at: to,
-            piece: self[from],
-        }])
+        Ok(vec![self.change(from, None), self.change(to, self[from])])
     }
 
     /// Shared pre-checks: bounds validation, piece lookup, movement ability,
@@ -573,12 +568,9 @@ impl Board {
         if piece.ability.has(Ability::CAPTURED_ON_CAPTURE)
             || target.ability.has(Ability::CAPTURE_ON_CAPTURED)
         {
-            vec![PositionChange { at: from, piece: None }, PositionChange { at: to, piece: None }]
+            vec![self.change(from, None), self.change(to, None)]
         } else {
-            vec![PositionChange { at: from, piece: None }, PositionChange {
-                at: to,
-                piece: self[from],
-            }]
+            vec![self.change(from, None), self.change(to, self[from])]
         }
     }
 
@@ -680,11 +672,19 @@ impl Board {
         }
     }
 
-    /// Write position-based changes onto the board. Panics when a change is
+    /// Write the new side of position changes onto the board. Panics when a change is
     /// outside the board.
     pub fn apply(&mut self, changes: &[PositionChange]) {
         for change in changes {
-            self[change.at] = change.piece;
+            self[change.at] = change.new;
+        }
+    }
+
+    /// Write the old side of position changes back onto the board. Panics when
+    /// a change is outside the board.
+    pub fn undo(&mut self, changes: &[PositionChange]) {
+        for change in changes {
+            self[change.at] = change.old;
         }
     }
 
@@ -696,11 +696,11 @@ impl Board {
         let mut result: Vec<PositionChange> = Vec::new();
         for change in changes {
             if let Some(pos) = result.iter_mut().find(|c| c.at == change.at) {
-                if pos.piece.is_none() && change.piece.is_some() {
-                    pos.piece = change.piece;
+                if pos.new.is_none() && change.new.is_some() {
+                    pos.new = change.new;
                 }
             } else {
-                result.push(PositionChange { at: change.at, piece: change.piece });
+                result.push(*change);
             }
         }
         result.sort_by_key(|c| c.at);

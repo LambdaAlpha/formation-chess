@@ -15,7 +15,7 @@ fn reaction_changes_resolve_and_apply() {
     let game = Game::from_str(SWAP_STATE).expect("parse game");
     let board = game.board();
 
-    let result = NotationResolver::movement(board)
+    let result = NotationResolver::new(&game)
         .parse_reaction("变化：[红车二四 红马一二]\n胜负：未分")
         .expect("parse result")
         .expect("success result");
@@ -30,13 +30,12 @@ fn reaction_changes_resolve_and_apply() {
 #[test]
 fn reaction_change_order_is_independent() {
     let game = Game::from_str(SWAP_STATE).expect("parse game");
-    let board = game.board();
 
-    let a = NotationResolver::movement(board)
+    let a = NotationResolver::new(&game)
         .parse_reaction("变化：[红车二四 红马一二]\n胜负：未分")
         .expect("parse result")
         .expect("success result");
-    let b = NotationResolver::movement(board)
+    let b = NotationResolver::new(&game)
         .parse_reaction("变化：[红马一二 红车二四]\n胜负：未分")
         .expect("parse result")
         .expect("success result");
@@ -49,7 +48,7 @@ fn reaction_coordinates_resolve_a_cyclic_swap() {
     let game = Game::from_str(SWAP_STATE).expect("parse game");
     let board = game.board();
 
-    let result = NotationResolver::movement(board)
+    let result = NotationResolver::new(&game)
         .parse_reaction("变化：[二四一二 一二一四]\n胜负：未分")
         .expect("parse result")
         .expect("success result");
@@ -67,12 +66,16 @@ fn reaction_removal_entry_clears_a_position() {
     let game = Game::from_str(SWAP_STATE).expect("parse game");
     let board = game.board();
 
-    let result = NotationResolver::movement(board)
+    let result = NotationResolver::new(&game)
         .parse_reaction("变化：[红车失]\n胜负：未分")
         .expect("parse result")
         .expect("success result");
 
-    assert_eq!(result.changes, vec![PositionChange { at: (0, 1), piece: None }]);
+    assert_eq!(result.changes, vec![PositionChange {
+        at: (0, 1),
+        old: board.get((0, 1)),
+        new: None
+    }]);
 
     let mut applied = board.clone();
     applied.apply(&result.changes);
@@ -81,17 +84,14 @@ fn reaction_removal_entry_clears_a_position() {
 #[test]
 fn notation_rejects_an_ambiguous_identifier() {
     let game = Game::from_str(SIMPLE).expect("parse");
-    let err = NotationResolver::movement(game.board())
-        .parse_action("红卒进一")
-        .expect_err("must be ambiguous");
+    let err = NotationResolver::new(&game).parse_action("红卒进一").expect_err("must be ambiguous");
     assert!(err.contains("multiple 红卒"), "unexpected error: {err}");
 }
 
 #[test]
 fn coordinate_notation_selects_a_unique_origin() {
     let mut game = Game::from_str(SIMPLE).expect("parse");
-    let action =
-        NotationResolver::movement(game.board()).parse_action("一三直二").expect("parse action");
+    let action = NotationResolver::new(&game).parse_action("一三直二").expect("parse action");
     game.action(action).expect("action");
     assert_eq!(game.board()[(0, 1)].map(|p| p.name), Some('卒'));
 }
@@ -135,9 +135,7 @@ fn placement_notation_rejects_relative_position() {
 五[红将 一一 一一 一一 一一]
 ";
     let game = Game::from_str(state).expect("parse");
-    let err = NotationResolver::new(game.board(), game.phase())
-        .parse_action("红车进一")
-        .expect_err("must fail");
+    let err = NotationResolver::new(&game).parse_action("红车进一").expect_err("must fail");
     assert!(err.contains("not on board"), "unexpected error: {err}");
 }
 
@@ -169,10 +167,9 @@ fn long_moves_on_tall_boards_format_and_parse() {
     );
     let game = Game::from_str(&state).expect("parse");
     let action = Action::Push(Move { from: (0, 14), to: (0, 0) });
-    let formatted = NotationResolver::movement(game.board()).fmt_action(&action);
+    let formatted = NotationResolver::new(&game).fmt_action(&action);
     assert_eq!(formatted, "红车进丁推");
-    let reparsed =
-        NotationResolver::movement(game.board()).parse_action(&formatted).expect("parse action");
+    let reparsed = NotationResolver::new(&game).parse_action(&formatted).expect("parse action");
     let Action::Push(move_) = reparsed else {
         panic!("expected move, got {reparsed}");
     };
@@ -254,24 +251,21 @@ fn notation_rejects_out_of_bounds_placement() {
 五[红将 一一 一一 一一 一一]
 ";
     let game = Game::from_str(state).expect("parse");
-    let err = NotationResolver::new(game.board(), game.phase())
-        .parse_action("红车九九分")
-        .expect_err("must fail");
+    let err = NotationResolver::new(&game).parse_action("红车九九分").expect_err("must fail");
     assert!(err.contains("not on board"), "unexpected error: {err}");
 }
 
 #[test]
 fn notation_rejects_out_of_bounds_origin() {
     let game = Game::from_str(SIMPLE).expect("parse");
-    let err =
-        NotationResolver::movement(game.board()).parse_action("九九平一").expect_err("must fail");
+    let err = NotationResolver::new(&game).parse_action("九九平一").expect_err("must fail");
     assert!(err.contains("outside the board"), "unexpected error: {err}");
 }
 
 #[test]
 fn notation_rejects_zero_numerals() {
     let game = Game::from_str(SIMPLE).expect("parse");
-    let resolver = NotationResolver::movement(game.board());
+    let resolver = NotationResolver::new(&game);
     let err = resolver.parse_action("红将零一").expect_err("must fail");
     assert!(err.contains("cannot resolve position"), "unexpected error: {err}");
     let err = resolver.parse_action("红将平零").expect_err("must fail");
@@ -298,33 +292,28 @@ fn notation_rejects_advance_past_board_edge() {
 五[红将 一一 一一 一一 一一]
 ";
     let game = Game::from_str(state).expect("parse");
-    let err =
-        NotationResolver::movement(game.board()).parse_action("红车进一").expect_err("must fail");
+    let err = NotationResolver::new(&game).parse_action("红车进一").expect_err("must fail");
     assert!(err.contains("cannot resolve position"), "unexpected error: {err}");
 }
 
 #[test]
 fn notation_rejects_truncated_position() {
     let game = Game::from_str(SIMPLE).expect("parse");
-    let err =
-        NotationResolver::movement(game.board()).parse_action("红将平").expect_err("must fail");
+    let err = NotationResolver::new(&game).parse_action("红将平").expect_err("must fail");
     assert!(err.contains("invalid position"), "unexpected error: {err}");
 }
 
 #[test]
 fn notation_rejects_trailing_action_text() {
     let game = Game::from_str(SIMPLE).expect("parse");
-    let err = NotationResolver::movement(game.board())
-        .parse_action("红将平五推吃")
-        .expect_err("must fail");
+    let err = NotationResolver::new(&game).parse_action("红将平五推吃").expect_err("must fail");
     assert!(err.contains("invalid position"), "unexpected error: {err}");
 }
 
 #[test]
 fn notation_rejects_empty_coordinate_origin() {
     let game = Game::from_str(SIMPLE).expect("parse");
-    let err =
-        NotationResolver::movement(game.board()).parse_action("二二平三").expect_err("must fail");
+    let err = NotationResolver::new(&game).parse_action("二二平三").expect_err("must fail");
     assert!(err.contains("no piece at (1,1)"), "unexpected error: {err}");
 }
 
@@ -424,14 +413,14 @@ fn state_parser_rejects_wrong_row_label() {
 fn notation_formats_action_intent() {
     let game = Game::from_str(SIMPLE).expect("parse");
     let action = Action::Move(Move { from: (0, 4), to: (0, 3) });
-    assert_eq!(NotationResolver::movement(game.board()).fmt_action(&action), "红将进一");
+    assert_eq!(NotationResolver::new(&game).fmt_action(&action), "红将进一");
     let action = Action::Push(Move { from: (0, 4), to: (0, 2) });
-    assert_eq!(NotationResolver::movement(game.board()).fmt_action(&action), "红将进二推");
+    assert_eq!(NotationResolver::new(&game).fmt_action(&action), "红将进二推");
 }
 
 #[test]
 fn notation_formats_coordinate_action_with_vertical_direction() {
     let game = Game::from_str(SIMPLE).expect("parse");
     let action = Action::Move(Move { from: (2, 3), to: (2, 1) });
-    assert_eq!(NotationResolver::movement(game.board()).fmt_action(&action), "三四直二");
+    assert_eq!(NotationResolver::new(&game).fmt_action(&action), "三四直二");
 }

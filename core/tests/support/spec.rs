@@ -3,6 +3,7 @@
 use std::collections::HashSet;
 use std::str::FromStr;
 
+use formation_chess_core::action::PoolChange;
 use formation_chess_core::action::Reaction;
 use formation_chess_core::board::Board;
 use formation_chess_core::game::Game;
@@ -46,23 +47,24 @@ pub fn run_tests(data: &str) {
 
 fn run_case(case: &TestCase) -> Result<(), String> {
     let mut game = case.game.clone();
-    let mut pre_board = game.board().clone();
-    let mut pre_phase = game.phase();
+    let mut pre_game = game.clone();
     let mut last_result = None;
 
     for action_str in &case.actions {
-        let action = NotationResolver::new(game.board(), game.phase())
+        let action = NotationResolver::new(&game)
             .parse_action(action_str)
             .map_err(|e| format!("parse action: {e}"))?;
-        pre_board = game.board().clone();
-        pre_phase = game.phase();
+        pre_game = game.clone();
         last_result = Some(game.action(action));
     }
 
-    let actual =
-        last_result.unwrap_or(Ok(Reaction { changes: Vec::new(), game_result: game.result() }));
+    let actual = last_result.unwrap_or(Ok(Reaction {
+        changes: Vec::new(),
+        pool_change: PoolChange::Unchanged,
+        game_result: game.result(),
+    }));
 
-    let expected = NotationResolver::new(&pre_board, pre_phase)
+    let expected = NotationResolver::new(&pre_game)
         .parse_reaction(&case.expected_result)
         .map_err(|e| format!("parse result: {e}"))?;
 
@@ -77,8 +79,8 @@ fn run_case(case: &TestCase) -> Result<(), String> {
 
     // Round-trip: formatting the actual result and re-parsing it must
     // resolve to the same changes.
-    let formatted = NotationResolver::new(&pre_board, pre_phase).fmt_reaction(actual.clone());
-    let reparsed = NotationResolver::new(&pre_board, pre_phase)
+    let formatted = NotationResolver::new(&pre_game).fmt_reaction(actual.clone());
+    let reparsed = NotationResolver::new(&pre_game)
         .parse_reaction(&formatted)
         .map_err(|e| format!("reparse formatted result `{formatted}`: {e}"))?;
     compare_results(&actual, &reparsed)?;
@@ -89,7 +91,7 @@ fn run_case(case: &TestCase) -> Result<(), String> {
         // The receiver resolves piece-based changes into position-based
         // changes and applies them; this must reproduce the final board.
         let changes = Board::normalize_changes(&result.changes);
-        let mut board = pre_board;
+        let mut board = pre_game.board().clone();
         board.apply(&changes);
         let applied = format!("{:#}", board);
         let expected_board = format!("{:#}", case.expected_state.board());
@@ -124,6 +126,12 @@ fn compare_results(
                 return Err(format!(
                     "game_result mismatch: expected {}, got {}",
                     e.game_result, a.game_result
+                ));
+            }
+            if a.pool_change != e.pool_change {
+                return Err(format!(
+                    "pool_change mismatch: expected {:?}, got {:?}",
+                    e.pool_change, a.pool_change
                 ));
             }
         },

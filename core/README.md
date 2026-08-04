@@ -44,7 +44,7 @@ fn main() -> Result<(), String> {
     let mut game = Game::new(GameConfig::default())?;
 
     for text in ["红将五十", "黑将五一"] {
-        let resolver = NotationResolver::new(game.board(), game.phase());
+        let resolver = NotationResolver::new(&game);
         let action = resolver.parse_action(text)?;
         let reaction = game.action(action)?;
         println!("{text} → {}", reaction.game_result);
@@ -99,7 +99,9 @@ or one error line:
 
 `NotationResolver` provides `parse_action`, `fmt_action`, `parse_reaction`,
 and `fmt_reaction`. It resolves names, coordinates, and relative positions
-against the board supplied at construction time.
+against the game supplied at construction time. For reactions, pass the
+pre-action `Game`; the resolver uses its board, placement pools, and white
+piece definition to rebuild the complete reversible `Reaction`.
 
 ## Custom positions
 
@@ -139,8 +141,8 @@ The parser's snapshot example is also available as
 
 | Module | Main contents |
 |---|---|
-| `game` | `Game`, `GameConfig`, phases, turn flow, validation, and result tracking |
-| `action` | `Action`, `Move`, `Place`, `Reaction`, `PositionChange`, `GameResult`; placement actions use `PieceId`, while reaction changes carry complete `Piece` values |
+| `game` | `Game`, `GameConfig`, phases, turn flow, validation, result tracking, and `Game::undo(Reaction)` |
+| `action` | `Action`, `Move`, `Place`, `Reaction`, `PositionChange`, `PoolChange`, `GameResult`; placement actions use `PieceId`, while reversible reactions carry complete `Piece` values |
 | `board` | board geometry, effective pieces, movement, push, capture, draw, divide, and legal-action enumeration |
 | `piece` | `Piece`, lightweight `PieceId`, `Color`, `Player`, canonical `Piece` constants, and `Piece::id()` for identity conversion |
 | `formation` | active neighbor patterns and ability-rewriting effects |

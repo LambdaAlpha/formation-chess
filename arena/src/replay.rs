@@ -148,7 +148,7 @@ where
         action_error(record, action_index, format!("action is not legal: {message}"))
     })?;
     let (notation, reaction_notation) = {
-        let resolver = NotationResolver::new(replay.board(), phase);
+        let resolver = NotationResolver::new(replay);
         (resolver.fmt_action(&action), resolver.fmt_reaction(Ok(reaction.clone())))
     };
     if stored.notation != notation {

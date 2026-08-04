@@ -18,6 +18,7 @@ use formation_chess_agent::ActionSelector;
 use formation_chess_agent::MinAgent;
 use formation_chess_agent::analyze_agent;
 use formation_chess_agent::play_agent_turn;
+use formation_chess_core::action::Reaction;
 use formation_chess_core::game::Game;
 use formation_chess_core::game::GameConfig;
 use formation_chess_core::game::Phase;
@@ -68,7 +69,7 @@ impl PreparedAgentAnalysis {
     fn run(mut self) -> Result<ApiAgentAnalyzeResponse, String> {
         let analysis = analyze_agent(&self.game, &mut self.agent, self.top_k)
             .map_err(|error| error.to_string())?;
-        let resolver = NotationResolver::new(self.game.board(), self.game.phase());
+        let resolver = NotationResolver::new(&self.game);
         let candidates = analysis
             .candidates
             .into_iter()
@@ -89,7 +90,7 @@ impl PreparedAgentAnalysis {
 }
 
 struct HistoryEntry {
-    game: Game,
+    reaction: Reaction,
     control: ApiControl,
 }
 
@@ -150,9 +151,8 @@ impl GameSession {
             return Err(format!("{} 方当前由 AI 控制", request.side));
         }
         let action = request.action.to_action(player)?;
-        let snapshot = self.game.clone();
-        self.game.action(action)?;
-        self.history.push(HistoryEntry { game: snapshot, control: ApiControl::Human });
+        let reaction = self.game.action(action)?;
+        self.history.push(HistoryEntry { reaction, control: ApiControl::Human });
         self.revision += 1;
         Ok(())
     }
@@ -204,7 +204,7 @@ impl GameSession {
         }
 
         let snapshot = self.game.clone();
-        let resolver = NotationResolver::new(snapshot.board(), snapshot.phase());
+        let resolver = NotationResolver::new(&snapshot);
         let turn = match player {
             Player::Red => {
                 play_agent_turn(&mut self.game, &mut self.red.agent, &mut self.red.selector)
@@ -219,7 +219,7 @@ impl GameSession {
             notation: resolver.fmt_action(&turn.action),
             score: turn.score,
         };
-        self.history.push(HistoryEntry { game: snapshot, control: ApiControl::Agent });
+        self.history.push(HistoryEntry { reaction: turn.reaction, control: ApiControl::Agent });
         self.revision += 1;
         Ok(played)
     }
@@ -239,9 +239,10 @@ impl GameSession {
         } else {
             1
         };
-        let target_index = history_len - undo_count;
-        self.game = self.history[target_index].game.clone();
-        self.history.truncate(target_index);
+        for _ in 0 .. undo_count {
+            let entry = self.history.pop().expect("undo count is bounded by history length");
+            self.game.undo(entry.reaction);
+        }
         self.revision += 1;
         Ok(())
     }
@@ -436,6 +437,7 @@ fn api_error(status: StatusCode, error: String) -> (StatusCode, Json<ApiError>) 
 
 #[cfg(test)]
 mod tests {
+    use formation_chess_core::action::PoolChange;
     use formation_chess_core::piece::Piece;
 
     use super::*;
@@ -521,6 +523,15 @@ mod tests {
 
         assert_eq!(session.game.red_pool().len(), 15, "red should have placed once");
         assert_eq!(session.game.black_pool().len(), 15, "black should have placed once");
+        assert_eq!(session.history.len(), 2, "both reactions should be recorded");
+        assert!(
+            matches!(session.history[0].reaction.pool_change, PoolChange::Removed { .. }),
+            "human placement reaction should be recorded"
+        );
+        assert!(
+            matches!(session.history[1].reaction.pool_change, PoolChange::Removed { .. }),
+            "agent placement reaction should be recorded"
+        );
 
         let undo = ApiUndoRequest { revision: 2, side: "Red".to_owned() };
         session.undo(&undo).expect("paired undo should succeed");
@@ -528,6 +539,7 @@ mod tests {
         assert_eq!(session.game.red_pool().len(), 16, "red placement should be reverted");
         assert_eq!(session.game.black_pool().len(), 16, "black reply should be reverted");
         assert_eq!(session.game.board().iter().count(), 0, "board should be empty again");
+        assert!(session.history.is_empty(), "undone reactions should leave history");
         assert_eq!(session.revision, 3, "undo should advance the revision");
     }
 }

@@ -6,11 +6,13 @@ use crate::action::Action;
 use crate::action::GameResult;
 use crate::action::Move;
 use crate::action::Place;
+use crate::action::PoolChange;
 use crate::action::PositionChange;
 use crate::action::Reaction;
 use crate::board::Board;
 use crate::chinese_num::fmt_num;
 use crate::chinese_num::parse_num;
+use crate::game::Game;
 use crate::game::Phase;
 use crate::piece::Color;
 use crate::piece::Piece;
@@ -18,12 +20,11 @@ use crate::piece::PieceId;
 use crate::piece::Player;
 
 /// Resolves between 1‑based notation types and 0‑based API types, using a
-/// board for piece lookups and bounds checks. When formatting or parsing
+/// game for board and pool lookups. When formatting or parsing
 /// the changes of an already-executed action, the resolver must hold the
-/// board as it stood **before** that action.
+/// game as it stood **before** that action.
 pub struct NotationResolver<'a> {
-    board: &'a Board,
-    phase: Phase,
+    game: &'a Game,
 }
 
 /// An action as written in notation, e.g. `红车平五推` or `黑认负`.
@@ -172,10 +173,10 @@ fn place_notation(p: Place) -> PlaceNotation {
 }
 
 fn change_notation(change: PositionChange) -> ChangeNotation {
-    if let Some(piece) = change.piece {
+    if let Some(piece) = change.new {
         ChangeNotation::Place(PlaceNotation {
             piece: piece.id(),
-            to: (change.at.0 + 1, change.at.1),
+            to: (change.at.0 + 1, change.at.1 + 1),
         })
     } else {
         ChangeNotation::Remove(PieceNotation::Coord(change.at.0 + 1, change.at.1 + 1))
@@ -463,15 +464,10 @@ fn parse_two_numbers(s: &str) -> Result<(u8, u8), String> {
 }
 
 impl<'a> NotationResolver<'a> {
-    pub fn new(board: &'a Board, phase: Phase) -> Self {
-        Self { board, phase }
-    }
-
-    /// Convenience: creates a resolver with `phase = Phase::Move`.
-    /// Callers that know the actual phase should use
-    /// [`Self::new`].
-    pub fn movement(board: &'a Board) -> Self {
-        Self::new(board, Phase::Move)
+    /// Create a resolver against a game snapshot. Reaction formatting and
+    /// parsing require the game as it stood before the action.
+    pub fn new(game: &'a Game) -> Self {
+        Self { game }
     }
 
     // --- Convenience ---
@@ -487,7 +483,7 @@ impl<'a> NotationResolver<'a> {
         self.action_notation(action).to_string()
     }
 
-    /// Parse a reaction text against the pre-action board. The outer
+    /// Parse a reaction text against the pre-action game. The outer
     /// `Result` is a notation failure (malformed text, unresolvable
     /// pieces); the inner one distinguishes a success reaction from an
     /// `错误：` reaction.
@@ -497,7 +493,7 @@ impl<'a> NotationResolver<'a> {
     }
 
     /// Format an action outcome — success or error — as reaction text,
-    /// against the pre-action board.
+    /// against the pre-action game.
     pub fn fmt_reaction(&self, result: Result<Reaction, String>) -> String {
         self.reaction_notation(result).to_string()
     }
@@ -519,7 +515,7 @@ impl<'a> NotationResolver<'a> {
     }
 
     fn resolve_move_or_place(&self, pp: PiecePosition) -> Result<Action, String> {
-        let action = if self.phase == Phase::Place
+        let action = if self.game.phase() == Phase::Place
             && let PieceNotation::Name(piece) = pp.piece
             && let Position::Absolute(x, y) = pp.position
         {
@@ -555,7 +551,7 @@ impl<'a> NotationResolver<'a> {
                 },
             },
         };
-        if self.board[from].is_none() {
+        if self.game.board()[from].is_none() {
             return Err(format!("no piece at ({},{})", from.0, from.1));
         }
         Ok(Move { from, to })
@@ -576,7 +572,7 @@ impl<'a> NotationResolver<'a> {
         }
     }
 
-    /// Resolve a parsed reaction against the pre-action board. An
+    /// Resolve a parsed reaction against the pre-action game. An
     /// `错误：` reaction resolves to `Err` with its message.
     pub fn resolve_reaction(&self, reaction: ReactionNotation) -> Result<Reaction, String> {
         match reaction {
@@ -586,14 +582,15 @@ impl<'a> NotationResolver<'a> {
                 for c in changes {
                     position_changes.extend(self.resolve_change(c)?);
                 }
-                let resolved = Board::normalize_changes(&position_changes);
-                Ok(Reaction { changes: resolved, game_result })
+                let mut resolved = Board::normalize_changes(&position_changes);
+                let pool_change = self.resolve_pool_change(&mut resolved)?;
+                Ok(Reaction { changes: resolved, pool_change, game_result })
             },
         }
     }
 
     /// Convert an action outcome — success or error — into notation form,
-    /// against the pre-action board.
+    /// against the pre-action game.
     pub fn reaction_notation(&self, result: Result<Reaction, String>) -> ReactionNotation {
         match result {
             Err(msg) => ReactionNotation::Error(msg),
@@ -615,10 +612,10 @@ impl<'a> NotationResolver<'a> {
                     PieceNotation::Name(p) => self.find_unique(p)?,
                     PieceNotation::Coord(col, row) => self.checked(col, row)?,
                 };
-                Ok(vec![PositionChange { at: from, piece: None }])
+                Ok(vec![PositionChange { at: from, old: self.game.board().get(from), new: None }])
             },
             ChangeNotation::Phase(pp) => {
-                if self.phase == Phase::Place
+                if self.game.phase() == Phase::Place
                     && let PieceNotation::Name(piece) = pp.piece
                     && let Position::Absolute(col, row) = pp.position
                 {
@@ -634,98 +631,116 @@ impl<'a> NotationResolver<'a> {
     /// is not on the pre-action board.
     fn resolve_change_move(&self, pp: PiecePosition) -> Result<Vec<PositionChange>, String> {
         let move_ = self.move_(pp)?;
-        let Some(piece) = self.board.get(move_.from) else {
+        let Some(piece) = self.game.board().get(move_.from) else {
             return Err(format!("no piece at ({},{})", move_.from.0, move_.from.1));
         };
-        Ok(vec![PositionChange { at: move_.from, piece: None }, PositionChange {
+        Ok(vec![PositionChange { at: move_.from, old: Some(piece), new: None }, PositionChange {
             at: move_.to,
-            piece: Some(piece),
+            old: self.game.board().get(move_.to),
+            new: Some(piece),
         }])
     }
 
-    /// Convert position changes into notation form, against the pre-action
-    /// board. For each change: if the piece does not yet appear in the result,
-    /// emit a Place or Remove; if it does appear, transform that entry into a
-    /// Move.
+    /// Convert reversible position changes into notation form, against the
+    /// pre-action game. Matching departures and arrivals become moves;
+    /// unmatched arrivals become placements, and unmatched departures become
+    /// removals unless an arrival at the same point already implies capture.
     pub fn changes_notation(&self, changes: &[PositionChange]) -> Vec<ChangeNotation> {
-        let mut result: Vec<ChangeNotation> = Vec::new();
-
+        let mut departures = Vec::new();
+        let mut arrivals = Vec::new();
         for change in changes {
-            let idx = if let Some(piece) = change.piece {
-                let piece = piece.id();
-                result.iter().position(|cn| Some(piece) == self.piece_of(cn))
-            } else if let Some(piece) = self.board.get(change.at) {
-                let piece = piece.id();
-                result.iter().position(|cn| Some(piece) == self.piece_of(cn))
-            } else {
-                None
-            };
+            if change.old == change.new {
+                continue;
+            }
+            if let Some(piece) = change.old {
+                departures.push((change.at, piece, false));
+            }
+            if let Some(piece) = change.new {
+                arrivals.push((change.at, piece));
+            }
+        }
 
-            let change_notation = match idx {
-                None => {
-                    if let Some(piece) = change.piece {
-                        let piece = piece.id();
-                        if let Ok(from) = self.board.find_unique(piece) {
-                            ChangeNotation::Phase(self.piece_position(from, change.at))
-                        } else {
-                            let to = (change.at.0 + 1, change.at.1 + 1);
-                            ChangeNotation::Place(PlaceNotation { piece, to })
-                        }
-                    } else {
-                        ChangeNotation::Remove(self.piece_notation(change.at))
-                    }
-                },
-                Some(i) => {
-                    let existing = result.swap_remove(i);
-                    match existing {
-                        ChangeNotation::Remove(ref pn) if change.piece.is_some() => {
-                            if let Some(from) = self.position_of(*pn) {
-                                ChangeNotation::Phase(self.piece_position(from, change.at))
-                            } else {
-                                existing
-                            }
-                        },
-                        ChangeNotation::Place(ref p) if change.piece.is_none() => {
-                            let to = (p.to.0.saturating_sub(1), p.to.1.saturating_sub(1));
-                            ChangeNotation::Phase(self.piece_position(change.at, to))
-                        },
-                        _ => existing,
-                    }
-                },
-            };
-            result.push(change_notation);
+        let mut result = Vec::new();
+        for (to, piece) in arrivals {
+            let mut from = None;
+            for departure in &mut departures {
+                if !departure.2 && departure.1 == piece {
+                    departure.2 = true;
+                    from = Some(departure.0);
+                    break;
+                }
+            }
+            if let Some(from) = from {
+                result.push(ChangeNotation::Phase(self.piece_position(from, to)));
+            } else {
+                result.push(ChangeNotation::Place(PlaceNotation {
+                    piece: piece.id(),
+                    to: (to.0 + 1, to.1 + 1),
+                }));
+            }
+        }
+
+        for (at, _, matched) in departures {
+            if matched {
+                continue;
+            }
+            let mut replaced = false;
+            for change in changes {
+                if change.at == at && change.new.is_some() {
+                    replaced = true;
+                    break;
+                }
+            }
+            if !replaced {
+                result.push(ChangeNotation::Remove(self.piece_notation(at)));
+            }
         }
 
         result
     }
 
-    fn piece_of(&self, cn: &ChangeNotation) -> Option<PieceId> {
-        match cn {
-            ChangeNotation::Place(p) => Some(p.piece),
-            ChangeNotation::Remove(pn) | ChangeNotation::Phase(PiecePosition { piece: pn, .. }) => {
-                match pn {
-                    PieceNotation::Name(p) => Some(*p),
-                    PieceNotation::Coord(col, row) => {
-                        self.board.get((col - 1, row - 1)).map(|piece| piece.id())
-                    },
-                }
-            },
-        }
-    }
-
-    fn position_of(&self, pn: PieceNotation) -> Option<(u8, u8)> {
-        match pn {
-            PieceNotation::Coord(col, row) => Some((col.saturating_sub(1), row.saturating_sub(1))),
-            PieceNotation::Name(p) => self.board.find_unique(p).ok(),
-        }
-    }
-
     fn resolve_place_change(&self, notation: PlaceNotation) -> Result<Vec<PositionChange>, String> {
         let place = self.place(notation)?;
-        let Some(piece) = Piece::lookup(place.piece.name, place.piece.color) else {
-            return Err(format!("unknown piece: {}", place.piece));
+        let piece = self.resolve_external_piece(place.piece)?;
+        Ok(vec![PositionChange {
+            at: place.to,
+            old: self.game.board().get(place.to),
+            new: Some(piece),
+        }])
+    }
+
+    fn resolve_external_piece(&self, piece: PieceId) -> Result<Piece, String> {
+        if self.game.phase() == Phase::Place {
+            let (piece, _) = self.game.find_in_pool(piece)?;
+            return Ok(piece);
+        }
+        let white = self.game.white();
+        if white.id() == piece {
+            return Ok(white);
+        }
+        let Some(piece) = Piece::lookup(piece.name, piece.color) else {
+            return Err(format!("unknown piece: {piece}"));
         };
-        Ok(vec![PositionChange { at: place.to, piece: Some(piece) }])
+        Ok(piece)
+    }
+
+    fn resolve_pool_change(&self, changes: &mut [PositionChange]) -> Result<PoolChange, String> {
+        if self.game.phase() != Phase::Place || changes.is_empty() {
+            return Ok(PoolChange::Unchanged);
+        }
+        if changes.len() != 1 {
+            return Err("placement reaction must contain exactly one position change".into());
+        }
+        let change = &mut changes[0];
+        if change.old.is_some() {
+            return Err("placement reaction destination must be empty".into());
+        }
+        let Some(piece_id) = change.new.map(|piece| piece.id()) else {
+            return Err("placement reaction must place a piece".into());
+        };
+        let (piece, index) = self.game.find_in_pool(piece_id)?;
+        change.new = Some(piece);
+        Ok(PoolChange::Removed { index, piece })
     }
 
     fn place(&self, place: PlaceNotation) -> Result<Place, String> {
@@ -735,9 +750,12 @@ impl<'a> NotationResolver<'a> {
     fn resolve_position(
         &self, from: (u8, u8), color: Color, pos: Position,
     ) -> Result<(u8, u8), String> {
-        let Some(result) =
-            pos.resolve((from.0 + 1, from.1 + 1), self.board.width(), self.board.height(), color)
-        else {
+        let Some(result) = pos.resolve(
+            (from.0 + 1, from.1 + 1),
+            self.game.board().width(),
+            self.game.board().height(),
+            color,
+        ) else {
             return Err(format!("cannot resolve position from ({},{})", from.0, from.1));
         };
         self.checked(result.0, result.1)
@@ -752,11 +770,11 @@ impl<'a> NotationResolver<'a> {
     }
 
     fn piece_notation(&self, pos: (u8, u8)) -> PieceNotation {
-        let Some(piece) = self.board.get(pos) else {
+        let Some(piece) = self.game.board().get(pos) else {
             return PieceNotation::Coord(pos.0 + 1, pos.1 + 1);
         };
         let piece = piece.id();
-        if self.board.find_unique(piece).is_ok() {
+        if self.game.board().find_unique(piece).is_ok() {
             PieceNotation::Name(piece)
         } else {
             PieceNotation::Coord(pos.0 + 1, pos.1 + 1)
@@ -764,12 +782,12 @@ impl<'a> NotationResolver<'a> {
     }
 
     fn position(&self, from: (u8, u8), to: (u8, u8)) -> Position {
-        let color = self.board.get(from).map_or(Color::White, |p| p.color);
+        let color = self.game.board().get(from).map_or(Color::White, |p| p.color);
         Position::notation((from.0 + 1, from.1 + 1), color, (to.0 + 1, to.1 + 1))
     }
 
     fn find_unique(&self, piece: PieceId) -> Result<(u8, u8), String> {
-        match self.board.find_unique(piece) {
+        match self.game.board().find_unique(piece) {
             Ok(from) => Ok((from.0, from.1)),
             Err(false) => Err(format!("piece {piece} not on board")),
             Err(true) => Err(format!("multiple {piece} on board, identify by coordinates")),
@@ -780,7 +798,7 @@ impl<'a> NotationResolver<'a> {
     /// validating that it lies on the board. Rejects 零 (0) and anything
     /// beyond the board edge.
     fn checked(&self, col: u8, row: u8) -> Result<(u8, u8), String> {
-        if col >= 1 && row >= 1 && self.board.in_bounds((col - 1, row - 1)) {
+        if col >= 1 && row >= 1 && self.game.board().in_bounds((col - 1, row - 1)) {
             Ok((col - 1, row - 1))
         } else {
             Err(format!("({col},{row}) is outside the board"))

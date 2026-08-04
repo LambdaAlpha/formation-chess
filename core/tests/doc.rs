@@ -4,8 +4,10 @@
 
 use std::str::FromStr;
 
+use formation_chess_core::action::GameResult;
 use formation_chess_core::board::Board;
 use formation_chess_core::game::Game;
+use formation_chess_core::game::GameConfig;
 use formation_chess_core::game::Phase;
 use formation_chess_core::notation::NotationResolver;
 
@@ -79,9 +81,9 @@ fn documented_swap_example_matches_both_notation_documents() {
     }
 }
 
-/// README snippets and the runnable example must use the phase-aware resolver API.
+/// README snippets and the runnable example must use the game-aware resolver API.
 #[test]
-fn documented_readme_examples_use_the_phase_aware_resolver() {
+fn documented_readme_examples_use_the_game_aware_resolver() {
     let sources = [
         include_str!("../../README.md"),
         include_str!("../../README.zh-Hans.md"),
@@ -89,8 +91,7 @@ fn documented_readme_examples_use_the_phase_aware_resolver() {
         include_str!("../../core/examples/readme.rs"),
     ];
     for source in sources {
-        assert!(source.contains("NotationResolver::new(game.board(), game.phase())"));
-        assert!(!source.contains("NotationResolver::new(game.board())"));
+        assert!(source.contains("NotationResolver::new(&game)"));
         assert!(source.contains("红将五十"));
         assert!(source.contains("黑将五一"));
     }
@@ -147,7 +148,15 @@ fn notation_md_swap_example_applies() {
     .parse()
     .expect("parse board");
 
-    let reaction = NotationResolver::movement(&board)
+    let game = Game::new(GameConfig {
+        board: board.clone(),
+        red_pool: Vec::new(),
+        black_pool: Vec::new(),
+        result: GameResult::Draw,
+        ..GameConfig::default()
+    })
+    .expect("construct resolver game");
+    let reaction = NotationResolver::new(&game)
         .parse_reaction(DOCUMENTED_SWAP_REACTION)
         .expect("parse reaction")
         .expect("reaction is a success");

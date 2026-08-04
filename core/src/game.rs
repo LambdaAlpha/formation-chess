@@ -7,6 +7,7 @@ use crate::action::Action;
 use crate::action::GameResult;
 use crate::action::Move;
 use crate::action::Place;
+use crate::action::PoolChange;
 use crate::action::PositionChange;
 use crate::action::Reaction;
 use crate::board::Board;
@@ -17,7 +18,8 @@ use crate::piece::PieceId;
 pub use crate::piece::Player;
 
 /// A running game: board, pools, player to move, and result. Constructed
-/// from a validated [`GameConfig`]; mutated only through [`Game::action`].
+/// from a validated [`GameConfig`]; mutated through [`Game::action`] and
+/// [`Game::undo`].
 #[derive(Clone)]
 pub struct Game {
     player: Player,
@@ -83,6 +85,7 @@ impl Default for GameConfig {
 
 struct PlaceResult {
     index: usize,
+    piece: Piece,
     changes: Vec<PositionChange>,
 }
 
@@ -127,6 +130,10 @@ impl Game {
     /// Number of white pieces available for the `Divide` action.
     pub fn white_pool(&self) -> u8 {
         self.white_pool
+    }
+
+    pub(crate) fn white(&self) -> Piece {
+        self.white
     }
 
     pub fn result(&self) -> GameResult {
@@ -257,35 +264,41 @@ impl Game {
     /// On error, self is unchanged. Error messages must stay single-line:
     /// the notation protocol renders them as one `错误：` line.
     pub fn action(&mut self, action: Action) -> Result<Reaction, String> {
-        if self.result != GameResult::Unfinished {
-            return Err(format!("game is already decided: {}", self.result));
+        let reaction = self.try_action(action)?;
+        self.apply(&reaction);
+        Ok(reaction)
+    }
+
+    fn apply(&mut self, reaction: &Reaction) {
+        match reaction.pool_change {
+            PoolChange::Unchanged => {
+                self.adjust_white_pool(Self::white_delta(&reaction.changes));
+            },
+            PoolChange::Removed { index, .. } => {
+                match self.player {
+                    Player::Red => self.red_pool.remove(index),
+                    Player::Black => self.black_pool.remove(index),
+                };
+            },
         }
-        match action {
-            Action::Place(place) => {
-                let pr = self.try_place(place)?;
-                self.apply_place(pr.index, pr.changes, GameResult::Unfinished)
+        self.board.apply(&reaction.changes);
+        self.result = reaction.game_result;
+        self.switch_player();
+    }
+
+    /// Undo the most recently applied successful action represented by
+    /// `reaction`. Reactions must be undone in strict last-in-first-out order.
+    pub fn undo(&mut self, reaction: Reaction) {
+        self.switch_player();
+        self.result = GameResult::Unfinished;
+        self.board.undo(&reaction.changes);
+        match reaction.pool_change {
+            PoolChange::Unchanged => {
+                self.adjust_white_pool(-Self::white_delta(&reaction.changes));
             },
-            Action::Move(move_) => self.apply_move(self.try_move(move_)?),
-            Action::Capture(move_) => self.apply_move(self.try_capture(move_)?),
-            Action::Push(move_) => self.apply_move(self.try_push(move_)?),
-            Action::Draw(move_) => {
-                let changes = self.try_draw(move_)?;
-                self.apply_draw(changes)
-            },
-            Action::Divide(move_) => {
-                let changes = self.try_divide(move_)?;
-                self.apply_divide(changes)
-            },
-            Action::Pass(player) => {
-                self.try_pass(player)?;
-                self.switch_player();
-                Ok(Reaction { changes: vec![], game_result: self.result })
-            },
-            Action::Resign(player) => {
-                let game_result = self.try_resign(player)?;
-                self.result = game_result;
-                self.switch_player();
-                Ok(Reaction { changes: vec![], game_result })
+            PoolChange::Removed { index, piece } => match self.player {
+                Player::Red => self.red_pool.insert(index, piece),
+                Player::Black => self.black_pool.insert(index, piece),
             },
         }
     }
@@ -299,40 +312,52 @@ impl Game {
         match action {
             Action::Place(place) => {
                 let pr = self.try_place(place)?;
-                Ok(Reaction { changes: pr.changes, game_result: GameResult::Unfinished })
+                let pool_change = PoolChange::Removed { index: pr.index, piece: pr.piece };
+                Ok(Reaction {
+                    changes: pr.changes,
+                    pool_change,
+                    game_result: GameResult::Unfinished,
+                })
             },
             Action::Move(move_) => {
                 let changes = self.try_move(move_)?;
                 let game_result = self.move_result(&changes);
-                Ok(Reaction { changes, game_result })
+                Ok(Reaction { changes, pool_change: PoolChange::Unchanged, game_result })
             },
             Action::Capture(move_) => {
                 let changes = self.try_capture(move_)?;
                 let game_result = self.move_result(&changes);
-                Ok(Reaction { changes, game_result })
+                Ok(Reaction { changes, pool_change: PoolChange::Unchanged, game_result })
             },
             Action::Push(move_) => {
                 let changes = self.try_push(move_)?;
                 let game_result = self.move_result(&changes);
-                Ok(Reaction { changes, game_result })
+                Ok(Reaction { changes, pool_change: PoolChange::Unchanged, game_result })
             },
             Action::Draw(move_) => {
                 let changes = self.try_draw(move_)?;
-                Ok(Reaction { changes, game_result: GameResult::Draw })
+                Ok(Reaction {
+                    changes,
+                    pool_change: PoolChange::Unchanged,
+                    game_result: GameResult::Draw,
+                })
             },
             Action::Divide(move_) => {
                 let changes = self.try_divide(move_)?;
                 let game_result = self.move_result(&changes);
-                Ok(Reaction { changes, game_result })
+                Ok(Reaction { changes, pool_change: PoolChange::Unchanged, game_result })
             },
             Action::Pass(player) => {
                 self.try_pass(player)?;
-                let result = self.move_result(&[]);
-                Ok(Reaction { changes: vec![], game_result: result })
+                Ok(Reaction {
+                    changes: vec![],
+                    pool_change: PoolChange::Unchanged,
+                    game_result: self.result,
+                })
             },
             Action::Resign(player) => {
-                let result = self.try_resign(player)?;
-                Ok(Reaction { changes: vec![], game_result: result })
+                let game_result = self.try_resign(player)?;
+                Ok(Reaction { changes: vec![], pool_change: PoolChange::Unchanged, game_result })
             },
         }
     }
@@ -387,10 +412,10 @@ impl Game {
         }
         let (piece, index) = self.find_in_pool(place.piece)?;
         let changes = self.board.try_place(piece, place.to)?;
-        Ok(PlaceResult { index, changes })
+        Ok(PlaceResult { index, piece, changes })
     }
 
-    fn find_in_pool(&self, piece: PieceId) -> Result<(Piece, usize), String> {
+    pub(crate) fn find_in_pool(&self, piece: PieceId) -> Result<(Piece, usize), String> {
         match piece.color {
             Color::Red => {
                 for (i, p) in self.red_pool.iter().enumerate() {
@@ -410,23 +435,6 @@ impl Game {
             },
             Color::White => Err("white pieces cannot be placed".into()),
         }
-    }
-
-    fn apply_place(
-        &mut self, index: usize, changes: Vec<PositionChange>, result: GameResult,
-    ) -> Result<Reaction, String> {
-        self.board.apply(&changes);
-        match self.player {
-            Player::Red => {
-                self.red_pool.remove(index);
-            },
-            Player::Black => {
-                self.black_pool.remove(index);
-            },
-        }
-        self.switch_player();
-        self.result = result;
-        Ok(Reaction { changes, game_result: result })
     }
 
     fn try_move(&self, move_: Move) -> Result<Vec<PositionChange>, String> {
@@ -459,30 +467,12 @@ impl Game {
         self.board.try_draw(move_.from, move_.to)
     }
 
-    fn apply_draw(&mut self, changes: Vec<PositionChange>) -> Result<Reaction, String> {
-        self.board.apply(&changes);
-        self.white_pool += 1;
-        self.switch_player();
-        let game_result = GameResult::Draw;
-        self.result = game_result;
-        Ok(Reaction { changes, game_result })
-    }
-
     fn try_divide(&self, move_: Move) -> Result<Vec<PositionChange>, String> {
         self.check_move(move_.from)?;
         if self.white_pool == 0 {
             return Err("no white pieces available".into());
         }
         self.board.try_divide(move_.from, move_.to, self.white)
-    }
-
-    fn apply_divide(&mut self, changes: Vec<PositionChange>) -> Result<Reaction, String> {
-        let game_result = self.move_result(&changes);
-        self.board.apply(&changes);
-        self.white_pool -= 1;
-        self.switch_player();
-        self.result = game_result;
-        Ok(Reaction { changes, game_result })
     }
 
     fn check_move(&self, from: (u8, u8)) -> Result<(), String> {
@@ -501,32 +491,21 @@ impl Game {
         Ok(())
     }
 
-    fn apply_move(&mut self, changes: Vec<PositionChange>) -> Result<Reaction, String> {
-        let captured = self.count_captured(&changes);
-        let game_result = self.move_result(&changes);
-        self.board.apply(&changes);
-        self.white_pool += captured;
-        self.switch_player();
-        self.result = game_result;
-        Ok(Reaction { changes, game_result })
-    }
-
-    fn count_captured(&self, changes: &[PositionChange]) -> u8 {
-        let mut captured: i8 = 0;
+    fn white_delta(changes: &[PositionChange]) -> i16 {
+        let mut delta = 0;
         for change in changes {
-            if self.board[change.at].is_some() {
-                captured += 1;
-            } else {
-                captured -= 1;
+            if change.old.is_some() {
+                delta += 1;
             }
-            if change.piece.is_some() {
-                captured -= 1;
-            } else {
-                captured += 1;
+            if change.new.is_some() {
+                delta -= 1;
             }
         }
-        assert!(captured >= 0, "moving will never increase piece");
-        (captured / 2) as u8
+        delta
+    }
+
+    fn adjust_white_pool(&mut self, delta: i16) {
+        self.white_pool = (i16::from(self.white_pool) + delta) as u8;
     }
 
     fn move_result(&self, changes: &[PositionChange]) -> GameResult {
@@ -544,13 +523,13 @@ impl Game {
         let mut removed = false;
         let mut added = false;
         for &change in changes {
-            if let Some(old) = self.board.get(change.at)
+            if let Some(old) = change.old
                 && old.color == color
                 && old.ability.has(Ability::VITAL)
             {
                 removed = true;
             }
-            if let Some(new) = change.piece
+            if let Some(new) = change.new
                 && new.color == color
                 && new.ability.has(Ability::VITAL)
             {

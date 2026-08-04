@@ -28,13 +28,21 @@ pub(super) fn analyze_placements(
     }
 
     let root_player = game.player();
+    let mut search_game = game.clone();
     let max_depth = config.max_depth.get();
     let max_nodes =
         usize::try_from(config.max_nodes.get()).expect("validated Min node budget must fit usize");
     let root_width = usize::from(config.root_width.get());
     let root_probe_limit = probe_limit(max_nodes, root_width, max_depth > 1);
-    let root_selection =
-        select_children(game, area, root_player, evaluator, root_width, true, root_probe_limit)?;
+    let root_selection = select_children(
+        &mut search_game,
+        area,
+        root_player,
+        evaluator,
+        root_width,
+        true,
+        root_probe_limit,
+    )?;
     if root_selection.children.is_empty() {
         return Err(no_placement_error(game));
     }
@@ -46,18 +54,25 @@ pub(super) fn analyze_placements(
         let branches_left = root_count - index;
         let branch_budget =
             if max_depth > 1 { fair_share(remaining_nodes, branches_left) } else { 0 };
-        let search = if branch_budget > 0 && child.game.phase() == Phase::Place {
+        let reaction = search_game.action(child.action).map_err(|message| {
+            AgentError::Decision(format!(
+                "generated Min placement was rejected during search: {message}"
+            ))
+        })?;
+        let search = if branch_budget > 0 && search_game.phase() == Phase::Place {
             search_position(
-                &child.game,
+                &mut search_game,
                 root_player,
                 evaluator,
                 config,
                 max_depth - 1,
                 branch_budget,
-            )?
+            )
         } else {
-            SearchResult { utility: child.ordering_utility, nodes: 0 }
+            Ok(SearchResult { utility: child.ordering_utility, nodes: 0 })
         };
+        search_game.undo(reaction);
+        let search = search?;
         remaining_nodes -= search.nodes;
         results.push(RootResult {
             action: child.action,
@@ -86,8 +101,8 @@ pub(super) fn analyze_placements(
 }
 
 fn search_position(
-    game: &Game, root_player: Player, evaluator: MinEvaluator, config: MinPlacementSearchConfig,
-    depth_remaining: u8, budget: usize,
+    game: &mut Game, root_player: Player, evaluator: MinEvaluator,
+    config: MinPlacementSearchConfig, depth_remaining: u8, budget: usize,
 ) -> Result<SearchResult, AgentError> {
     if depth_remaining == 0
         || budget == 0
@@ -135,18 +150,23 @@ fn search_position(
     for (index, child) in selection.children.into_iter().enumerate() {
         let branches_left = child_count - index;
         let branch_budget = fair_share(remaining_nodes, branches_left);
-        let child_search = if branch_budget > 0 && child.game.phase() == Phase::Place {
+        let reaction = game.action(child.action).map_err(|message| {
+            AgentError::Decision(format!("generated Min placement was rejected: {message}"))
+        })?;
+        let child_search = if branch_budget > 0 && game.phase() == Phase::Place {
             search_position(
-                &child.game,
+                game,
                 root_player,
                 evaluator,
                 config,
                 depth_remaining - 1,
                 branch_budget,
-            )?
+            )
         } else {
-            SearchResult { utility: child.ordering_utility, nodes: 0 }
+            Ok(SearchResult { utility: child.ordering_utility, nodes: 0 })
         };
+        game.undo(reaction);
+        let child_search = child_search?;
         remaining_nodes -= child_search.nodes;
         nodes += child_search.nodes;
         utility = Some(match utility {
@@ -163,8 +183,8 @@ fn search_position(
 }
 
 fn select_children(
-    game: &Game, area: PlacementArea, root_player: Player, evaluator: MinEvaluator, width: usize,
-    maximizing: bool, probe_limit: usize,
+    game: &mut Game, area: PlacementArea, root_player: Player, evaluator: MinEvaluator,
+    width: usize, maximizing: bool, probe_limit: usize,
 ) -> Result<ChildSelection, AgentError> {
     if width == 0 || probe_limit == 0 {
         return Ok(ChildSelection::default());
@@ -189,14 +209,14 @@ fn select_children(
         let piece = pieces[ordinal / positions.len()];
         let to = positions[ordinal % positions.len()];
         let action = Action::Place(Place { piece: piece.id(), to });
-        let mut child_game = game.clone();
-        child_game.action(action).map_err(|message| {
+        let reaction = game.action(action).map_err(|message| {
             AgentError::Decision(format!("generated Min placement was rejected: {message}"))
         })?;
-        let ordering_utility = evaluator.evaluate(&child_game, root_player).utility;
+        let ordering_utility = evaluator.evaluate(game, root_player).utility;
+        game.undo(reaction);
         insert_child(
             &mut children,
-            SearchChild { action, game: child_game, ordering_utility, ordinal },
+            SearchChild { action, ordering_utility, ordinal },
             width,
             maximizing,
         );
@@ -286,7 +306,6 @@ struct ChildSelection {
 
 struct SearchChild {
     action: Action,
-    game: Game,
     ordering_utility: i32,
     ordinal: usize,
 }

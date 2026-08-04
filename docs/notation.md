@@ -194,6 +194,8 @@ Ordinary movement and capture usually need only the arriving piece; an original 
 
 Entry order does not affect meaning. A reader first resolves every entry against the pre-action board, then combines the resulting clears and occupancies by point. If the same point is both cleared and occupied, occupancy wins. This permits cyclic moves and position swaps to be represented without applying entries sequentially.
 
+The core `NotationResolver` is constructed with the complete **pre-action `Game`**, not only its board. The board resolves departures and arrivals; the current placement pool restores the exact removed piece and index, and the game's white-piece definition restores divide results. Therefore the unchanged text protocol can reconstruct a complete reversible `Reaction`.
+
 Examples follow.
 
 Ordinary movement or capture:

@@ -42,8 +42,8 @@ impl GameMetrics {
     /// Verify and replay a record before calculating its metrics.
     pub fn from_record(record: &GameRecord) -> Result<Self, MetricsError> {
         let mut reaction_changes = ReactionChangeMetrics::default();
-        let final_game = replay_with(record, |game, _, _, reaction| {
-            reaction_changes.record(game, reaction);
+        let final_game = replay_with(record, |_, _, _, reaction| {
+            reaction_changes.record(reaction);
         })?;
         let legal_movement_actions = DistributionMetrics::from_counts(
             record.actions.iter().filter_map(|action| action.legal_action_count),
@@ -282,9 +282,9 @@ pub struct ReactionChangeMetrics {
 }
 
 impl ReactionChangeMetrics {
-    fn record(&mut self, game: &Game, reaction: &Reaction) {
+    fn record(&mut self, reaction: &Reaction) {
         for change in &reaction.changes {
-            match (game.board().get(change.at), change.piece) {
+            match (change.old, change.new) {
                 (None, Some(_)) => self.additions += 1,
                 (Some(_), None) => self.removals += 1,
                 (Some(_), Some(_)) => self.replacements += 1,

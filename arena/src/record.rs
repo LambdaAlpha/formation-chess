@@ -237,7 +237,7 @@ impl GameRecord {
                 )));
             }
             let (notation, reaction_notation) = {
-                let resolver = NotationResolver::new(replay.board(), executed.phase);
+                let resolver = NotationResolver::new(&replay);
                 (
                     resolver.fmt_action(&executed.action),
                     resolver.fmt_reaction(Ok(actual_reaction.clone())),
@@ -408,7 +408,7 @@ pub struct PositionChangeRecord {
 
 impl From<PositionChange> for PositionChangeRecord {
     fn from(change: PositionChange) -> Self {
-        Self { at: PositionRecord::from(change.at), piece: change.piece.map(PieceRecord::from) }
+        Self { at: PositionRecord::from(change.at), piece: change.new.map(PieceRecord::from) }
     }
 }
 

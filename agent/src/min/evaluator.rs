@@ -430,17 +430,14 @@ fn record_exchange(exchange_units: i64, analysis: &mut ActionAnalysis) {
 fn analyze_action_outcome(board: &Board, player: Player, action: Action) -> ActionOutcome {
     match action {
         Action::Move(move_) => outcome_from_changes(
-            board,
             player,
             board.try_move(move_.from, move_.to).expect("enumerated move must remain valid"),
         ),
         Action::Capture(move_) => outcome_from_changes(
-            board,
             player,
             board.try_capture(move_.from, move_.to).expect("enumerated capture must remain valid"),
         ),
         Action::Push(move_) => outcome_from_changes(
-            board,
             player,
             board.try_push(move_.from, move_.to).expect("enumerated push must remain valid"),
         ),
@@ -457,18 +454,16 @@ fn analyze_action_outcome(board: &Board, player: Player, action: Action) -> Acti
     }
 }
 
-fn outcome_from_changes(
-    board: &Board, player: Player, changes: Vec<PositionChange>,
-) -> ActionOutcome {
+fn outcome_from_changes(player: Player, changes: Vec<PositionChange>) -> ActionOutcome {
     ActionOutcome {
-        game_result: result_after_changes(board, &changes),
-        exchange_units: exchange_units(board, &changes, player),
+        game_result: result_after_changes(&changes),
+        exchange_units: exchange_units(&changes, player),
     }
 }
 
-fn result_after_changes(board: &Board, changes: &[PositionChange]) -> GameResult {
-    let red_alive = vital_survives(board, changes, Color::Red);
-    let black_alive = vital_survives(board, changes, Color::Black);
+fn result_after_changes(changes: &[PositionChange]) -> GameResult {
+    let red_alive = vital_survives(changes, Color::Red);
+    let black_alive = vital_survives(changes, Color::Black);
     match (red_alive, black_alive) {
         (false, false) => GameResult::Draw,
         (false, true) => GameResult::BlackWin,
@@ -477,17 +472,17 @@ fn result_after_changes(board: &Board, changes: &[PositionChange]) -> GameResult
     }
 }
 
-fn vital_survives(board: &Board, changes: &[PositionChange], color: Color) -> bool {
+fn vital_survives(changes: &[PositionChange], color: Color) -> bool {
     let mut removed = false;
     let mut added = false;
     for change in changes {
-        if let Some(old) = board.get(change.at)
+        if let Some(old) = change.old
             && old.color == color
             && old.ability.has(Ability::VITAL)
         {
             removed = true;
         }
-        if let Some(new) = change.piece
+        if let Some(new) = change.new
             && new.color == color
             && new.ability.has(Ability::VITAL)
         {
@@ -497,16 +492,13 @@ fn vital_survives(board: &Board, changes: &[PositionChange], color: Color) -> bo
     added || !removed
 }
 
-fn exchange_units(board: &Board, changes: &[PositionChange], player: Player) -> i64 {
+fn exchange_units(changes: &[PositionChange], player: Player) -> i64 {
     let mut units = 0;
     for change in changes {
-        let old = if let Some(piece) = board.get(change.at) {
-            exchange_piece_units(piece, player)
-        } else {
-            0
-        };
+        let old =
+            if let Some(piece) = change.old { exchange_piece_units(piece, player) } else { 0 };
         let new =
-            if let Some(piece) = change.piece { exchange_piece_units(piece, player) } else { 0 };
+            if let Some(piece) = change.new { exchange_piece_units(piece, player) } else { 0 };
         units += i64::from(new - old);
     }
     units

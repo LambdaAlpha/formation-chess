@@ -27,19 +27,32 @@ pub enum Action {
     Resign(Player),
 }
 
-/// The successful outcome of an [`Action`]: the piece changes it caused and
-/// the game result afterwards.
+/// The successful outcome of an [`Action`]: reversible board and pool changes,
+/// plus the game result afterwards.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Reaction {
     pub changes: Vec<PositionChange>,
+    pub pool_change: PoolChange,
     pub game_result: GameResult,
 }
 
-/// The new content of a single point: a complete piece, or None for empty.
+/// A reversible change to a single board point.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct PositionChange {
     pub at: (u8, u8),
-    pub piece: Option<Piece>,
+    /// The complete piece before the action, or None when the point was empty.
+    pub old: Option<Piece>,
+    /// The complete piece after the action, or None when the point became empty.
+    pub new: Option<Piece>,
+}
+
+/// A reversible change to the current player's placement pool.
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum PoolChange {
+    /// The placement pool was not changed.
+    Unchanged,
+    /// A piece was removed from the current player's pool.
+    Removed { index: usize, piece: Piece },
 }
 
 /// A piece identity arriving at `to` from outside the board.
