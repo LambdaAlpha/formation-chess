@@ -34,16 +34,10 @@ function addOriginMarker(intersection, state) {
     intersection.appendChild(marker);
 }
 
-function addTargetMarker(intersection, state, multiple = false) {
+function addTargetMarker(intersection, state) {
     const marker = document.createElement('div');
     marker.className = `action-marker action-target marker-${state}`;
     addCorners(marker);
-    if (multiple) {
-        const inner = document.createElement('span');
-        inner.className = 'action-target-inner';
-        addCorners(inner);
-        marker.appendChild(inner);
-    }
     intersection.appendChild(marker);
 }
 
@@ -90,7 +84,7 @@ export function showMoveHints(actions) {
             intersection.dataset.hintType = types[0];
         }
 
-        addTargetMarker(intersection, 'legal', multiple);
+        addTargetMarker(intersection, 'legal');
         const labels = types.map(actionLabel);
         addTooltip(intersection, multiple ? `可选：${labels.join(' · ')}` : labels[0], 'legal');
     }

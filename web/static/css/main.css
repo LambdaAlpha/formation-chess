@@ -99,10 +99,6 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 .corner-top-right { top: 0; right: 0; border-width: var(--marker-width) var(--marker-width) 0 0; }
 .corner-bottom-left { bottom: 0; left: 0; border-width: 0 0 var(--marker-width) var(--marker-width); }
 .corner-bottom-right { right: 0; bottom: 0; border-width: 0 var(--marker-width) var(--marker-width) 0; }
-.action-target-inner {
-  --marker-width: 2px; --corner-size: 34%;
-  position: absolute; inset: 8%;
-}
 
 .action-tooltip {
   position: absolute; left: 50%; bottom: calc(100% - 2px); z-index: 30;
