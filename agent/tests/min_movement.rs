@@ -19,6 +19,12 @@ use formation_chess_core::game::GameConfig;
 use formation_chess_core::piece::Piece;
 use formation_chess_core::piece::Player;
 
+fn collected_movement_actions(game: &Game) -> Vec<Action> {
+    let mut actions = Vec::new();
+    legal_movement_actions(game, &mut actions);
+    actions
+}
+
 fn search_config(depth: u8, nodes: u32, width: u8) -> MinConfig {
     let mut config = MinConfig::best();
     config.movement_search.max_depth = NonZeroU8::new(depth).expect("test depth must be non-zero");
@@ -66,7 +72,7 @@ fn exhaustive_value(
         return evaluator.evaluate(game, root_player).utility;
     }
 
-    let values = legal_movement_actions(game).into_iter().map(|action| {
+    let values = collected_movement_actions(game).into_iter().map(|action| {
         let mut child = game.clone();
         child.action(action).expect("enumerated movement must be legal");
         exhaustive_value(&child, root_player, evaluator, depth_remaining - 1)
@@ -82,7 +88,7 @@ fn exhaustive_roots(game: &Game, config: &MinConfig) -> Vec<ScoredAction> {
     let evaluator = MinEvaluator::new(config).expect("valid evaluator");
     let root_player = game.player();
     let depth = config.movement_search.max_depth.get();
-    let mut roots = legal_movement_actions(game)
+    let mut roots = collected_movement_actions(game)
         .into_iter()
         .enumerate()
         .map(|(ordinal, action)| {
@@ -126,7 +132,7 @@ fn one_ply_movement_scores_static_leaves_and_scans_every_unique_root() {
         ((0, 0), Piece::BLACK_GENERAL),
         ((4, 0), Piece::BLACK_ROOK),
     ]);
-    let mut legal_actions = legal_movement_actions(&game);
+    let mut legal_actions = collected_movement_actions(&game);
     let config = search_config(1, 1, 64);
     let expected = exhaustive_roots(&game, &config);
     legal_actions.push(legal_actions[0]);
@@ -144,7 +150,7 @@ fn two_and_three_ply_movement_match_exhaustive_minimax_with_full_budget() {
         ((0, 0), Piece::BLACK_GENERAL),
         ((2, 0), Piece::BLACK_ROOK),
     ]);
-    let legal_actions = legal_movement_actions(&game);
+    let legal_actions = collected_movement_actions(&game);
     let mut analyses = Vec::new();
 
     for depth in [2, 3] {
@@ -167,7 +173,7 @@ fn opponent_reply_turns_an_exposed_general_into_an_exact_loss() {
         ((4, 0), Piece::BLACK_GENERAL),
         ((0, 0), Piece::BLACK_ROOK),
     ]);
-    let legal_actions = legal_movement_actions(&game);
+    let legal_actions = collected_movement_actions(&game);
     let exposed = Action::Move(Move { from: (0, 4), to: (0, 2) });
 
     assert!(legal_actions.contains(&exposed));
@@ -189,7 +195,7 @@ fn movement_search_is_deterministic_and_scans_all_roots_with_a_tiny_budget() {
         ((0, 0), Piece::BLACK_GENERAL),
         ((4, 0), Piece::BLACK_ROOK),
     ]);
-    let mut legal_actions = legal_movement_actions(&game);
+    let mut legal_actions = collected_movement_actions(&game);
     let unique_count = legal_actions.len();
     legal_actions.push(legal_actions[0]);
     let config = search_config(3, 1, 64);
@@ -211,7 +217,7 @@ fn exact_win_outranks_exact_draw() {
         ((4, 0), Piece::RED_ROOK),
         ((0, 0), Piece::BLACK_GENERAL),
     ]);
-    let legal_actions = legal_movement_actions(&game);
+    let legal_actions = collected_movement_actions(&game);
     let win = Action::Capture(Move { from: (4, 0), to: (0, 0) });
     let draw = Action::Draw(Move { from: (0, 4), to: (0, 0) });
 
@@ -234,7 +240,7 @@ fn favorable_position_avoids_an_available_draw() {
         ((4, 4), Piece::RED_ROOK),
         ((0, 0), Piece::BLACK_GENERAL),
     ]);
-    let legal_actions = legal_movement_actions(&game);
+    let legal_actions = collected_movement_actions(&game);
     let draw = Action::Draw(Move { from: (0, 4), to: (0, 0) });
     let candidates = analyze(&game, MinConfig::best(), &legal_actions);
     let (_, draw_candidate) = candidate(&candidates, draw);
@@ -251,7 +257,7 @@ fn unfavorable_position_takes_an_available_draw() {
         ((0, 0), Piece::BLACK_GENERAL),
         ((4, 0), Piece::BLACK_ROOK),
     ]);
-    let legal_actions = legal_movement_actions(&game);
+    let legal_actions = collected_movement_actions(&game);
     let draw = Action::Draw(Move { from: (0, 4), to: (0, 0) });
     let candidates = analyze(&game, MinConfig::best(), &legal_actions);
 
@@ -268,7 +274,7 @@ fn immediate_loss_receives_exact_negative_score() {
         ((0, 2), Piece::BLACK_ROOK),
         ((4, 0), Piece::BLACK_GENERAL),
     ]);
-    let legal_actions = legal_movement_actions(&game);
+    let legal_actions = collected_movement_actions(&game);
     let loss = Action::Capture(Move { from: (0, 4), to: (0, 2) });
 
     assert!(legal_actions.contains(&loss));

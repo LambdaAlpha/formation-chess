@@ -203,7 +203,9 @@ fn verify_legal_action_count(
                     "movement action has no legal-action count",
                 ));
             };
-            let expected = u64::try_from(legal_movement_actions(replay).len()).map_err(|_| {
+            let mut legal_actions = Vec::new();
+            legal_movement_actions(replay, &mut legal_actions);
+            let expected = u64::try_from(legal_actions.len()).map_err(|_| {
                 action_error(record, action_index, "legal-action count exceeds u64")
             })?;
             if stored == expected {

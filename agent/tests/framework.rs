@@ -21,6 +21,12 @@ use formation_chess_core::game::GameConfig;
 use formation_chess_core::piece::Piece;
 use formation_chess_core::piece::Player;
 
+fn collected_movement_actions(game: &Game) -> Vec<Action> {
+    let mut actions = Vec::new();
+    legal_movement_actions(game, &mut actions);
+    actions
+}
+
 struct TestAgent {
     placement_candidates: Vec<ScoredAction>,
     movement_candidates: Vec<ScoredAction>,
@@ -171,16 +177,28 @@ fn board_iterator_yields_positions_for_duplicate_pieces() {
 #[test]
 fn movement_actions_include_pass_but_not_place_or_resign() {
     let game = movement_game();
-    let actions = legal_movement_actions(&game);
+    let actions = collected_movement_actions(&game);
 
     assert_eq!(actions.last(), Some(&Action::Pass(Player::Red)));
     assert!(!actions.iter().any(|action| matches!(action, Action::Place(_) | Action::Resign(_))));
 }
 
 #[test]
+fn movement_actions_append_to_existing_buffer() {
+    let game = movement_game();
+    let prefix = Action::Resign(Player::Black);
+    let mut actions = vec![prefix];
+
+    legal_movement_actions(&game, &mut actions);
+
+    assert_eq!(actions[0], prefix);
+    assert_eq!(actions.last(), Some(&Action::Pass(Player::Red)));
+}
+
+#[test]
 fn every_enumerated_movement_action_is_accepted_by_core() {
     let game = movement_game();
-    let actions = legal_movement_actions(&game);
+    let actions = collected_movement_actions(&game);
 
     for action in actions {
         game.try_action(action).expect("enumerated action must be legal");
@@ -229,7 +247,7 @@ fn analysis_dispatches_placement_without_action_enumeration() {
 #[test]
 fn analysis_dispatches_prepared_movement_candidates() {
     let game = movement_game();
-    let expected_actions = legal_movement_actions(&game);
+    let expected_actions = collected_movement_actions(&game);
     let expected_count = expected_actions.len();
     let prepared = prepare_turn(&game).expect("prepared movement turn");
     let PreparedInput::Movement { legal_actions } = prepared.input() else {
@@ -284,7 +302,7 @@ fn analysis_rejects_empty_candidate_list() {
 #[test]
 fn analysis_rejects_more_candidates_than_top_k() {
     let game = movement_game();
-    let legal_actions = legal_movement_actions(&game);
+    let legal_actions = collected_movement_actions(&game);
     let mut agent = TestAgent::new(Vec::new(), vec![
         scored(legal_actions[0], 2.0),
         scored(legal_actions[1], 1.0),
@@ -308,7 +326,7 @@ fn analysis_rejects_non_finite_scores() {
 #[test]
 fn analysis_rejects_increasing_scores() {
     let game = movement_game();
-    let legal_actions = legal_movement_actions(&game);
+    let legal_actions = collected_movement_actions(&game);
     let mut agent = TestAgent::new(Vec::new(), vec![
         scored(legal_actions[0], 1.0),
         scored(legal_actions[1], 2.0),

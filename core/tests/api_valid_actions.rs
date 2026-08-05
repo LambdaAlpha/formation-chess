@@ -37,18 +37,34 @@ fn all_valid_moves_matches_controlled_piece_queries() {
     expected.extend(g.valid_moves(2, 3));
     expected.extend(g.valid_moves(0, 4));
 
-    let actions = g.all_valid_moves();
+    let mut actions = Vec::new();
+    g.all_valid_moves(&mut actions);
     assert_eq!(actions, expected);
-    assert!(actions.capacity() >= 128);
 }
 
 #[test]
-fn all_valid_moves_outside_unfinished_movement_phase_returns_empty() {
-    assert!(Game::default().all_valid_moves().is_empty());
+fn all_valid_moves_appends_to_existing_actions() {
+    let g = game_one(Player::Red, Piece::RED_ROOK, (2, 2));
+    let prefix = Action::Resign(Player::Black);
+    let mut actions = vec![prefix];
+
+    g.all_valid_moves(&mut actions);
+
+    assert_eq!(actions[0], prefix);
+    assert!(actions.len() > 1);
+}
+
+#[test]
+fn all_valid_moves_outside_unfinished_movement_phase_appends_nothing() {
+    let sentinel = Action::Resign(Player::Black);
+    let mut actions = vec![sentinel];
+    Game::default().all_valid_moves(&mut actions);
+    assert_eq!(actions, [sentinel]);
 
     let mut g = game_one(Player::Red, Piece::RED_ROOK, (2, 2));
     g.action(Action::Resign(Player::Red)).expect("resign");
-    assert!(g.all_valid_moves().is_empty());
+    g.all_valid_moves(&mut actions);
+    assert_eq!(actions, [sentinel]);
 }
 
 // -- valid_moves: edge cases -------------------------------------------------

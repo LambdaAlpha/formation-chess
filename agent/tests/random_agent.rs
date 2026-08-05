@@ -18,6 +18,12 @@ use formation_chess_core::game::Phase;
 use formation_chess_core::piece::Piece;
 use formation_chess_core::piece::Player;
 
+fn collected_movement_actions(game: &Game) -> Vec<Action> {
+    let mut actions = Vec::new();
+    legal_movement_actions(game, &mut actions);
+    actions
+}
+
 fn top_k(value: u8) -> NonZeroU8 {
     NonZeroU8::new(value).expect("nonzero top_k")
 }
@@ -65,7 +71,7 @@ fn same_seed_reproduces_placement_and_movement_analyses() {
     let placement_game = Game::new(GameConfig::default()).expect("standard game");
     let area = placement_area(&placement_game).expect("placement area");
     let movement_game = movement_game();
-    let legal_actions = legal_movement_actions(&movement_game);
+    let legal_actions = collected_movement_actions(&movement_game);
     let mut first = RandomAgent::with_seed(42);
     let mut second = RandomAgent::with_seed(42);
 
@@ -161,7 +167,7 @@ fn random_agent_reports_empty_movement_list() {
 #[test]
 fn random_agent_returns_unique_legal_movement_top_k() {
     let game = movement_game();
-    let legal_actions = legal_movement_actions(&game);
+    let legal_actions = collected_movement_actions(&game);
     let mut agent = RandomAgent::with_seed(23);
 
     let analysis = analyze_agent(&game, &mut agent, top_k(5)).expect("movement analysis");
@@ -219,7 +225,7 @@ fn random_agent_completes_standard_placement_phase() {
 #[test]
 fn random_movement_turn_uses_supplied_candidates() {
     let mut game = movement_game();
-    let candidates = legal_movement_actions(&game);
+    let candidates = collected_movement_actions(&game);
     let mut agent = RandomAgent::with_seed(11);
     let mut selector = ActionSelector::default();
 

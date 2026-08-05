@@ -21,7 +21,7 @@ fn reaction_changes_resolve_and_apply() {
         .expect("success result");
 
     let mut applied = board.clone();
-    applied.apply(&result.changes);
+    applied.apply(result.changes.as_slice());
 
     assert_eq!(applied[(0, 1)].map(|p| p.name), Some('马'));
     assert_eq!(applied[(1, 3)].map(|p| p.name), Some('车'));
@@ -54,7 +54,7 @@ fn reaction_coordinates_resolve_a_cyclic_swap() {
         .expect("success result");
 
     let mut applied = board.clone();
-    applied.apply(&result.changes);
+    applied.apply(result.changes.as_slice());
 
     assert_eq!(applied[(0, 1)].map(|p| p.name), Some('马'));
     assert_eq!(applied[(0, 3)].map(|p| p.name), Some('车'));
@@ -71,14 +71,14 @@ fn reaction_removal_entry_clears_a_position() {
         .expect("parse result")
         .expect("success result");
 
-    assert_eq!(result.changes, vec![PositionChange {
+    assert_eq!(result.changes.as_slice(), &[PositionChange {
         at: (0, 1),
         old: board.get((0, 1)),
         new: None
     }]);
 
     let mut applied = board.clone();
-    applied.apply(&result.changes);
+    applied.apply(result.changes.as_slice());
     assert_eq!(applied[(0, 1)], None);
 }
 #[test]

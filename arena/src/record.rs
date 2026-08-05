@@ -653,7 +653,9 @@ fn validate_turn_context(
             "movement action {action_index} has no legal-action count"
         ))),
         (Phase::Move, Some(actual)) => {
-            let expected = legal_movement_actions(replay).len();
+            let mut legal_actions = Vec::new();
+            legal_movement_actions(replay, &mut legal_actions);
+            let expected = legal_actions.len();
             if actual == expected {
                 Ok(())
             } else {

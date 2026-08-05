@@ -56,6 +56,7 @@ pub(super) fn analyze_movements(
     candidates.sort_by(root_ordering);
     let max_depth = config.max_depth.get();
     if max_depth > 1 {
+        let mut action_buffer = Vec::with_capacity(128);
         let mut remaining_nodes = usize::try_from(config.max_nodes.get())
             .expect("validated Min node budget must fit usize");
         let mut branches_left = candidates
@@ -82,6 +83,7 @@ pub(super) fn analyze_movements(
                     config,
                     max_depth - 1,
                     branch_budget,
+                    &mut action_buffer,
                 )
             } else {
                 Ok(SearchResult { utility: candidate.ordering_utility, nodes: 0 })
@@ -113,7 +115,7 @@ pub(super) fn analyze_movements(
 
 fn search_position(
     game: &mut Game, root_player: Player, evaluator: MinEvaluator, config: MinMovementSearchConfig,
-    depth_remaining: u8, budget: usize,
+    depth_remaining: u8, budget: usize, action_buffer: &mut Vec<Action>,
 ) -> Result<SearchResult, AgentError> {
     if depth_remaining == 0 || budget == 0 || game.result() != GameResult::Unfinished {
         return Ok(SearchResult {
@@ -129,8 +131,15 @@ fn search_position(
         usize::from(config.opponent_width.get())
     };
     let candidate_probe_limit = probe_limit(budget, width, depth_remaining > 1);
-    let selection =
-        select_children(game, root_player, evaluator, width, maximizing, candidate_probe_limit)?;
+    let selection = select_children(
+        game,
+        root_player,
+        evaluator,
+        width,
+        maximizing,
+        candidate_probe_limit,
+        action_buffer,
+    )?;
     if selection.children.is_empty() {
         return Err(AgentError::Decision("recursive Min movement action list is empty".to_owned()));
     }
@@ -161,6 +170,7 @@ fn search_position(
                 config,
                 depth_remaining - 1,
                 branch_budget,
+                action_buffer,
             )
         } else {
             Ok(SearchResult { utility: child.ordering_utility, nodes: 0 })
@@ -190,13 +200,14 @@ fn search_position(
 
 fn select_children(
     game: &mut Game, root_player: Player, evaluator: MinEvaluator, width: usize, maximizing: bool,
-    probe_limit: usize,
+    probe_limit: usize, actions: &mut Vec<Action>,
 ) -> Result<ChildSelection, AgentError> {
     if width == 0 || probe_limit == 0 {
         return Ok(ChildSelection::default());
     }
 
-    let actions = legal_movement_actions(game);
+    actions.clear();
+    legal_movement_actions(game, actions);
     if actions.is_empty() {
         return Ok(ChildSelection::default());
     }

@@ -283,7 +283,7 @@ pub struct ReactionChangeMetrics {
 
 impl ReactionChangeMetrics {
     fn record(&mut self, reaction: &Reaction) {
-        for change in &reaction.changes {
+        for change in reaction.changes.as_slice() {
             match (change.old, change.new) {
                 (None, Some(_)) => self.additions += 1,
                 (Some(_), None) => self.removals += 1,

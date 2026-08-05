@@ -2,6 +2,7 @@ use formation_chess_core::ability::Ability;
 use formation_chess_core::action::Action;
 use formation_chess_core::action::GameResult;
 use formation_chess_core::action::PositionChange;
+use formation_chess_core::action::PositionChanges;
 use formation_chess_core::board::Board;
 use formation_chess_core::game::Game;
 use formation_chess_core::game::Phase;
@@ -454,10 +455,11 @@ fn analyze_action_outcome(board: &Board, player: Player, action: Action) -> Acti
     }
 }
 
-fn outcome_from_changes(player: Player, changes: Vec<PositionChange>) -> ActionOutcome {
+fn outcome_from_changes(player: Player, changes: PositionChanges) -> ActionOutcome {
+    let changes = changes.as_slice();
     ActionOutcome {
-        game_result: result_after_changes(&changes),
-        exchange_units: exchange_units(&changes, player),
+        game_result: result_after_changes(changes),
+        exchange_units: exchange_units(changes, player),
     }
 }
 
@@ -851,8 +853,11 @@ mod tests {
                 .expect("complete deterministic placement");
         }
 
+        let mut actions = Vec::new();
         for _ in 0 .. 32 {
-            for action in legal_movement_actions(&game) {
+            actions.clear();
+            legal_movement_actions(&game, &mut actions);
+            for &action in &actions {
                 if matches!(action, Action::Pass(_)) {
                     continue;
                 }

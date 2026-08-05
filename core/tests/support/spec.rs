@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use std::str::FromStr;
 
 use formation_chess_core::action::PoolChange;
+use formation_chess_core::action::PositionChanges;
 use formation_chess_core::action::Reaction;
 use formation_chess_core::board::Board;
 use formation_chess_core::game::Game;
@@ -59,7 +60,7 @@ fn run_case(case: &TestCase) -> Result<(), String> {
     }
 
     let actual = last_result.unwrap_or(Ok(Reaction {
-        changes: Vec::new(),
+        changes: PositionChanges::empty(),
         pool_change: PoolChange::Unchanged,
         game_result: game.result(),
     }));
@@ -90,7 +91,7 @@ fn run_case(case: &TestCase) -> Result<(), String> {
 
         // The receiver resolves piece-based changes into position-based
         // changes and applies them; this must reproduce the final board.
-        let changes = Board::normalize_changes(&result.changes);
+        let changes = Board::normalize_changes(result.changes.as_slice());
         let mut board = pre_game.board().clone();
         board.apply(&changes);
         let applied = format!("{:#}", board);
@@ -115,8 +116,8 @@ fn compare_results(
             }
         },
         (Ok(a), Ok(e)) => {
-            let a_changes = Board::normalize_changes(&a.changes);
-            let e_changes = Board::normalize_changes(&e.changes);
+            let a_changes = Board::normalize_changes(a.changes.as_slice());
+            let e_changes = Board::normalize_changes(e.changes.as_slice());
             if a_changes != e_changes {
                 return Err(format!(
                     "changes mismatch:\n  expected: {e_changes:?}\n  actual:   {a_changes:?}"

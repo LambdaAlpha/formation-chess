@@ -45,7 +45,7 @@ fn placement_action_uses_the_pool_piece_configuration() {
     let reaction = game
         .action(Action::Place(Place { piece: Piece::RED_ROOK.id(), to: (1, 3) }))
         .expect("place");
-    assert_eq!(reaction.changes, vec![PositionChange {
+    assert_eq!(reaction.changes.as_slice(), &[PositionChange {
         at: (1, 3),
         old: None,
         new: Some(custom_rook)
@@ -85,11 +85,11 @@ fn try_move_changes_keep_the_original_piece_configuration() {
     assert!(!effective.ability.has(Ability::ANY_DISTANCE));
 
     let changes = board.try_move((1, 1), (1, 2)).expect("one-step move should succeed");
-    assert_eq!(changes, vec![
+    assert_eq!(changes.as_slice(), &[
         PositionChange { at: (1, 1), old: Some(Piece::BLACK_ROOK), new: None },
         PositionChange { at: (1, 2), old: None, new: Some(Piece::BLACK_ROOK) },
     ]);
-    board.apply(&changes);
+    board.apply(changes.as_slice());
     assert_eq!(board[(1, 2)].expect("moved piece").ability, Piece::BLACK_ROOK.ability);
 }
 
@@ -107,11 +107,11 @@ fn try_capture_changes_keep_the_original_mover_configuration() {
     assert!(!Piece::RED_WIND.ability.has(Ability::CAPTURE));
 
     let changes = board.try_capture((1, 1), (0, 0)).expect("capture should succeed");
-    assert_eq!(changes, vec![
+    assert_eq!(changes.as_slice(), &[
         PositionChange { at: (1, 1), old: Some(Piece::RED_WIND), new: None },
         PositionChange { at: (0, 0), old: Some(Piece::WHITE), new: Some(Piece::RED_WIND) },
     ]);
-    board.apply(&changes);
+    board.apply(changes.as_slice());
     assert_eq!(board[(0, 0)].expect("capturing piece").ability, Piece::RED_WIND.ability);
 }
 
@@ -129,16 +129,94 @@ fn try_push_changes_keep_the_original_piece_configurations() {
     assert!(!Piece::RED_WIND.ability.has(Ability::CAPTURE));
 
     let changes = board.try_push((2, 2), (3, 3)).expect("push should succeed");
-    assert_eq!(changes, vec![
+    assert_eq!(changes.as_slice(), &[
         PositionChange { at: (2, 2), old: Some(Piece::RED_WIND), new: None },
         PositionChange { at: (3, 3), old: Some(Piece::BLACK_SCHOLAR), new: Some(Piece::RED_WIND) },
         PositionChange { at: (4, 4), old: None, new: Some(Piece::BLACK_SCHOLAR) },
     ]);
-    board.apply(&changes);
+    board.apply(changes.as_slice());
     assert_eq!(board[(3, 3)].expect("pushing piece").ability, Piece::RED_WIND.ability);
     assert_eq!(board[(4, 4)].expect("pushed piece").ability, Piece::BLACK_SCHOLAR.ability);
 }
 
+#[test]
+fn try_push_omits_an_unchanged_middle_point() {
+    let mut board = Board::new(5, 5);
+    board[(1, 2)] = Some(Piece::RED_ARMY);
+    board[(2, 2)] = Some(Piece::RED_ARMY);
+
+    let changes = board.try_push((1, 2), (2, 2)).expect("ally push should succeed");
+    assert_eq!(changes.as_slice(), &[
+        PositionChange { at: (1, 2), old: Some(Piece::RED_ARMY), new: None },
+        PositionChange { at: (3, 2), old: None, new: Some(Piece::RED_ARMY) },
+    ]);
+    for change in changes.as_slice() {
+        assert_ne!(change.old, change.new);
+    }
+
+    board.apply(changes.as_slice());
+    assert_eq!(board[(2, 2)], Some(Piece::RED_ARMY));
+    assert_eq!(board[(3, 2)], Some(Piece::RED_ARMY));
+}
+
+#[test]
+fn blocked_push_capture_omits_an_unchanged_destination() {
+    let piece = Piece {
+        formation: Piece::WHITE.formation,
+        ability: Piece::RED_ARMY.ability | Ability::CAPTURE_ON_PUSH_BLOCKED,
+        ..Piece::RED_ARMY
+    };
+    let mut board = Board::new(5, 5);
+    board[(1, 2)] = Some(piece);
+    board[(2, 2)] = Some(piece);
+    board[(3, 2)] = Some(Piece::BLACK_PAWN);
+
+    let changes = board.try_push((1, 2), (2, 2)).expect("blocked push should capture");
+    assert_eq!(changes.as_slice(), &[PositionChange { at: (1, 2), old: Some(piece), new: None }]);
+
+    board.apply(changes.as_slice());
+    assert_eq!(board[(2, 2)], Some(piece));
+    assert_eq!(board[(3, 2)], Some(Piece::BLACK_PAWN));
+}
+#[test]
+fn try_divide_omits_an_unchanged_white_origin() {
+    let white = Piece {
+        formation: Piece::WHITE.formation,
+        ability: Piece::RED_ARMY.ability,
+        ..Piece::WHITE
+    };
+    let mut board = Board::new(3, 3);
+    board[(1, 1)] = Some(white);
+
+    let changes = board.try_divide((1, 1), (1, 2), white).expect("white divide should succeed");
+    assert_eq!(changes.as_slice(), &[PositionChange { at: (1, 2), old: None, new: Some(white) }]);
+
+    board.apply(changes.as_slice());
+    assert_eq!(board[(1, 1)], Some(white));
+    assert_eq!(board[(1, 2)], Some(white));
+}
+
+#[test]
+fn try_draw_omits_an_unchanged_destination() {
+    let draw_vital = Piece {
+        formation: Piece::WHITE.formation,
+        ability: Piece::RED_GENERAL.ability | Ability::DRAW,
+        ..Piece::RED_GENERAL
+    };
+    let mut board = Board::new(3, 3);
+    board[(1, 1)] = Some(draw_vital);
+    board[(1, 2)] = Some(draw_vital);
+
+    let changes = board.try_draw((1, 1), (1, 2)).expect("draw should succeed");
+    assert_eq!(changes.as_slice(), &[PositionChange {
+        at: (1, 1),
+        old: Some(draw_vital),
+        new: None
+    }]);
+
+    board.apply(changes.as_slice());
+    assert_eq!(board[(1, 2)], Some(draw_vital));
+}
 #[test]
 fn capture_action_uses_mutual_destruction_bypass() {
     let mut board = Board::new(5, 5);
@@ -148,7 +226,7 @@ fn capture_action_uses_mutual_destruction_bypass() {
     board[(4, 0)] = Some(Piece::BLACK_GENERAL);
 
     let changes = board.try_capture((2, 2), (2, 3)).expect("retaliating target can be captured");
-    assert_eq!(changes, vec![
+    assert_eq!(changes.as_slice(), &[
         PositionChange { at: (2, 2), old: Some(Piece::RED_ARMY), new: None },
         PositionChange { at: (2, 3), old: Some(Piece::BLACK_MINE), new: None },
     ]);
@@ -230,7 +308,7 @@ fn try_action_place_validates_without_mutating() {
     let reaction = g
         .try_action(Action::Place(Place { piece: Piece::RED_ROOK.id(), to: (0, 3) }))
         .expect("valid");
-    assert_eq!(reaction.changes, vec![PositionChange {
+    assert_eq!(reaction.changes.as_slice(), &[PositionChange {
         at: (0, 3),
         old: None,
         new: Some(Piece::RED_ROOK)
@@ -288,7 +366,7 @@ fn undo_restores_captured_custom_piece_and_white_pool() {
 
     let reaction =
         game.action(Action::Capture(Move { from: (1, 2), to: (2, 2) })).expect("capture");
-    assert_eq!(reaction.changes[1].old, Some(custom_target));
+    assert_eq!(reaction.changes.as_slice()[1].old, Some(custom_target));
     assert_eq!(game.white_pool(), 1);
 
     let notation = NotationResolver::new(&before).fmt_reaction(Ok(reaction.clone()));

@@ -42,6 +42,12 @@ use formation_chess_core::game::Phase;
 use formation_chess_core::piece::Piece;
 use formation_chess_core::piece::Player;
 
+fn collected_movement_actions(game: &Game) -> Vec<Action> {
+    let mut actions = Vec::new();
+    legal_movement_actions(game, &mut actions);
+    actions
+}
+
 const PARTICIPANT_A: &str = "agent,\"a";
 const PARTICIPANT_B: &str = "agent_b";
 
@@ -130,7 +136,7 @@ fn game_run(
         let phase = final_game.phase();
         let legal_action_count = match phase {
             Phase::Place => None,
-            Phase::Move => Some(legal_movement_actions(&final_game).len()),
+            Phase::Move => Some(collected_movement_actions(&final_game).len()),
         };
         let reaction = final_game.action(action).expect("legal analysis test action");
         executed_actions.push(ExecutedAction {

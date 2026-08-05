@@ -9,6 +9,7 @@ use crate::ability::Ability;
 use crate::action::Action;
 use crate::action::Move;
 use crate::action::PositionChange;
+use crate::action::PositionChanges;
 use crate::chinese_num::fmt_num;
 use crate::piece::Color;
 use crate::piece::Piece;
@@ -178,15 +179,15 @@ impl Board {
     }
 
     /// Place a red or black piece onto an empty point in its own half.
-    pub fn place(&mut self, piece: Piece, to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
+    pub fn place(&mut self, piece: Piece, to: (u8, u8)) -> Result<PositionChanges, String> {
         let changes = self.try_place(piece, to)?;
-        self.apply(&changes);
+        self.apply(changes.as_slice());
         Ok(changes)
     }
 
     /// Validate a placement without modifying the board. Checks bounds,
     /// vacancy, and the half-board rule (red bottom, black top).
-    pub fn try_place(&self, piece: Piece, to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
+    pub fn try_place(&self, piece: Piece, to: (u8, u8)) -> Result<PositionChanges, String> {
         self.check_placement_target(to)?;
         let half = self.height / 2;
         let midpoint = self.height.div_ceil(2);
@@ -196,7 +197,7 @@ impl Board {
         if piece.color == Color::Black && to.1 >= half {
             return Err("black pieces can only be placed in the top half".into());
         }
-        Ok(vec![self.change(to, Some(piece))])
+        Ok(PositionChanges::one(self.change(to, Some(piece))))
     }
 
     /// Verify `to` is in bounds and empty, for placement.
@@ -211,20 +212,20 @@ impl Board {
     }
 
     /// Execute a simple move to an empty point (no capture or push intent).
-    pub fn move_(&mut self, move_: Move) -> Result<Vec<PositionChange>, String> {
+    pub fn move_(&mut self, move_: Move) -> Result<PositionChanges, String> {
         let changes = self.try_move(move_.from, move_.to)?;
-        self.apply(&changes);
+        self.apply(changes.as_slice());
         Ok(changes)
     }
 
     /// Validate a simple move to an empty point without modifying the board.
     /// Checks movement ability, distance, and path blocking.
-    pub fn try_move(&self, from: (u8, u8), to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
+    pub fn try_move(&self, from: (u8, u8), to: (u8, u8)) -> Result<PositionChanges, String> {
         let _ = self.try_move_to(from, to)?;
         if self[to].is_some() {
             return Err(format!("cannot move onto occupied destination ({},{})", to.0, to.1));
         }
-        Ok(vec![self.change(from, None), self.change(to, self[from])])
+        Ok(PositionChanges::two(self.change(from, None), self.change(to, self[from])))
     }
 
     /// Validate a divide action without modifying the board. Checks movement,
@@ -233,7 +234,7 @@ impl Board {
     /// `to`.
     pub fn try_divide(
         &self, from: (u8, u8), to: (u8, u8), white: Piece,
-    ) -> Result<Vec<PositionChange>, String> {
+    ) -> Result<PositionChanges, String> {
         let piece = self.try_move_to(from, to)?;
         if !piece.ability.has(Ability::DIVIDE) {
             return Err("only pieces with DIVIDE ability can divide forces".into());
@@ -241,20 +242,25 @@ impl Board {
         if self[to].is_some() {
             return Err(format!("cannot move onto occupied destination ({},{})", to.0, to.1));
         }
-        Ok(vec![self.change(from, Some(white)), self.change(to, self[from])])
+        let origin = self.change(from, Some(white));
+        let destination = self.change(to, self[from]);
+        if origin.old == origin.new {
+            return Ok(PositionChanges::one(destination));
+        }
+        Ok(PositionChanges::two(origin, destination))
     }
 
     /// Execute a capture (normal or jump, including mutual destruction).
-    pub fn capture(&mut self, move_: Move) -> Result<Vec<PositionChange>, String> {
+    pub fn capture(&mut self, move_: Move) -> Result<PositionChanges, String> {
         let changes = self.try_capture(move_.from, move_.to)?;
-        self.apply(&changes);
+        self.apply(changes.as_slice());
         Ok(changes)
     }
 
     /// Validate a capture without modifying the board. Checks movement,
     /// path blocking, capture ability, mutual-destruction effects,
     /// and capture demotion.
-    pub fn try_capture(&self, from: (u8, u8), to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
+    pub fn try_capture(&self, from: (u8, u8), to: (u8, u8)) -> Result<PositionChanges, String> {
         let piece = self.try_move_to(from, to)?;
         let Some(target) = self.effective(to) else {
             return Err(format!(
@@ -271,19 +277,15 @@ impl Board {
             || target.ability.has(Ability::PUSHED_ON_CAPTURE_UNBLOCKED))
             && let Some(pt) = self.pushed_target(from, to)
         {
-            return Ok(vec![
-                self.change(from, None),
-                self.change(to, self[from]),
-                self.change(pt, self[to]),
-            ]);
+            return Ok(self.push_result(from, to, pt));
         }
         Ok(self.capture_result(piece, from, to, target))
     }
 
     /// Execute a push (escalates to capture when blocked).
-    pub fn push(&mut self, move_: Move) -> Result<Vec<PositionChange>, String> {
+    pub fn push(&mut self, move_: Move) -> Result<PositionChanges, String> {
         let changes = self.try_push(move_.from, move_.to)?;
-        self.apply(&changes);
+        self.apply(changes.as_slice());
         Ok(changes)
     }
 
@@ -291,7 +293,7 @@ impl Board {
     /// path blocking, push ability, and the pushed piece's landing.
     /// A blocked push may escalate to capture if either piece has the
     /// escalation ability.
-    pub fn try_push(&self, from: (u8, u8), to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
+    pub fn try_push(&self, from: (u8, u8), to: (u8, u8)) -> Result<PositionChanges, String> {
         let piece = self.try_move_to(from, to)?;
         let Some(target) = self.effective(to) else {
             return Err(format!(
@@ -303,11 +305,7 @@ impl Board {
             return Err(format!("cannot push {} at ({},{})", target, to.0, to.1));
         }
         if let Some(pt) = self.pushed_target(from, to) {
-            return Ok(vec![
-                self.change(from, None),
-                self.change(to, self[from]),
-                self.change(pt, self[to]),
-            ]);
+            return Ok(self.push_result(from, to, pt));
         }
         // Push is blocked. Escalate to capture if either piece has
         // escalation ability; otherwise fail.
@@ -325,7 +323,7 @@ impl Board {
     /// is a vital piece. A piece with DRAW may move onto an opponent's vital
     /// piece to end the game in a draw without needing capture or push
     /// abilities.
-    pub fn try_draw(&self, from: (u8, u8), to: (u8, u8)) -> Result<Vec<PositionChange>, String> {
+    pub fn try_draw(&self, from: (u8, u8), to: (u8, u8)) -> Result<PositionChanges, String> {
         let piece = self.try_move_to(from, to)?;
         let Some(target) = self.get(to) else {
             return Err(format!(
@@ -339,7 +337,12 @@ impl Board {
         if !target.ability.has(Ability::VITAL) {
             return Err(format!("{} at ({},{}) is not a vital piece", target, to.0, to.1));
         }
-        Ok(vec![self.change(from, None), self.change(to, self[from])])
+        let departure = self.change(from, None);
+        let arrival = self.change(to, self[from]);
+        if arrival.old == arrival.new {
+            return Ok(PositionChanges::one(departure));
+        }
+        Ok(PositionChanges::two(departure, arrival))
     }
 
     /// Shared pre-checks: bounds validation, piece lookup, movement ability,
@@ -560,18 +563,32 @@ impl Board {
         }
     }
 
+    fn push_result(&self, from: (u8, u8), to: (u8, u8), pushed_to: (u8, u8)) -> PositionChanges {
+        let departure = self.change(from, None);
+        let arrival = self.change(to, self[from]);
+        let pushed = self.change(pushed_to, self[to]);
+        if arrival.old == arrival.new {
+            return PositionChanges::two(departure, pushed);
+        }
+        PositionChanges::three(departure, arrival, pushed)
+    }
     /// Compute the changes of a successful capture, including
     /// mutual‑destruction effects.
     fn capture_result(
         &self, piece: Piece, from: (u8, u8), to: (u8, u8), target: Piece,
-    ) -> Vec<PositionChange> {
+    ) -> PositionChanges {
+        let departure = self.change(from, None);
         if piece.ability.has(Ability::CAPTURED_ON_CAPTURE)
             || target.ability.has(Ability::CAPTURE_ON_CAPTURED)
         {
-            vec![self.change(from, None), self.change(to, None)]
-        } else {
-            vec![self.change(from, None), self.change(to, self[from])]
+            return PositionChanges::two(departure, self.change(to, None));
         }
+
+        let arrival = self.change(to, self[from]);
+        if arrival.old == arrival.new {
+            return PositionChanges::one(departure);
+        }
+        PositionChanges::two(departure, arrival)
     }
 
     /// Append all legal actions for the piece at `from` to `actions`. The piece

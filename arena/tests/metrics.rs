@@ -34,6 +34,12 @@ use formation_chess_core::game::Phase;
 use formation_chess_core::piece::Piece;
 use formation_chess_core::piece::Player;
 
+fn collected_movement_actions(game: &Game) -> Vec<Action> {
+    let mut actions = Vec::new();
+    legal_movement_actions(game, &mut actions);
+    actions
+}
+
 fn nonzero(value: u32) -> NonZeroU32 {
     NonZeroU32::new(value).expect("nonzero value")
 }
@@ -91,7 +97,7 @@ fn game_record(
         let phase = final_game.phase();
         let legal_action_count = match phase {
             Phase::Place => None,
-            Phase::Move => Some(legal_movement_actions(&final_game).len()),
+            Phase::Move => Some(collected_movement_actions(&final_game).len()),
         };
         let reaction = final_game.action(action).expect("legal test action");
         executed_actions.push(ExecutedAction {

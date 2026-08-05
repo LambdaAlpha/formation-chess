@@ -60,17 +60,16 @@ pub fn placement_area(game: &Game) -> Option<PlacementArea> {
     Some(PlacementArea { x_start: 0, x_end: board.width(), y_start, y_end })
 }
 
-/// Enumerate movement-phase actions accepted by the core rules engine.
+/// Append movement-phase actions accepted by the core rules engine to `actions`.
 ///
 /// Resignation is intentionally excluded because it is not a board move and
 /// should be handled by an explicit higher-level policy. Passing is always the
-/// final candidate in an unfinished movement phase.
-pub fn legal_movement_actions(game: &Game) -> Vec<Action> {
+/// final appended candidate in an unfinished movement phase.
+pub fn legal_movement_actions(game: &Game, actions: &mut Vec<Action>) {
     if game.phase() != Phase::Move || game.result() != GameResult::Unfinished {
-        return Vec::new();
+        return;
     }
 
-    let mut actions = game.all_valid_moves();
+    game.all_valid_moves(actions);
     actions.push(Action::Pass(game.player()));
-    actions
 }

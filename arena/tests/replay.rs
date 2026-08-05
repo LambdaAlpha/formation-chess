@@ -34,6 +34,12 @@ use formation_chess_core::game::Phase;
 use formation_chess_core::piece::Piece;
 use formation_chess_core::piece::Player;
 
+fn collected_movement_actions(game: &Game) -> Vec<Action> {
+    let mut actions = Vec::new();
+    legal_movement_actions(game, &mut actions);
+    actions
+}
+
 fn nonzero(value: u32) -> NonZeroU32 {
     NonZeroU32::new(value).expect("nonzero value")
 }
@@ -70,7 +76,7 @@ fn one_action_record(action: Action, termination: GameTermination) -> GameRecord
     let initial_game = movement_game();
     let player = initial_game.player();
     let phase = initial_game.phase();
-    let legal_action_count = Some(legal_movement_actions(&initial_game).len());
+    let legal_action_count = Some(collected_movement_actions(&initial_game).len());
     let mut final_game = initial_game.clone();
     let reaction = final_game.action(action).expect("legal test action");
     let factory = RandomAgentFactory;

@@ -118,7 +118,11 @@ pub fn prepare_turn(game: &Game) -> Result<PreparedTurn<'_>, AgentError> {
             })?;
             PreparedInput::Placement { area }
         },
-        Phase::Move => PreparedInput::Movement { legal_actions: legal_movement_actions(game) },
+        Phase::Move => {
+            let mut legal_actions = Vec::with_capacity(128);
+            legal_movement_actions(game, &mut legal_actions);
+            PreparedInput::Movement { legal_actions }
+        },
     };
 
     Ok(PreparedTurn { game, player: game.player(), input })

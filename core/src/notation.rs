@@ -8,6 +8,7 @@ use crate::action::Move;
 use crate::action::Place;
 use crate::action::PoolChange;
 use crate::action::PositionChange;
+use crate::action::PositionChanges;
 use crate::action::Reaction;
 use crate::board::Board;
 use crate::chinese_num::fmt_num;
@@ -584,7 +585,8 @@ impl<'a> NotationResolver<'a> {
                 }
                 let mut resolved = Board::normalize_changes(&position_changes);
                 let pool_change = self.resolve_pool_change(&mut resolved)?;
-                Ok(Reaction { changes: resolved, pool_change, game_result })
+                let changes = PositionChanges::try_from_slice(&resolved)?;
+                Ok(Reaction { changes, pool_change, game_result })
             },
         }
     }
@@ -595,7 +597,7 @@ impl<'a> NotationResolver<'a> {
         match result {
             Err(msg) => ReactionNotation::Error(msg),
             Ok(result) => {
-                let changes = self.changes_notation(&result.changes);
+                let changes = self.changes_notation(result.changes.as_slice());
                 ReactionNotation::Changes { changes, game_result: result.game_result }
             },
         }
