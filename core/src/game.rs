@@ -304,6 +304,11 @@ impl Game {
                 let game_result = self.move_result(changes.as_slice());
                 Ok(Reaction { changes, pool_change: PoolChange::Unchanged, game_result })
             },
+            Action::Pull(move_) => {
+                let changes = self.try_pull(move_)?;
+                let game_result = self.move_result(changes.as_slice());
+                Ok(Reaction { changes, pool_change: PoolChange::Unchanged, game_result })
+            },
             Action::Draw(move_) => {
                 let changes = self.try_draw(move_)?;
                 Ok(Reaction {
@@ -409,6 +414,11 @@ impl Game {
     fn try_push(&self, move_: Move) -> Result<PositionChanges, String> {
         self.check_move(move_.from)?;
         self.board.try_push(move_.from, move_.to)
+    }
+
+    fn try_pull(&self, move_: Move) -> Result<PositionChanges, String> {
+        self.check_move(move_.from)?;
+        self.board.try_pull(move_.from, move_.to)
     }
 
     fn try_capture(&self, move_: Move) -> Result<PositionChanges, String> {

@@ -27,6 +27,10 @@ pub struct AbilityConfig {
     pub push_enemy: bool,
     pub pushed_by_ally: bool,
     pub pushed_by_enemy: bool,
+    pub pull_ally: bool,
+    pub pull_enemy: bool,
+    pub pulled_by_ally: bool,
+    pub pulled_by_enemy: bool,
     pub capture_on_push_blocked: bool,
     pub captured_on_push_blocked: bool,
     pub push_on_capture_unblocked: bool,
@@ -67,6 +71,16 @@ impl Ability {
     pub const PUSHED_BY_ALLY: Ability = Ability(1 << 4);
     /// Can be shoved by enemies; see [`Self::PUSH_ENEMY`].
     pub const PUSHED_BY_ENEMY: Ability = Ability(1 << 5);
+    /// Pulling an ally requires mover PULL_ALLY **or** target
+    /// PULLED_BY_ALLY; either side's consent suffices.
+    pub const PULL_ALLY: Ability = Ability(1 << 22);
+    /// Pulling an enemy requires mover PULL_ENEMY **and** target
+    /// PULLED_BY_ENEMY; both must agree.
+    pub const PULL_ENEMY: Ability = Ability(1 << 23);
+    /// Can be pulled by an ally; see [`Self::PULL_ALLY`].
+    pub const PULLED_BY_ALLY: Ability = Ability(1 << 24);
+    /// Can be pulled by an enemy; see [`Self::PULL_ENEMY`].
+    pub const PULLED_BY_ENEMY: Ability = Ability(1 << 25);
     /// Push escalation (active): when this piece pushes and the push is
     /// blocked (target cannot land), the push becomes a capture —
     /// destroying the target regardless of its abilities or color.
@@ -189,6 +203,10 @@ impl AbilityConfig {
         a.add(if self.push_enemy { Ability::PUSH_ENEMY } else { NONE });
         a.add(if self.pushed_by_ally { Ability::PUSHED_BY_ALLY } else { NONE });
         a.add(if self.pushed_by_enemy { Ability::PUSHED_BY_ENEMY } else { NONE });
+        a.add(if self.pull_ally { Ability::PULL_ALLY } else { NONE });
+        a.add(if self.pull_enemy { Ability::PULL_ENEMY } else { NONE });
+        a.add(if self.pulled_by_ally { Ability::PULLED_BY_ALLY } else { NONE });
+        a.add(if self.pulled_by_enemy { Ability::PULLED_BY_ENEMY } else { NONE });
         a.add(if self.capture_on_push_blocked { Ability::CAPTURE_ON_PUSH_BLOCKED } else { NONE });
         a.add(if self.captured_on_push_blocked { Ability::CAPTURED_ON_PUSH_BLOCKED } else { NONE });
         a.add(if self.push_on_capture_unblocked {
@@ -277,6 +295,10 @@ const ABILITIES: &[(Ability, &str)] = &[
     (Ability::PUSH_ENEMY, "push_enemy"),
     (Ability::PUSHED_BY_ALLY, "pushed_by_ally"),
     (Ability::PUSHED_BY_ENEMY, "pushed_by_enemy"),
+    (Ability::PULL_ALLY, "pull_ally"),
+    (Ability::PULL_ENEMY, "pull_enemy"),
+    (Ability::PULLED_BY_ALLY, "pulled_by_ally"),
+    (Ability::PULLED_BY_ENEMY, "pulled_by_enemy"),
     (Ability::CAPTURE_ON_PUSH_BLOCKED, "capture_on_push_blocked"),
     (Ability::CAPTURED_ON_PUSH_BLOCKED, "captured_on_push_blocked"),
     (Ability::PUSH_ON_CAPTURE_UNBLOCKED, "push_on_capture_unblocked"),

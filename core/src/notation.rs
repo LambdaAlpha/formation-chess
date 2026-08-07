@@ -37,6 +37,8 @@ pub enum ActionNotation {
     Capture(PiecePosition),
     /// Piece + position + `推`.
     Push(PiecePosition),
+    /// Piece + position + `拉`.
+    Pull(PiecePosition),
     /// Piece + position + `和`.
     Draw(PiecePosition),
     /// Player + `按兵`.
@@ -122,6 +124,7 @@ impl Display for Action {
             Action::Move(m) => ActionNotation::Phase(piece_position(*m)),
             Action::Capture(m) => ActionNotation::Capture(piece_position(*m)),
             Action::Push(m) => ActionNotation::Push(piece_position(*m)),
+            Action::Pull(m) => ActionNotation::Pull(piece_position(*m)),
             Action::Draw(m) => ActionNotation::Draw(piece_position(*m)),
             Action::Pass(p) => ActionNotation::Pass(*p),
             Action::Resign(p) => ActionNotation::Resign(*p),
@@ -193,6 +196,7 @@ impl Display for ActionNotation {
             ActionNotation::Phase(pp) => write!(f, "{pp}"),
             ActionNotation::Capture(pp) => write!(f, "{pp}捉"),
             ActionNotation::Push(pp) => write!(f, "{pp}推"),
+            ActionNotation::Pull(pp) => write!(f, "{pp}拉"),
             ActionNotation::Draw(pp) => write!(f, "{pp}和"),
             ActionNotation::Pass(player) => write!(f, "{player}按兵"),
             ActionNotation::Resign(player) => write!(f, "{player}认负"),
@@ -218,6 +222,9 @@ impl FromStr for ActionNotation {
         }
         if let Some(body) = s.strip_suffix('推') {
             return Ok(Self::Push(body.parse()?));
+        }
+        if let Some(body) = s.strip_suffix('拉') {
+            return Ok(Self::Pull(body.parse()?));
         }
         if let Some(body) = s.strip_suffix('和') {
             return Ok(Self::Draw(body.parse()?));
@@ -497,6 +504,7 @@ impl<'a> NotationResolver<'a> {
             ActionNotation::Phase(pp) => self.resolve_move_or_place(pp)?,
             ActionNotation::Capture(pp) => Action::Capture(self.move_(pp)?),
             ActionNotation::Push(pp) => Action::Push(self.move_(pp)?),
+            ActionNotation::Pull(pp) => Action::Pull(self.move_(pp)?),
             ActionNotation::Draw(pp) => Action::Draw(self.move_(pp)?),
             ActionNotation::Pass(p) => Action::Pass(p),
             ActionNotation::Resign(p) => Action::Resign(p),
@@ -555,6 +563,7 @@ impl<'a> NotationResolver<'a> {
             Action::Move(m) => ActionNotation::Phase(self.piece_position(m.from, m.to)),
             Action::Capture(m) => ActionNotation::Capture(self.piece_position(m.from, m.to)),
             Action::Push(m) => ActionNotation::Push(self.piece_position(m.from, m.to)),
+            Action::Pull(m) => ActionNotation::Pull(self.piece_position(m.from, m.to)),
             Action::Draw(m) => ActionNotation::Draw(self.piece_position(m.from, m.to)),
             Action::Pass(p) => ActionNotation::Pass(*p),
             Action::Resign(p) => ActionNotation::Resign(*p),

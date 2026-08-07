@@ -69,6 +69,10 @@ impl Piece {
                 push_enemy: true,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
+                pull_ally: false,
+                pull_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: false,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -101,6 +105,10 @@ impl Piece {
                 push_enemy: true,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
+                pull_ally: false,
+                pull_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: false,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -133,6 +141,10 @@ impl Piece {
                 push_enemy: true,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
+                pull_ally: false,
+                pull_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: false,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -164,6 +176,10 @@ impl Piece {
                 push_enemy: true,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
+                pull_ally: false,
+                pull_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: false,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -196,6 +212,10 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
+                pull_ally: false,
+                pull_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: false,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -228,6 +248,10 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
+                pull_ally: false,
+                pull_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: false,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -260,6 +284,10 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
+                pull_ally: false,
+                pull_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: false,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -292,6 +320,10 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
+                pull_ally: false,
+                pull_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: false,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -324,6 +356,10 @@ impl Piece {
                 push_enemy: true,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
+                pull_ally: false,
+                pull_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: false,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -356,6 +392,10 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: true,
                 pushed_by_enemy: false,
+                pull_ally: false,
+                pull_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: false,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -388,6 +428,10 @@ impl Piece {
                 push_enemy: true,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
+                pull_ally: false,
+                pull_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: false,
                 capture_on_push_blocked: true,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -420,6 +464,10 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
+                pull_ally: false,
+                pull_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: false,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -452,6 +500,10 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
+                pull_ally: false,
+                pull_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: false,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -484,6 +536,10 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
+                pull_ally: false,
+                pull_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: false,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -516,6 +572,10 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
+                pull_ally: false,
+                pull_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: false,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -548,6 +608,10 @@ impl Piece {
                 push_enemy: false,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
+                pull_ally: false,
+                pull_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: false,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -708,10 +772,21 @@ impl Piece {
     /// PUSH_ENEMY **and** target PUSHED_BY_ENEMY.
     pub fn can_push(&self, target: Piece) -> bool {
         if self.player == target.player {
-            self.ability.has(Ability::PUSH_ALLY) || target.ability.has(Ability::PUSHED_BY_ALLY)
-        } else {
-            self.ability.has(Ability::PUSH_ENEMY) && target.ability.has(Ability::PUSHED_BY_ENEMY)
+            return self.ability.has(Ability::PUSH_ALLY)
+                || target.ability.has(Ability::PUSHED_BY_ALLY);
         }
+        self.ability.has(Ability::PUSH_ENEMY) && target.ability.has(Ability::PUSHED_BY_ENEMY)
+    }
+
+    /// Whether this piece can pull `target`: same color needs mover
+    /// PULL_ALLY **or** target PULLED_BY_ALLY; different colors need mover
+    /// PULL_ENEMY **and** target PULLED_BY_ENEMY.
+    pub fn can_pull(&self, target: Piece) -> bool {
+        if self.player == target.player {
+            return self.ability.has(Ability::PULL_ALLY)
+                || target.ability.has(Ability::PULLED_BY_ALLY);
+        }
+        self.ability.has(Ability::PULL_ENEMY) && target.ability.has(Ability::PULLED_BY_ENEMY)
     }
 
     /// Whether this piece can capture `target` normally or through

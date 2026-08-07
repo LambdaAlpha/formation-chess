@@ -295,6 +295,39 @@ impl Board {
         }
     }
 
+    /// Execute a pull: move the active piece to an empty destination and
+    /// move the piece behind it into its original position.
+    pub fn pull(&mut self, move_: Move) -> Result<PositionChanges, String> {
+        let changes = self.try_pull(move_.from, move_.to)?;
+        self.apply(changes.as_slice());
+        Ok(changes)
+    }
+
+    /// Validate a pull without modifying the board. The destination must be
+    /// empty; the piece one movement step behind `from` is moved to `from`.
+    /// The pulled piece is moved by external force, so its direction ability
+    /// is irrelevant, but its landing leg must be clear for a 日字 step.
+    pub fn try_pull(&self, from: (u8, u8), to: (u8, u8)) -> Result<PositionChanges, String> {
+        let piece = self.try_move_to(from, to)?;
+        if self[to].is_some() {
+            return Err(format!(
+                "destination ({},{}) is occupied, pull requires an empty destination",
+                to.0, to.1
+            ));
+        }
+        let Some(pulled_from) = self.pull_source(from, to) else {
+            return Err(format!("no valid piece position behind ({},{}) to pull", from.0, from.1));
+        };
+        let Some(pulled) = self.effective(pulled_from) else {
+            return Err(format!("no piece at ({},{}) to pull", pulled_from.0, pulled_from.1));
+        };
+
+        if !piece.can_pull(pulled) {
+            return Err(format!("cannot pull {} at ({},{})", pulled, pulled_from.0, pulled_from.1));
+        }
+        Ok(self.pull_result(from, to, pulled_from))
+    }
+
     /// Validate a draw without modifying the board. Checks movement, path
     /// blocking, opposing players, DRAW ability, and the target's VITAL
     /// ability. A legal draw exchanges the two occupied points and ends the
@@ -430,6 +463,47 @@ impl Board {
         true
     }
 
+    /// Return the one-step vector along a valid movement direction.
+    fn movement_step(from: (u8, u8), to: (u8, u8)) -> (i8, i8) {
+        let delta_x = to.0 as i8 - from.0 as i8;
+        let delta_y = to.1 as i8 - from.1 as i8;
+        let sign_x = delta_x.signum();
+        let sign_y = delta_y.signum();
+        let distance_x = delta_x.unsigned_abs();
+        let distance_y = delta_y.unsigned_abs();
+        if distance_x == 0 || distance_y == 0 || distance_x == distance_y {
+            return (sign_x, sign_y);
+        }
+        if distance_x * 2 == distance_y {
+            return (sign_x, sign_y * 2);
+        }
+        if distance_x == distance_y * 2 {
+            return (sign_x * 2, sign_y);
+        }
+        panic!("invalid movement vector ({delta_x},{delta_y})");
+    }
+
+    /// Return the point one movement step behind `from`, opposite the
+    /// direction from `from` to `to`. Returns None when the source is outside
+    /// the board, empty, or cannot reach `from` in one clear step.
+    fn pull_source(&self, from: (u8, u8), to: (u8, u8)) -> Option<(u8, u8)> {
+        let (step_x, step_y) = Self::movement_step(from, to);
+        let source_x = from.0 as i8 - step_x;
+        let source_y = from.1 as i8 - step_y;
+        if source_x < 0 || source_y < 0 {
+            return None;
+        }
+        let source = (source_x as u8, source_y as u8);
+        if !self.in_bounds(source) {
+            return None;
+        }
+        self[source]?;
+        if !self.step_passable(source, from) {
+            return None;
+        }
+        Some(source)
+    }
+
     /// Where the pushed piece would land, continuing one step along the push
     /// direction. The pushed piece's own direction abilities are irrelevant:
     /// the shove supplies the movement. Returns None if the pushed piece
@@ -437,23 +511,9 @@ impl Board {
     /// or the pushed piece's path there is blocked (for L-shaped pushes this
     /// is the pushed piece's leg).
     fn pushed_target(&self, from: (u8, u8), to: (u8, u8)) -> Option<(u8, u8)> {
-        let dx: i8 = to.0 as i8 - from.0 as i8;
-        let dy: i8 = to.1 as i8 - from.1 as i8;
-        let sx = dx.signum();
-        let sy = dy.signum();
-        let adx = dx.unsigned_abs();
-        let ady = dy.unsigned_abs();
-        let (tsx, tsy) = if adx == 0 || ady == 0 || adx == ady {
-            (sx, sy)
-        } else if adx * 2 == ady {
-            (sx, sy * 2)
-        } else if adx == ady * 2 {
-            (sx * 2, sy)
-        } else {
-            panic!("push_target called with invalid move vector ({dx},{dy})");
-        };
-        let tx = to.0 as i8 + tsx;
-        let ty = to.1 as i8 + tsy;
+        let (step_x, step_y) = Self::movement_step(from, to);
+        let tx = to.0 as i8 + step_x;
+        let ty = to.1 as i8 + step_y;
         if tx < 0 || ty < 0 || tx as u8 >= self.width || ty as u8 >= self.height {
             return None;
         }
@@ -546,6 +606,17 @@ impl Board {
         }
         PositionChanges::three(departure, arrival, pushed)
     }
+
+    fn pull_result(&self, from: (u8, u8), to: (u8, u8), pulled_from: (u8, u8)) -> PositionChanges {
+        let from_change = self.change(from, self[pulled_from]);
+        let arrival = self.change(to, self[from]);
+        let pulled = self.change(pulled_from, None);
+        if from_change.old == from_change.new {
+            return PositionChanges::two(arrival, pulled);
+        }
+        PositionChanges::three(from_change, arrival, pulled)
+    }
+
     /// Compute the changes of a successful capture, including
     /// mutual‑destruction effects.
     fn capture_result(
@@ -566,7 +637,7 @@ impl Board {
     }
 
     /// Append all legal actions for the piece at `from` to `actions`. The piece
-    /// must be present on the board. Actions are [`Action::Move`],
+    /// must be present on the board. Actions are [`Action::Move`], [`Action::Pull`],
     /// [`Action::Capture`], [`Action::Push`], and [`Action::Draw`]; placement,
     /// pass, and resign are the caller's concern.
     ///
@@ -618,22 +689,36 @@ impl Board {
             if !self.step_passable(origin, to) {
                 break;
             }
-            if let Some(target) = self.effective(to) {
-                self.enumerate_action(player, piece, from, to, target, actions);
+            let target = self.effective(to);
+            self.enumerate_action(player, piece, from, to, target, actions);
+            if target.is_some() {
                 break;
             }
-            actions.push(Action::Move(Move { from, to }));
             origin = to;
         }
     }
 
-    /// Add every capture, push, and draw action legal against `target`.
-    /// Path blocking is already handled by [`Self::enumerate_line`].
+    /// Add every action legal at `to`, including movement, pull, capture,
+    /// push, and draw. Path blocking is already handled by
+    /// [`Self::enumerate_line`].
     fn enumerate_action(
-        &self, player: Player, piece: Piece, from: (u8, u8), to: (u8, u8), target: Piece,
+        &self, player: Player, piece: Piece, from: (u8, u8), to: (u8, u8), target: Option<Piece>,
         actions: &mut Vec<Action>,
     ) {
         let move_ = Move { from, to };
+        let Some(target) = target else {
+            actions.push(Action::Move(move_));
+            let Some(pulled_from) = self.pull_source(from, to) else {
+                return;
+            };
+            let Some(pulled) = self.effective(pulled_from) else {
+                return;
+            };
+            if piece.can_pull(pulled) {
+                actions.push(Action::Pull(move_));
+            }
+            return;
+        };
         if piece.can_capture(target) {
             actions.push(Action::Capture(move_));
         }

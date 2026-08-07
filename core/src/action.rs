@@ -16,6 +16,9 @@ pub enum Action {
     /// Move onto an occupied point, shoving the piece there one step
     /// farther.
     Push(Move),
+    /// Move to an empty point and pull the piece one movement step behind
+    /// the origin into the origin.
+    Pull(Move),
     /// Exchange positions with an opponent's vital piece to draw the game.
     Draw(Move),
     /// Skip the turn without moving.
