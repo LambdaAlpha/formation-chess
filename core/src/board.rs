@@ -295,11 +295,10 @@ impl Board {
         }
     }
 
-    /// Validate a draw without modifying the board. Checks movement,
-    /// path blocking, that the mover has DRAW ability, and that the target
-    /// is a vital piece. A piece with DRAW may move onto an opponent's vital
-    /// piece to end the game in a draw without needing capture or push
-    /// abilities.
+    /// Validate a draw without modifying the board. Checks movement, path
+    /// blocking, opposing players, DRAW ability, and the target's VITAL
+    /// ability. A legal draw exchanges the two occupied points and ends the
+    /// game in a draw.
     pub fn try_draw(&self, from: (u8, u8), to: (u8, u8)) -> Result<PositionChanges, String> {
         let piece = self.try_move_to(from, to)?;
         let Some(target) = self.get(to) else {
@@ -308,18 +307,16 @@ impl Board {
                 to.0, to.1
             ));
         };
+        if piece.player == target.player {
+            return Err("draw requires pieces belonging to opposing players".into());
+        }
         if !piece.ability.has(Ability::DRAW) {
             return Err("only pieces with DRAW ability can draw".into());
         }
         if !target.ability.has(Ability::VITAL) {
             return Err(format!("{} at ({},{}) is not a vital piece", target, to.0, to.1));
         }
-        let departure = self.change(from, None);
-        let arrival = self.change(to, self[from]);
-        if arrival.old == arrival.new {
-            return Ok(PositionChanges::one(departure));
-        }
-        Ok(PositionChanges::two(departure, arrival))
+        Ok(PositionChanges::two(self.change(from, self[to]), self.change(to, self[from])))
     }
 
     /// Shared pre-checks: bounds validation, piece lookup, movement ability,
@@ -573,8 +570,8 @@ impl Board {
     /// [`Action::Capture`], [`Action::Push`], and [`Action::Draw`]; placement,
     /// pass, and resign are the caller's concern.
     ///
-    /// `player` filters draw actions: only draws targeting the opponent's
-    /// colored pieces are appended.
+    /// `player` filters draw actions to own DRAW pieces targeting the
+    /// opponent's vital pieces.
     pub fn valid_moves(&self, player: Player, from: (u8, u8), actions: &mut Vec<Action>) {
         let Some(piece) = self.effective(from) else {
             return;
@@ -649,13 +646,10 @@ impl Board {
                 actions.push(Action::Push(move_));
             }
         }
-        let opponent_player = match player {
-            Player::Red => Player::Black,
-            Player::Black => Player::Red,
-        };
-        if piece.ability.has(Ability::DRAW)
+        if piece.player == player
+            && target.player != player
+            && piece.ability.has(Ability::DRAW)
             && target.ability.has(Ability::VITAL)
-            && target.player == opponent_player
         {
             actions.push(Action::Draw(move_));
         }

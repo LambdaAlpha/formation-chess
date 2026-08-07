@@ -418,15 +418,14 @@ impl Game {
 
     fn try_draw(&self, move_: Move) -> Result<PositionChanges, String> {
         self.check_move(move_.from)?;
-        let Some(target) = self.board.get(move_.to) else {
-            return Err(format!("destination ({},{}) is empty", move_.to.0, move_.to.1));
+        let Some(piece) = self.board.effective(move_.from) else {
+            return Err(format!("no piece at ({},{})", move_.from.0, move_.from.1));
         };
-        let opponent_player = match self.player {
-            Player::Red => Player::Black,
-            Player::Black => Player::Red,
-        };
-        if target.player != opponent_player {
-            return Err(format!("cannot draw with {} at ({},{})", target, move_.to.0, move_.to.1));
+        if piece.player != self.player {
+            return Err(format!(
+                "player {} cannot draw with opponent piece {}",
+                self.player, piece
+            ));
         }
         self.board.try_draw(move_.from, move_.to)
     }

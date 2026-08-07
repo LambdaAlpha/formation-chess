@@ -118,8 +118,9 @@ impl Ability {
     /// loses; when both sides lose theirs in the same action, the game is
     /// a draw.
     pub const VITAL: Ability = Ability(1 << 20);
-    /// Can move onto an opponent's vital piece to end the game in a draw
-    /// (the `Draw` action). Granted to allies by the General's formation.
+    /// Can exchange positions with an opponent's vital piece to end the
+    /// game in a draw (the `Draw` action). Granted to allies by the General's
+    /// formation.
     pub const DRAW: Ability = Ability(1 << 21);
 
     /// Whether **any** of the bits in `ability` is set. For single-bit
