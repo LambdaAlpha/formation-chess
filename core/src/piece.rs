@@ -776,15 +776,12 @@ impl Piece {
     }
 
     /// Whether this piece can capture `target` normally or through
-    /// mutual-destruction bypass: different colors, and either
+    /// mutual-destruction bypass, regardless of color, and either
     /// (i) attacker has CAPTURED_ON_CAPTURE (sacrifice, bypasses target's
     /// CAPTURED), (ii) target has CAPTURE_ON_CAPTURED (retaliation, bypasses
     /// attacker's CAPTURE), or (iii) attacker has CAPTURE and target has
     /// CAPTURED. Path rules are the caller's concern.
     pub fn can_capture(&self, target: Piece) -> bool {
-        if self.color == target.color {
-            return false;
-        }
         if self.ability.has(Ability::CAPTURED_ON_CAPTURE)
             || target.ability.has(Ability::CAPTURE_ON_CAPTURED)
         {
