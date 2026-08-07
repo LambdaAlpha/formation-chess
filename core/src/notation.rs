@@ -15,7 +15,6 @@ use crate::chinese_num::fmt_num;
 use crate::chinese_num::parse_num;
 use crate::game::Game;
 use crate::game::Phase;
-use crate::piece::Color;
 use crate::piece::Piece;
 use crate::piece::PieceId;
 use crate::piece::Player;
@@ -40,11 +39,9 @@ pub enum ActionNotation {
     Push(PiecePosition),
     /// Piece + position + `和`.
     Draw(PiecePosition),
-    /// Piece + position + `分`: move and divide forces, leaving a white piece at origin.
-    Divide(PiecePosition),
-    /// Color + `按兵`.
+    /// Player + `按兵`.
     Pass(Player),
-    /// Color + `认负`.
+    /// Player + `认负`.
     Resign(Player),
 }
 
@@ -112,11 +109,9 @@ pub enum RelativePosition {
     Horizontal(u8),
     /// `直` + row: another row in the same column.
     Straight(u8),
-    /// `进` + steps: forward — up for Red, down for Black, invalid for
-    /// White.
+    /// `进` + steps: forward — up for Red, down for Black.
     Advance(u8),
-    /// `退` + steps: backward — down for Red, up for Black, invalid for
-    /// White.
+    /// `退` + steps: backward — down for Red, up for Black.
     Retreat(u8),
 }
 
@@ -128,7 +123,6 @@ impl Display for Action {
             Action::Capture(m) => ActionNotation::Capture(piece_position(*m)),
             Action::Push(m) => ActionNotation::Push(piece_position(*m)),
             Action::Draw(m) => ActionNotation::Draw(piece_position(*m)),
-            Action::Divide(m) => ActionNotation::Divide(piece_position(*m)),
             Action::Pass(p) => ActionNotation::Pass(*p),
             Action::Resign(p) => ActionNotation::Resign(*p),
         };
@@ -200,7 +194,6 @@ impl Display for ActionNotation {
             ActionNotation::Capture(pp) => write!(f, "{pp}捉"),
             ActionNotation::Push(pp) => write!(f, "{pp}推"),
             ActionNotation::Draw(pp) => write!(f, "{pp}和"),
-            ActionNotation::Divide(pp) => write!(f, "{pp}分"),
             ActionNotation::Pass(player) => write!(f, "{player}按兵"),
             ActionNotation::Resign(player) => write!(f, "{player}认负"),
         }
@@ -219,9 +212,6 @@ impl FromStr for ActionNotation {
         }
         if let Some(player) = s.strip_suffix("认负") {
             return Ok(Self::Resign(player.parse()?));
-        }
-        if let Some(body) = s.strip_suffix('分') {
-            return Ok(Self::Divide(body.parse()?));
         }
         if let Some(body) = s.strip_suffix('捉') {
             return Ok(Self::Capture(body.parse()?));
@@ -370,7 +360,7 @@ impl FromStr for PieceNotation {
         if s.chars().count() != 2 {
             return Err(format!("piece reference must be 2 characters: {s}"));
         }
-        if s.starts_with('红') || s.starts_with('黑') || s.starts_with('白') {
+        if s.starts_with('红') || s.starts_with('黑') {
             return Ok(PieceNotation::Name(s.parse()?));
         }
         let (col, row) = parse_two_numbers(s)?;
@@ -508,7 +498,6 @@ impl<'a> NotationResolver<'a> {
             ActionNotation::Capture(pp) => Action::Capture(self.move_(pp)?),
             ActionNotation::Push(pp) => Action::Push(self.move_(pp)?),
             ActionNotation::Draw(pp) => Action::Draw(self.move_(pp)?),
-            ActionNotation::Divide(pp) => Action::Divide(self.move_(pp)?),
             ActionNotation::Pass(p) => Action::Pass(p),
             ActionNotation::Resign(p) => Action::Resign(p),
         };
@@ -531,7 +520,7 @@ impl<'a> NotationResolver<'a> {
         match pp.piece {
             PieceNotation::Name(p) => {
                 let from = self.find_unique(p)?;
-                let to = self.resolve_position(from, p.color, pp.position)?;
+                let to = self.resolve_position(from, p.player, pp.position)?;
                 Ok(Move { from, to })
             },
             PieceNotation::Coord(col, row) => self.coord_move(col, row, pp.position),
@@ -567,7 +556,6 @@ impl<'a> NotationResolver<'a> {
             Action::Capture(m) => ActionNotation::Capture(self.piece_position(m.from, m.to)),
             Action::Push(m) => ActionNotation::Push(self.piece_position(m.from, m.to)),
             Action::Draw(m) => ActionNotation::Draw(self.piece_position(m.from, m.to)),
-            Action::Divide(m) => ActionNotation::Divide(self.piece_position(m.from, m.to)),
             Action::Pass(p) => ActionNotation::Pass(*p),
             Action::Resign(p) => ActionNotation::Resign(*p),
         }
@@ -716,11 +704,7 @@ impl<'a> NotationResolver<'a> {
             let (piece, _) = self.game.find_in_pool(piece)?;
             return Ok(piece);
         }
-        let white = self.game.white();
-        if white.id() == piece {
-            return Ok(white);
-        }
-        let Some(piece) = Piece::lookup(piece.name, piece.color) else {
+        let Some(piece) = Piece::lookup(piece.name, piece.player) else {
             return Err(format!("unknown piece: {piece}"));
         };
         Ok(piece)
@@ -750,13 +734,13 @@ impl<'a> NotationResolver<'a> {
     }
 
     fn resolve_position(
-        &self, from: (u8, u8), color: Color, pos: Position,
+        &self, from: (u8, u8), player: Player, pos: Position,
     ) -> Result<(u8, u8), String> {
         let Some(result) = pos.resolve(
             (from.0 + 1, from.1 + 1),
             self.game.board().width(),
             self.game.board().height(),
-            color,
+            player,
         ) else {
             return Err(format!("cannot resolve position from ({},{})", from.0, from.1));
         };
@@ -784,8 +768,10 @@ impl<'a> NotationResolver<'a> {
     }
 
     fn position(&self, from: (u8, u8), to: (u8, u8)) -> Position {
-        let color = self.game.board().get(from).map_or(Color::White, |p| p.color);
-        Position::notation((from.0 + 1, from.1 + 1), color, (to.0 + 1, to.1 + 1))
+        let Some(piece) = self.game.board().get(from) else {
+            return Position::Absolute(to.0 + 1, to.1 + 1);
+        };
+        Position::notation((from.0 + 1, from.1 + 1), piece.player, (to.0 + 1, to.1 + 1))
     }
 
     fn find_unique(&self, piece: PieceId) -> Result<(u8, u8), String> {
@@ -811,7 +797,7 @@ impl<'a> NotationResolver<'a> {
 impl Position {
     /// Resolve against 1-based coordinates; valid columns are 1..=width and
     /// valid rows 1..=height.
-    fn resolve(self, from: (u8, u8), width: u8, height: u8, color: Color) -> Option<(u8, u8)> {
+    fn resolve(self, from: (u8, u8), width: u8, height: u8, player: Player) -> Option<(u8, u8)> {
         match self {
             Position::Absolute(col, row) => {
                 if (1 ..= width).contains(&col) && (1 ..= height).contains(&row) {
@@ -820,12 +806,12 @@ impl Position {
                     None
                 }
             },
-            Position::Relative(ref rp) => rp.resolve(from, width, height, color),
+            Position::Relative(ref rp) => rp.resolve(from, width, height, player),
         }
     }
 
-    fn notation(from: (u8, u8), color: Color, to: (u8, u8)) -> Position {
-        if let Some(position) = RelativePosition::notation(from, color, to) {
+    fn notation(from: (u8, u8), player: Player, to: (u8, u8)) -> Position {
+        if let Some(position) = RelativePosition::notation(from, player, to) {
             return Position::Relative(position);
         }
         Position::Absolute(to.0, to.1)
@@ -834,7 +820,7 @@ impl Position {
 
 impl RelativePosition {
     /// Resolve against 1-based coordinates; see [`Position::resolve`].
-    fn resolve(self, from: (u8, u8), width: u8, height: u8, color: Color) -> Option<(u8, u8)> {
+    fn resolve(self, from: (u8, u8), width: u8, height: u8, player: Player) -> Option<(u8, u8)> {
         match self {
             RelativePosition::Horizontal(col) => {
                 if (1 ..= width).contains(&col) {
@@ -851,47 +837,44 @@ impl RelativePosition {
                 }
             },
             RelativePosition::Advance(steps) => {
-                let y = match color {
-                    Color::Red => from.1.checked_sub(steps)?,
-                    Color::Black => from.1 + steps,
-                    Color::White => return None,
+                let y = match player {
+                    Player::Red => from.1.checked_sub(steps)?,
+                    Player::Black => from.1 + steps,
                 };
                 if (1 ..= height).contains(&y) { Some((from.0, y)) } else { None }
             },
             RelativePosition::Retreat(steps) => {
-                let y = match color {
-                    Color::Red => from.1 + steps,
-                    Color::Black => from.1.checked_sub(steps)?,
-                    Color::White => return None,
+                let y = match player {
+                    Player::Red => from.1 + steps,
+                    Player::Black => from.1.checked_sub(steps)?,
                 };
                 if (1 ..= height).contains(&y) { Some((from.0, y)) } else { None }
             },
         }
     }
 
-    fn notation(from: (u8, u8), color: Color, to: (u8, u8)) -> Option<RelativePosition> {
+    fn notation(from: (u8, u8), player: Player, to: (u8, u8)) -> Option<RelativePosition> {
         if from.1 == to.1 {
             return Some(RelativePosition::Horizontal(to.0));
         }
         if from.0 != to.0 {
             return None;
         }
-        let position = match color {
-            Color::Red => {
+        let position = match player {
+            Player::Red => {
                 if to.1 < from.1 {
                     RelativePosition::Advance(from.1 - to.1)
                 } else {
                     RelativePosition::Retreat(to.1 - from.1)
                 }
             },
-            Color::Black => {
+            Player::Black => {
                 if to.1 < from.1 {
                     RelativePosition::Retreat(from.1 - to.1)
                 } else {
                     RelativePosition::Advance(to.1 - from.1)
                 }
             },
-            Color::White => RelativePosition::Straight(to.1),
         };
         Some(position)
     }

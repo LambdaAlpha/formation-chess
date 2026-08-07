@@ -13,7 +13,6 @@ use crate::action::PositionChanges;
 use crate::action::Reaction;
 use crate::board::Board;
 use crate::board::parse_board_from_lines;
-use crate::piece::Color;
 use crate::piece::Piece;
 use crate::piece::PieceId;
 pub use crate::piece::Player;
@@ -27,8 +26,6 @@ pub struct Game {
     board: Board,
     red_pool: Vec<Piece>,
     black_pool: Vec<Piece>,
-    white: Piece,
-    white_pool: u8,
     result: GameResult,
 }
 
@@ -41,10 +38,6 @@ pub struct GameConfig {
     pub board: Board,
     pub red_pool: Vec<Piece>,
     pub black_pool: Vec<Piece>,
-    /// The white piece definition.
-    pub white: Piece,
-    /// Number of white pieces available.
-    pub white_pool: u8,
     pub result: GameResult,
 }
 
@@ -62,25 +55,21 @@ impl Default for Game {
             board: config.board,
             red_pool: config.red_pool,
             black_pool: config.black_pool,
-            white: config.white,
-            white_pool: config.white_pool,
             result: config.result,
         }
     }
 }
 
 /// The standard initial setup: an empty 9×10 board, both 16-piece armies
-/// in their pools, no white pieces, and Red to move.
+/// in their pools, and Red to move.
 impl Default for GameConfig {
     fn default() -> Self {
         let player = Player::Red;
         let board = Board::new(9, 10);
         let red_pool = Piece::RED_PLAYER_PIECES.to_vec();
         let black_pool = Piece::BLACK_PLAYER_PIECES.to_vec();
-        let white = Piece::WHITE;
-        let white_pool = 0;
         let result = GameResult::Unfinished;
-        Self { player, board, red_pool, black_pool, white, white_pool, result }
+        Self { player, board, red_pool, black_pool, result }
     }
 }
 
@@ -103,8 +92,6 @@ impl Game {
             board: config.board,
             red_pool: config.red_pool,
             black_pool: config.black_pool,
-            white: config.white,
-            white_pool: config.white_pool,
             result: config.result,
         })
     }
@@ -126,15 +113,6 @@ impl Game {
     /// Black pieces not yet placed on the board.
     pub fn black_pool(&self) -> &[Piece] {
         &self.black_pool
-    }
-
-    /// Number of white pieces available for the `Divide` action.
-    pub fn white_pool(&self) -> u8 {
-        self.white_pool
-    }
-
-    pub(crate) fn white(&self) -> Piece {
-        self.white
     }
 
     pub fn result(&self) -> GameResult {
@@ -159,16 +137,13 @@ impl Game {
     }
 
     fn validate_pool(config: &GameConfig) -> Result<(), String> {
-        if config.white.color != Color::White {
-            return Err(format!("white piece is {}", config.white));
-        }
         for piece in &config.red_pool {
-            if piece.color != Color::Red {
+            if piece.player != Player::Red {
                 return Err(format!("red pool contains {piece}"));
             }
         }
         for piece in &config.black_pool {
-            if piece.color != Color::Black {
+            if piece.player != Player::Black {
                 return Err(format!("black pool contains {piece}"));
             }
         }
@@ -253,7 +228,7 @@ impl Game {
             }
         }
         for (_, piece) in config.board.iter() {
-            if piece.color == player.color() && piece.ability.has(Ability::VITAL) {
+            if piece.player == player && piece.ability.has(Ability::VITAL) {
                 count += 1;
             }
         }
@@ -272,16 +247,11 @@ impl Game {
 
     fn apply(&mut self, reaction: &Reaction) {
         let changes = reaction.changes.as_slice();
-        match reaction.pool_change {
-            PoolChange::Unchanged => {
-                self.adjust_white_pool(Self::white_delta(changes));
-            },
-            PoolChange::Removed { index, .. } => {
-                match self.player {
-                    Player::Red => self.red_pool.remove(index),
-                    Player::Black => self.black_pool.remove(index),
-                };
-            },
+        if let PoolChange::Removed { index, .. } = reaction.pool_change {
+            match self.player {
+                Player::Red => self.red_pool.remove(index),
+                Player::Black => self.black_pool.remove(index),
+            };
         }
         self.board.apply(changes);
         self.result = reaction.game_result;
@@ -295,14 +265,11 @@ impl Game {
         self.result = GameResult::Unfinished;
         let changes = reaction.changes.as_slice();
         self.board.undo(changes);
-        match reaction.pool_change {
-            PoolChange::Unchanged => {
-                self.adjust_white_pool(-Self::white_delta(changes));
-            },
-            PoolChange::Removed { index, piece } => match self.player {
+        if let PoolChange::Removed { index, piece } = reaction.pool_change {
+            match self.player {
                 Player::Red => self.red_pool.insert(index, piece),
                 Player::Black => self.black_pool.insert(index, piece),
-            },
+            }
         }
     }
 
@@ -345,11 +312,6 @@ impl Game {
                     game_result: GameResult::Draw,
                 })
             },
-            Action::Divide(move_) => {
-                let changes = self.try_divide(move_)?;
-                let game_result = self.move_result(changes.as_slice());
-                Ok(Reaction { changes, pool_change: PoolChange::Unchanged, game_result })
-            },
             Action::Pass(player) => {
                 self.try_pass(player)?;
                 Ok(Reaction {
@@ -384,8 +346,7 @@ impl Game {
         if !piece.can_controlled_by(self.player) {
             return actions;
         }
-        let has_white = self.white_pool > 0;
-        self.board.valid_moves(self.player, (x, y), has_white, &mut actions);
+        self.board.valid_moves(self.player, (x, y), &mut actions);
         actions
     }
 
@@ -395,7 +356,6 @@ impl Game {
         if self.phase() != Phase::Move || self.result != GameResult::Unfinished {
             return;
         }
-        let has_white = self.white_pool > 0;
         for (from, _) in self.board.iter() {
             let Some(piece) = self.board.effective(from) else {
                 continue;
@@ -403,16 +363,16 @@ impl Game {
             if !piece.can_controlled_by(self.player) {
                 continue;
             }
-            self.board.valid_moves(self.player, from, has_white, actions);
+            self.board.valid_moves(self.player, from, actions);
         }
     }
 
     /// Non‑mutating placement validation (handles colored pieces only).
     fn try_place(&self, place: Place) -> Result<PlaceResult, String> {
-        if place.piece.color != self.player.color() {
+        if place.piece.player != self.player {
             return Err(format!(
                 "player {} cannot place piece of color {}",
-                self.player, place.piece.color
+                self.player, place.piece.player
             ));
         }
         let (piece, index) = self.find_in_pool(place.piece)?;
@@ -421,8 +381,8 @@ impl Game {
     }
 
     pub(crate) fn find_in_pool(&self, piece: PieceId) -> Result<(Piece, usize), String> {
-        match piece.color {
-            Color::Red => {
+        match piece.player {
+            Player::Red => {
                 for (i, p) in self.red_pool.iter().enumerate() {
                     if p.id() == piece {
                         return Ok((self.red_pool[i], i));
@@ -430,7 +390,7 @@ impl Game {
                 }
                 Err(format!("piece {piece} not in pool"))
             },
-            Color::Black => {
+            Player::Black => {
                 for (i, p) in self.black_pool.iter().enumerate() {
                     if p.id() == piece {
                         return Ok((self.black_pool[i], i));
@@ -438,7 +398,6 @@ impl Game {
                 }
                 Err(format!("piece {piece} not in pool"))
             },
-            Color::White => Err("white pieces cannot be placed".into()),
         }
     }
 
@@ -462,22 +421,14 @@ impl Game {
         let Some(target) = self.board.get(move_.to) else {
             return Err(format!("destination ({},{}) is empty", move_.to.0, move_.to.1));
         };
-        let opponent_color = match self.player {
-            Player::Red => Color::Black,
-            Player::Black => Color::Red,
+        let opponent_player = match self.player {
+            Player::Red => Player::Black,
+            Player::Black => Player::Red,
         };
-        if target.color != opponent_color {
+        if target.player != opponent_player {
             return Err(format!("cannot draw with {} at ({},{})", target, move_.to.0, move_.to.1));
         }
         self.board.try_draw(move_.from, move_.to)
-    }
-
-    fn try_divide(&self, move_: Move) -> Result<PositionChanges, String> {
-        self.check_move(move_.from)?;
-        if self.white_pool == 0 {
-            return Err("no white pieces available".into());
-        }
-        self.board.try_divide(move_.from, move_.to, self.white)
     }
 
     fn check_move(&self, from: (u8, u8)) -> Result<(), String> {
@@ -496,26 +447,9 @@ impl Game {
         Ok(())
     }
 
-    fn white_delta(changes: &[PositionChange]) -> i16 {
-        let mut delta = 0;
-        for change in changes {
-            if change.old.is_some() {
-                delta += 1;
-            }
-            if change.new.is_some() {
-                delta -= 1;
-            }
-        }
-        delta
-    }
-
-    fn adjust_white_pool(&mut self, delta: i16) {
-        self.white_pool = (i16::from(self.white_pool) + delta) as u8;
-    }
-
     fn move_result(&self, changes: &[PositionChange]) -> GameResult {
-        let red = self.move_vital(Color::Red, changes);
-        let black = self.move_vital(Color::Black, changes);
+        let red = self.move_vital(Player::Red, changes);
+        let black = self.move_vital(Player::Black, changes);
         match (red, black) {
             (false, false) => GameResult::Draw,
             (false, true) => GameResult::BlackWin,
@@ -524,18 +458,18 @@ impl Game {
         }
     }
 
-    fn move_vital(&self, color: Color, changes: &[PositionChange]) -> bool {
+    fn move_vital(&self, player: Player, changes: &[PositionChange]) -> bool {
         let mut removed = false;
         let mut added = false;
         for &change in changes {
             if let Some(old) = change.old
-                && old.color == color
+                && old.player == player
                 && old.ability.has(Ability::VITAL)
             {
                 removed = true;
             }
             if let Some(new) = change.new
-                && new.color == color
+                && new.player == player
                 && new.ability.has(Ability::VITAL)
             {
                 added = true;
@@ -579,7 +513,6 @@ struct Snapshot<'a> {
     player: Player,
     red: &'a [Piece],
     black: &'a [Piece],
-    white_count: u8,
     result: GameResult,
     board: &'a Board,
 }
@@ -589,7 +522,6 @@ impl Display for Snapshot<'_> {
         writeln!(f, "行棋方：{}", self.player)?;
         fmt_pool(Player::Red, self.red, f)?;
         fmt_pool(Player::Black, self.black, f)?;
-        writeln!(f, "白方：{}", self.white_count)?;
         writeln!(f, "胜负：{}", self.result)?;
         writeln!(f, "棋盘：")?;
         write!(f, "{}", self.board)
@@ -602,7 +534,6 @@ impl Display for Game {
             player: self.player(),
             red: self.red_pool(),
             black: self.black_pool(),
-            white_count: self.white_pool(),
             result: self.result(),
             board: self.board(),
         }
@@ -622,7 +553,6 @@ impl Display for GameConfig {
             player: self.player,
             red: &self.red_pool,
             black: &self.black_pool,
-            white_count: self.white_pool,
             result: self.result,
             board: &self.board,
         }
@@ -662,7 +592,7 @@ impl FromStr for Game {
     }
 }
 
-fn parse_pool(s: &str, color: Color) -> Result<Vec<Piece>, String> {
+fn parse_pool(s: &str, player: Player) -> Result<Vec<Piece>, String> {
     let Some(inner) = s.strip_prefix('[') else {
         return Err(format!("pool must be bracketed: {s}"));
     };
@@ -681,7 +611,7 @@ fn parse_pool(s: &str, color: Color) -> Result<Vec<Piece>, String> {
         if chars.next().is_some() {
             return Err(format!("piece name in pool must be a single character: {piece_name}"));
         }
-        let Some(piece) = Piece::lookup(name, color) else {
+        let Some(piece) = Piece::lookup(name, player) else {
             return Err(format!("unknown piece in pool: {piece_name}"));
         };
         pieces.push(piece);
@@ -700,20 +630,11 @@ fn parse_config(s: &str) -> Result<GameConfig, String> {
     };
 
     let red_line = lines.next().ok_or("missing red pool")?;
-    let red = parse_pool(red_line.strip_prefix("红方：").ok_or("invalid red pool")?, Color::Red)?;
+    let red = parse_pool(red_line.strip_prefix("红方：").ok_or("invalid red pool")?, Player::Red)?;
 
     let black_line = lines.next().ok_or("missing black pool")?;
     let black =
-        parse_pool(black_line.strip_prefix("黑方：").ok_or("invalid black pool")?, Color::Black)?;
-
-    let white_line = lines.next().ok_or("missing white count")?;
-    let Some(white_count) = white_line.strip_prefix("白方：") else {
-        return Err(format!("invalid white count: {white_line}"));
-    };
-    let Ok(white_count) = white_count.parse::<u8>() else {
-        return Err(format!("invalid white count: {white_line}"));
-    };
-
+        parse_pool(black_line.strip_prefix("黑方：").ok_or("invalid black pool")?, Player::Black)?;
     let result_line = lines.next().ok_or("missing result line")?;
     let Some(result) = result_line.strip_prefix("胜负：") else {
         return Err(format!("invalid result: {result_line}"));
@@ -728,13 +649,5 @@ fn parse_config(s: &str) -> Result<GameConfig, String> {
     }
     let board = parse_board_from_lines(&mut lines).map_err(|e| format!("board: {e}"))?;
 
-    Ok(GameConfig {
-        player,
-        board,
-        red_pool: red,
-        black_pool: black,
-        white: Piece::WHITE,
-        white_pool: white_count,
-        result,
-    })
+    Ok(GameConfig { player, board, red_pool: red, black_pool: black, result })
 }

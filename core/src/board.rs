@@ -11,7 +11,6 @@ use crate::action::Move;
 use crate::action::PositionChange;
 use crate::action::PositionChanges;
 use crate::chinese_num::fmt_num;
-use crate::piece::Color;
 use crate::piece::Piece;
 use crate::piece::PieceId;
 use crate::piece::Player;
@@ -88,7 +87,7 @@ impl Board {
         for y in 0 .. midpoint {
             for x in 0 .. self.width() {
                 let Some(piece) = self[(x, y)] else { continue };
-                if piece.color != Color::Red {
+                if piece.player != Player::Red {
                     continue;
                 }
                 return Err(format!(
@@ -99,7 +98,7 @@ impl Board {
         for y in half .. height {
             for x in 0 .. self.width() {
                 let Some(piece) = self[(x, y)] else { continue };
-                if piece.color != Color::Black {
+                if piece.player != Player::Black {
                     continue;
                 }
                 return Err(format!(
@@ -191,10 +190,10 @@ impl Board {
         self.check_placement_target(to)?;
         let half = self.height / 2;
         let midpoint = self.height.div_ceil(2);
-        if piece.color == Color::Red && to.1 < midpoint {
+        if piece.player == Player::Red && to.1 < midpoint {
             return Err("red pieces can only be placed in the bottom half".into());
         }
-        if piece.color == Color::Black && to.1 >= half {
+        if piece.player == Player::Black && to.1 >= half {
             return Err("black pieces can only be placed in the top half".into());
         }
         Ok(PositionChanges::one(self.change(to, Some(piece))))
@@ -226,28 +225,6 @@ impl Board {
             return Err(format!("cannot move onto occupied destination ({},{})", to.0, to.1));
         }
         Ok(PositionChanges::two(self.change(from, None), self.change(to, self[from])))
-    }
-
-    /// Validate a divide action without modifying the board. Checks movement,
-    /// DIVIDE ability, and that the destination is empty. Returns
-    /// changes that place a white piece at `from` and the moving piece at
-    /// `to`.
-    pub fn try_divide(
-        &self, from: (u8, u8), to: (u8, u8), white: Piece,
-    ) -> Result<PositionChanges, String> {
-        let piece = self.try_move_to(from, to)?;
-        if !piece.ability.has(Ability::DIVIDE) {
-            return Err("only pieces with DIVIDE ability can divide forces".into());
-        }
-        if self[to].is_some() {
-            return Err(format!("cannot move onto occupied destination ({},{})", to.0, to.1));
-        }
-        let origin = self.change(from, Some(white));
-        let destination = self.change(to, self[from]);
-        if origin.old == origin.new {
-            return Ok(PositionChanges::one(destination));
-        }
-        Ok(PositionChanges::two(origin, destination))
     }
 
     /// Execute a capture (normal or jump, including mutual destruction).
@@ -593,14 +570,12 @@ impl Board {
 
     /// Append all legal actions for the piece at `from` to `actions`. The piece
     /// must be present on the board. Actions are [`Action::Move`],
-    /// [`Action::Capture`], [`Action::Push`], [`Action::Draw`], and
-    /// [`Action::Divide`]; placement, pass, and resign are the caller's concern.
+    /// [`Action::Capture`], [`Action::Push`], and [`Action::Draw`]; placement,
+    /// pass, and resign are the caller's concern.
     ///
     /// `player` filters draw actions: only draws targeting the opponent's
     /// colored pieces are appended.
-    pub fn valid_moves(
-        &self, player: Player, from: (u8, u8), has_white: bool, actions: &mut Vec<Action>,
-    ) {
+    pub fn valid_moves(&self, player: Player, from: (u8, u8), actions: &mut Vec<Action>) {
         let Some(piece) = self.effective(from) else {
             return;
         };
@@ -611,19 +586,19 @@ impl Board {
         };
         if piece.ability.has(Ability::DIRECTION_CROSS) {
             for (dx, dy) in [(0i8, -1), (0, 1), (-1, 0), (1, 0)] {
-                self.enumerate_line(player, piece, from, dx, dy, max, has_white, actions);
+                self.enumerate_line(player, piece, from, dx, dy, max, actions);
             }
         }
         if piece.ability.has(Ability::DIRECTION_DIAGONAL) {
             for (dx, dy) in [(-1i8, -1), (1, -1), (-1, 1), (1, 1)] {
-                self.enumerate_line(player, piece, from, dx, dy, max, has_white, actions);
+                self.enumerate_line(player, piece, from, dx, dy, max, actions);
             }
         }
         if piece.ability.has(Ability::DIRECTION_SHAPE_L) {
             for (dx, dy) in
                 [(1i8, 2), (2, 1), (-1, 2), (-2, 1), (1, -2), (2, -1), (-1, -2), (-2, -1)]
             {
-                self.enumerate_line(player, piece, from, dx, dy, max, has_white, actions);
+                self.enumerate_line(player, piece, from, dx, dy, max, actions);
             }
         }
     }
@@ -633,7 +608,7 @@ impl Board {
     #[expect(clippy::too_many_arguments)]
     fn enumerate_line(
         &self, player: Player, piece: Piece, from: (u8, u8), dx: i8, dy: i8, max_steps: i8,
-        has_white: bool, actions: &mut Vec<Action>,
+        actions: &mut Vec<Action>,
     ) {
         let mut origin = from;
         for _ in 0 .. max_steps {
@@ -651,9 +626,6 @@ impl Board {
                 break;
             }
             actions.push(Action::Move(Move { from, to }));
-            if has_white && piece.ability.has(Ability::DIVIDE) {
-                actions.push(Action::Divide(Move { from, to }));
-            }
             origin = to;
         }
     }
@@ -677,13 +649,13 @@ impl Board {
                 actions.push(Action::Push(move_));
             }
         }
-        let opponent_color = match player {
-            Player::Red => Color::Black,
-            Player::Black => Color::Red,
+        let opponent_player = match player {
+            Player::Red => Player::Black,
+            Player::Black => Player::Red,
         };
         if piece.ability.has(Ability::DRAW)
             && target.ability.has(Ability::VITAL)
-            && target.color == opponent_color
+            && target.player == opponent_player
         {
             actions.push(Action::Draw(move_));
         }

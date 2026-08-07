@@ -14,29 +14,20 @@ use crate::formation::Formation;
 #[derive(Debug, Copy, Clone)]
 pub struct Piece {
     pub name: char,
-    pub color: Color,
+    pub player: Player,
     pub formation: Formation,
     pub ability: Ability,
 }
 
-/// The stable identity of a piece: its name and color.
+/// The stable identity of a piece: its name and player.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct PieceId {
     pub name: char,
-    pub color: Color,
-}
-
-/// A piece color. Unlike [`Player`], this includes White, the color of
-/// captured-and-recycled pieces owned by neither player.
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
-pub enum Color {
-    Red,
-    Black,
-    White,
+    pub player: Player,
 }
 
 /// One of the two players.
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Player {
     Red,
     Black,
@@ -45,67 +36,32 @@ pub enum Player {
 impl Piece {
     /// Return the stable name-and-color identity of this piece.
     pub const fn id(&self) -> PieceId {
-        PieceId { name: self.name, color: self.color }
+        PieceId { name: self.name, player: self.player }
     }
 
     /// (controlled_by_red, controlled_by_black) for a piece of `color`.
-    const fn controlled(color: Color) -> (bool, bool) {
-        match color {
-            Color::Red => (true, false),
-            Color::Black => (false, true),
-            Color::White => (false, false),
+    const fn controlled(player: Player) -> (bool, bool) {
+        match player {
+            Player::Red => (true, false),
+            Player::Black => (false, true),
         }
     }
 
     /// Vertically mirror a formation for Black pieces, whose advance
     /// direction points toward the bottom of the board.
-    const fn orient(color: Color, formation: Formation) -> Formation {
-        match color {
-            Color::Black => formation.flipped(),
-            _ => formation,
+    const fn orient(player: Player, formation: Formation) -> Formation {
+        match player {
+            Player::Red => formation,
+            Player::Black => formation.flipped(),
         }
     }
 
-    /// The white piece: cross + diagonal + L-shaped movement at any
-    /// distance, capturable by anyone, controlled by nobody until an
-    /// army's, agent's, or spy's formation covers it. Other formations
-    /// leave its abilities unchanged.
-    pub const WHITE: Piece = Piece {
-        name: '子',
-        color: Color::White,
-        formation: Formation::WHITE,
-        ability: AbilityConfig {
-            controlled_by_red: false,
-            controlled_by_black: false,
-            push_ally: false,
-            push_enemy: false,
-            pushed_by_ally: false,
-            pushed_by_enemy: true,
-            capture_on_push_blocked: false,
-            captured_on_push_blocked: false,
-            push_on_capture_unblocked: false,
-            pushed_on_capture_unblocked: false,
-            capture: false,
-            captured: true,
-            capture_on_captured: false,
-            captured_on_capture: false,
-            any_distance: true,
-            direction_cross: true,
-            direction_diagonal: true,
-            direction_shape_L: true,
-            divide: false,
-            vital: false,
-            draw: false,
-        }
-        .build(),
-    };
-
-    const fn general(color: Color) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(color);
+    const fn general(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
             name: '将',
-            color,
-            formation: Self::orient(color, Formation::GENERAL),
+            player,
+            formation: Self::orient(player, Formation::GENERAL),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -125,7 +81,6 @@ impl Piece {
                 direction_cross: true,
                 direction_diagonal: false,
                 direction_shape_L: false,
-                divide: false,
                 vital: true,
                 draw: true,
             }
@@ -133,12 +88,12 @@ impl Piece {
         }
     }
 
-    const fn army(color: Color) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(color);
+    const fn army(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
             name: '军',
-            color,
-            formation: Self::orient(color, Formation::ARMY),
+            player,
+            formation: Self::orient(player, Formation::ARMY),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -158,7 +113,6 @@ impl Piece {
                 direction_cross: true,
                 direction_diagonal: false,
                 direction_shape_L: false,
-                divide: true,
                 vital: false,
                 draw: false,
             }
@@ -166,12 +120,12 @@ impl Piece {
         }
     }
 
-    const fn agent(color: Color) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(color);
+    const fn agent(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
             name: '间',
-            color,
-            formation: Self::orient(color, Formation::AGENT),
+            player,
+            formation: Self::orient(player, Formation::AGENT),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -191,7 +145,6 @@ impl Piece {
                 direction_cross: true,
                 direction_diagonal: false,
                 direction_shape_L: false,
-                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -199,11 +152,11 @@ impl Piece {
         }
     }
 
-    const fn spy(color: Color) -> Piece {
+    const fn spy(player: Player) -> Piece {
         Piece {
             name: '谍',
-            color,
-            formation: Self::orient(color, Formation::SPY),
+            player,
+            formation: Self::orient(player, Formation::SPY),
             ability: AbilityConfig {
                 controlled_by_red: true,
                 controlled_by_black: true,
@@ -223,7 +176,6 @@ impl Piece {
                 direction_cross: true,
                 direction_diagonal: false,
                 direction_shape_L: false,
-                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -231,12 +183,12 @@ impl Piece {
         }
     }
 
-    const fn scholar(color: Color) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(color);
+    const fn scholar(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
             name: '士',
-            color,
-            formation: Self::orient(color, Formation::SCHOLAR),
+            player,
+            formation: Self::orient(player, Formation::SCHOLAR),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -256,7 +208,6 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: true,
                 direction_shape_L: false,
-                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -264,12 +215,12 @@ impl Piece {
         }
     }
 
-    const fn pawn(color: Color) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(color);
+    const fn pawn(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
             name: '卒',
-            color,
-            formation: Self::orient(color, Formation::PAWN),
+            player,
+            formation: Self::orient(player, Formation::PAWN),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -289,7 +240,6 @@ impl Piece {
                 direction_cross: true,
                 direction_diagonal: false,
                 direction_shape_L: false,
-                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -297,12 +247,12 @@ impl Piece {
         }
     }
 
-    const fn rook(color: Color) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(color);
+    const fn rook(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
             name: '车',
-            color,
-            formation: Self::orient(color, Formation::ROOK),
+            player,
+            formation: Self::orient(player, Formation::ROOK),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -322,7 +272,6 @@ impl Piece {
                 direction_cross: true,
                 direction_diagonal: false,
                 direction_shape_L: false,
-                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -330,12 +279,12 @@ impl Piece {
         }
     }
 
-    const fn horse(color: Color) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(color);
+    const fn horse(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
             name: '马',
-            color,
-            formation: Self::orient(color, Formation::HORSE),
+            player,
+            formation: Self::orient(player, Formation::HORSE),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -355,7 +304,6 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: false,
                 direction_shape_L: true,
-                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -363,12 +311,12 @@ impl Piece {
         }
     }
 
-    const fn wind(color: Color) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(color);
+    const fn wind(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
             name: '风',
-            color,
-            formation: Self::orient(color, Formation::WIND),
+            player,
+            formation: Self::orient(player, Formation::WIND),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -388,7 +336,6 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: true,
                 direction_shape_L: false,
-                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -396,12 +343,12 @@ impl Piece {
         }
     }
 
-    const fn mountain(color: Color) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(color);
+    const fn mountain(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
             name: '山',
-            color,
-            formation: Self::orient(color, Formation::MOUNTAIN),
+            player,
+            formation: Self::orient(player, Formation::MOUNTAIN),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -421,7 +368,6 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: true,
                 direction_shape_L: false,
-                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -429,12 +375,12 @@ impl Piece {
         }
     }
 
-    const fn fire(color: Color) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(color);
+    const fn fire(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
             name: '火',
-            color,
-            formation: Self::orient(color, Formation::FIRE),
+            player,
+            formation: Self::orient(player, Formation::FIRE),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -454,7 +400,6 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: true,
                 direction_shape_L: false,
-                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -462,12 +407,12 @@ impl Piece {
         }
     }
 
-    const fn forest(color: Color) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(color);
+    const fn forest(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
             name: '林',
-            color,
-            formation: Self::orient(color, Formation::FOREST),
+            player,
+            formation: Self::orient(player, Formation::FOREST),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -487,7 +432,6 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: true,
                 direction_shape_L: false,
-                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -495,12 +439,12 @@ impl Piece {
         }
     }
 
-    const fn spear(color: Color) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(color);
+    const fn spear(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
             name: '矛',
-            color,
-            formation: Self::orient(color, Formation::SPEAR),
+            player,
+            formation: Self::orient(player, Formation::SPEAR),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -520,7 +464,6 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: false,
                 direction_shape_L: true,
-                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -528,12 +471,12 @@ impl Piece {
         }
     }
 
-    const fn shield(color: Color) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(color);
+    const fn shield(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
             name: '盾',
-            color,
-            formation: Self::orient(color, Formation::SHIELD),
+            player,
+            formation: Self::orient(player, Formation::SHIELD),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -553,7 +496,6 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: false,
                 direction_shape_L: true,
-                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -561,12 +503,12 @@ impl Piece {
         }
     }
 
-    const fn shell(color: Color) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(color);
+    const fn shell(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
             name: '弹',
-            color,
-            formation: Self::orient(color, Formation::SHELL),
+            player,
+            formation: Self::orient(player, Formation::SHELL),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -586,7 +528,6 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: false,
                 direction_shape_L: true,
-                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -594,12 +535,12 @@ impl Piece {
         }
     }
 
-    const fn mine(color: Color) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(color);
+    const fn mine(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
             name: '雷',
-            color,
-            formation: Self::orient(color, Formation::MINE),
+            player,
+            formation: Self::orient(player, Formation::MINE),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -619,7 +560,6 @@ impl Piece {
                 direction_cross: false,
                 direction_diagonal: false,
                 direction_shape_L: true,
-                divide: false,
                 vital: false,
                 draw: false,
             }
@@ -628,38 +568,38 @@ impl Piece {
     }
 
     // Canonical piece definitions, one constant per (name, color).
-    pub const RED_GENERAL: Piece = Self::general(Color::Red);
-    pub const BLACK_GENERAL: Piece = Self::general(Color::Black);
-    pub const RED_ARMY: Piece = Self::army(Color::Red);
-    pub const BLACK_ARMY: Piece = Self::army(Color::Black);
-    pub const RED_AGENT: Piece = Self::agent(Color::Red);
-    pub const BLACK_AGENT: Piece = Self::agent(Color::Black);
-    pub const RED_SPY: Piece = Self::spy(Color::Red);
-    pub const BLACK_SPY: Piece = Self::spy(Color::Black);
-    pub const RED_SCHOLAR: Piece = Self::scholar(Color::Red);
-    pub const BLACK_SCHOLAR: Piece = Self::scholar(Color::Black);
-    pub const RED_PAWN: Piece = Self::pawn(Color::Red);
-    pub const BLACK_PAWN: Piece = Self::pawn(Color::Black);
-    pub const RED_ROOK: Piece = Self::rook(Color::Red);
-    pub const BLACK_ROOK: Piece = Self::rook(Color::Black);
-    pub const RED_HORSE: Piece = Self::horse(Color::Red);
-    pub const BLACK_HORSE: Piece = Self::horse(Color::Black);
-    pub const RED_WIND: Piece = Self::wind(Color::Red);
-    pub const BLACK_WIND: Piece = Self::wind(Color::Black);
-    pub const RED_MOUNTAIN: Piece = Self::mountain(Color::Red);
-    pub const BLACK_MOUNTAIN: Piece = Self::mountain(Color::Black);
-    pub const RED_FIRE: Piece = Self::fire(Color::Red);
-    pub const BLACK_FIRE: Piece = Self::fire(Color::Black);
-    pub const RED_FOREST: Piece = Self::forest(Color::Red);
-    pub const BLACK_FOREST: Piece = Self::forest(Color::Black);
-    pub const RED_SPEAR: Piece = Self::spear(Color::Red);
-    pub const BLACK_SPEAR: Piece = Self::spear(Color::Black);
-    pub const RED_SHIELD: Piece = Self::shield(Color::Red);
-    pub const BLACK_SHIELD: Piece = Self::shield(Color::Black);
-    pub const RED_SHELL: Piece = Self::shell(Color::Red);
-    pub const BLACK_SHELL: Piece = Self::shell(Color::Black);
-    pub const RED_MINE: Piece = Self::mine(Color::Red);
-    pub const BLACK_MINE: Piece = Self::mine(Color::Black);
+    pub const RED_GENERAL: Piece = Self::general(Player::Red);
+    pub const BLACK_GENERAL: Piece = Self::general(Player::Black);
+    pub const RED_ARMY: Piece = Self::army(Player::Red);
+    pub const BLACK_ARMY: Piece = Self::army(Player::Black);
+    pub const RED_AGENT: Piece = Self::agent(Player::Red);
+    pub const BLACK_AGENT: Piece = Self::agent(Player::Black);
+    pub const RED_SPY: Piece = Self::spy(Player::Red);
+    pub const BLACK_SPY: Piece = Self::spy(Player::Black);
+    pub const RED_SCHOLAR: Piece = Self::scholar(Player::Red);
+    pub const BLACK_SCHOLAR: Piece = Self::scholar(Player::Black);
+    pub const RED_PAWN: Piece = Self::pawn(Player::Red);
+    pub const BLACK_PAWN: Piece = Self::pawn(Player::Black);
+    pub const RED_ROOK: Piece = Self::rook(Player::Red);
+    pub const BLACK_ROOK: Piece = Self::rook(Player::Black);
+    pub const RED_HORSE: Piece = Self::horse(Player::Red);
+    pub const BLACK_HORSE: Piece = Self::horse(Player::Black);
+    pub const RED_WIND: Piece = Self::wind(Player::Red);
+    pub const BLACK_WIND: Piece = Self::wind(Player::Black);
+    pub const RED_MOUNTAIN: Piece = Self::mountain(Player::Red);
+    pub const BLACK_MOUNTAIN: Piece = Self::mountain(Player::Black);
+    pub const RED_FIRE: Piece = Self::fire(Player::Red);
+    pub const BLACK_FIRE: Piece = Self::fire(Player::Black);
+    pub const RED_FOREST: Piece = Self::forest(Player::Red);
+    pub const BLACK_FOREST: Piece = Self::forest(Player::Black);
+    pub const RED_SPEAR: Piece = Self::spear(Player::Red);
+    pub const BLACK_SPEAR: Piece = Self::spear(Player::Black);
+    pub const RED_SHIELD: Piece = Self::shield(Player::Red);
+    pub const BLACK_SHIELD: Piece = Self::shield(Player::Black);
+    pub const RED_SHELL: Piece = Self::shell(Player::Red);
+    pub const BLACK_SHELL: Piece = Self::shell(Player::Black);
+    pub const RED_MINE: Piece = Self::mine(Player::Red);
+    pub const BLACK_MINE: Piece = Self::mine(Player::Black);
 
     /// The standard 16-piece red army, used as the default red pool.
     pub const RED_PLAYER_PIECES: [Piece; 16] = [
@@ -702,42 +642,41 @@ impl Piece {
     ];
 
     /// The canonical piece for a name and color, or None for an unknown
-    /// combination (e.g. a white 将, or a name that is not a piece).
-    pub fn lookup(name: char, color: Color) -> Option<Piece> {
-        let piece = match (name, color) {
-            ('子', Color::White) => Piece::WHITE,
-            ('将', Color::Red) => Piece::RED_GENERAL,
-            ('将', Color::Black) => Piece::BLACK_GENERAL,
-            ('军', Color::Red) => Piece::RED_ARMY,
-            ('军', Color::Black) => Piece::BLACK_ARMY,
-            ('间', Color::Red) => Piece::RED_AGENT,
-            ('间', Color::Black) => Piece::BLACK_AGENT,
-            ('谍', Color::Red) => Piece::RED_SPY,
-            ('谍', Color::Black) => Piece::BLACK_SPY,
-            ('士', Color::Red) => Piece::RED_SCHOLAR,
-            ('士', Color::Black) => Piece::BLACK_SCHOLAR,
-            ('卒', Color::Red) => Piece::RED_PAWN,
-            ('卒', Color::Black) => Piece::BLACK_PAWN,
-            ('车', Color::Red) => Piece::RED_ROOK,
-            ('车', Color::Black) => Piece::BLACK_ROOK,
-            ('马', Color::Red) => Piece::RED_HORSE,
-            ('马', Color::Black) => Piece::BLACK_HORSE,
-            ('风', Color::Red) => Piece::RED_WIND,
-            ('风', Color::Black) => Piece::BLACK_WIND,
-            ('山', Color::Red) => Piece::RED_MOUNTAIN,
-            ('山', Color::Black) => Piece::BLACK_MOUNTAIN,
-            ('火', Color::Red) => Piece::RED_FIRE,
-            ('火', Color::Black) => Piece::BLACK_FIRE,
-            ('林', Color::Red) => Piece::RED_FOREST,
-            ('林', Color::Black) => Piece::BLACK_FOREST,
-            ('矛', Color::Red) => Piece::RED_SPEAR,
-            ('矛', Color::Black) => Piece::BLACK_SPEAR,
-            ('盾', Color::Red) => Piece::RED_SHIELD,
-            ('盾', Color::Black) => Piece::BLACK_SHIELD,
-            ('弹', Color::Red) => Piece::RED_SHELL,
-            ('弹', Color::Black) => Piece::BLACK_SHELL,
-            ('雷', Color::Red) => Piece::RED_MINE,
-            ('雷', Color::Black) => Piece::BLACK_MINE,
+    /// combination.
+    pub fn lookup(name: char, player: Player) -> Option<Piece> {
+        let piece = match (name, player) {
+            ('将', Player::Red) => Piece::RED_GENERAL,
+            ('将', Player::Black) => Piece::BLACK_GENERAL,
+            ('军', Player::Red) => Piece::RED_ARMY,
+            ('军', Player::Black) => Piece::BLACK_ARMY,
+            ('间', Player::Red) => Piece::RED_AGENT,
+            ('间', Player::Black) => Piece::BLACK_AGENT,
+            ('谍', Player::Red) => Piece::RED_SPY,
+            ('谍', Player::Black) => Piece::BLACK_SPY,
+            ('士', Player::Red) => Piece::RED_SCHOLAR,
+            ('士', Player::Black) => Piece::BLACK_SCHOLAR,
+            ('卒', Player::Red) => Piece::RED_PAWN,
+            ('卒', Player::Black) => Piece::BLACK_PAWN,
+            ('车', Player::Red) => Piece::RED_ROOK,
+            ('车', Player::Black) => Piece::BLACK_ROOK,
+            ('马', Player::Red) => Piece::RED_HORSE,
+            ('马', Player::Black) => Piece::BLACK_HORSE,
+            ('风', Player::Red) => Piece::RED_WIND,
+            ('风', Player::Black) => Piece::BLACK_WIND,
+            ('山', Player::Red) => Piece::RED_MOUNTAIN,
+            ('山', Player::Black) => Piece::BLACK_MOUNTAIN,
+            ('火', Player::Red) => Piece::RED_FIRE,
+            ('火', Player::Black) => Piece::BLACK_FIRE,
+            ('林', Player::Red) => Piece::RED_FOREST,
+            ('林', Player::Black) => Piece::BLACK_FOREST,
+            ('矛', Player::Red) => Piece::RED_SPEAR,
+            ('矛', Player::Black) => Piece::BLACK_SPEAR,
+            ('盾', Player::Red) => Piece::RED_SHIELD,
+            ('盾', Player::Black) => Piece::BLACK_SHIELD,
+            ('弹', Player::Red) => Piece::RED_SHELL,
+            ('弹', Player::Black) => Piece::BLACK_SHELL,
+            ('雷', Player::Red) => Piece::RED_MINE,
+            ('雷', Player::Black) => Piece::BLACK_MINE,
             _ => return None,
         };
         Some(piece)
@@ -757,7 +696,7 @@ impl Piece {
             if !neighbor.formation.contains(-n.dx, -n.dy) {
                 continue;
             }
-            let (mask, update) = (neighbor.formation.effect)(neighbor.color, self.color);
+            let (mask, update) = (neighbor.formation.effect)(neighbor.player, self.player);
             effect_update = effect_update.masked_and(mask, update);
             effect_mask |= mask;
         }
@@ -768,7 +707,7 @@ impl Piece {
     /// PUSH_ALLY **or** target PUSHED_BY_ALLY; different colors need mover
     /// PUSH_ENEMY **and** target PUSHED_BY_ENEMY.
     pub fn can_push(&self, target: Piece) -> bool {
-        if self.color == target.color {
+        if self.player == target.player {
             self.ability.has(Ability::PUSH_ALLY) || target.ability.has(Ability::PUSHED_BY_ALLY)
         } else {
             self.ability.has(Ability::PUSH_ENEMY) && target.ability.has(Ability::PUSHED_BY_ENEMY)
@@ -810,19 +749,19 @@ impl From<Piece> for PieceId {
 /// ignored. Pool lookups and board searches rely on this.
 impl PartialEq for Piece {
     fn eq(&self, other: &Piece) -> bool {
-        self.name == other.name && self.color == other.color
+        self.name == other.name && self.player == other.player
     }
 }
 
 impl Display for Piece {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}", self.color, self.name)
+        write!(f, "{}{}", self.player, self.name)
     }
 }
 
 impl Display for PieceId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}", self.color, self.name)
+        write!(f, "{}{}", self.player, self.name)
     }
 }
 
@@ -836,8 +775,8 @@ impl FromStr for PieceId {
         else {
             return Err(format!("invalid piece: {s}"));
         };
-        let color: Color = s[.. name_start].parse()?;
-        let Some(piece) = Piece::lookup(name, color) else {
+        let player: Player = s[.. name_start].parse()?;
+        let Some(piece) = Piece::lookup(name, player) else {
             return Err(format!("unknown piece: {s}"));
         };
         Ok(Self::from(piece))
@@ -854,21 +793,11 @@ impl FromStr for Piece {
         else {
             return Err(format!("invalid piece: {s}"));
         };
-        let color: Color = s[.. name_start].parse()?;
-        let Some(piece) = Self::lookup(name, color) else {
+        let player: Player = s[.. name_start].parse()?;
+        let Some(piece) = Self::lookup(name, player) else {
             return Err(format!("unknown piece: {s}"));
         };
         Ok(piece)
-    }
-}
-
-impl Player {
-    /// The [`Color`] this player's own pieces carry.
-    pub fn color(self) -> Color {
-        match self {
-            Player::Red => Color::Red,
-            Player::Black => Color::Black,
-        }
     }
 }
 
@@ -895,35 +824,6 @@ impl FromStr for Player {
             "红" => Ok(Player::Red),
             "黑" => Ok(Player::Black),
             _ => Err(format!("unknown player: {s}")),
-        }
-    }
-}
-
-impl Display for Color {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = match self {
-            Color::Red => "红",
-            Color::Black => "黑",
-            Color::White => "白",
-        };
-        write!(f, "{s}")
-    }
-}
-
-impl Debug for Color {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Display::fmt(self, f)
-    }
-}
-
-impl FromStr for Color {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, String> {
-        match s {
-            "红" => Ok(Color::Red),
-            "黑" => Ok(Color::Black),
-            "白" => Ok(Color::White),
-            _ => Err(format!("unknown color: {s}")),
         }
     }
 }

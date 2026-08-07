@@ -7,13 +7,9 @@ use std::ops::Not;
 
 /// A piece's ability set, stored as a bit per ability.
 ///
-/// In the ability docs, "ally" and "enemy" normally compare Red and Black
-/// piece colors. White pieces are neutral for formation effects: formations
-/// do not modify their abilities, except that the army, agent, and spy may
-/// grant control over them. Capture and push interactions with white pieces
-/// are governed separately by the pieces' abilities. When several formations
-/// modify the same ability bit, the updates combine with bitwise AND — any
-/// formation that disables a bit wins.
+/// In the ability docs, "ally" and "enemy" compare Red and Black piece
+/// colors. When several formations modify the same ability bit, the updates
+/// combine with bitwise AND — any formation that disables a bit wins.
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Ability(Bits);
 
@@ -43,7 +39,6 @@ pub struct AbilityConfig {
     pub direction_cross: bool,
     pub direction_diagonal: bool,
     pub direction_shape_L: bool,
-    pub divide: bool,
     pub vital: bool,
     pub draw: bool,
 }
@@ -119,11 +114,6 @@ impl Ability {
     pub const DIRECTION_DIAGONAL: Ability = Ability(1 << 17);
     /// Move in L-shape (knight, 日) directions.
     pub const DIRECTION_SHAPE_L: Ability = Ability(1 << 18);
-    /// Move to an empty point and leave a white piece behind at the
-    /// original position (the `Divide` action, a.k.a. dividing forces).
-    /// Commanding the left-behind white pieces is not part of this bit
-    /// — the army's, agent's, and spy's formation effects grant that.
-    pub const DIVIDE: Ability = Ability(1 << 19);
     /// A side with no vital piece left (on the board or in its pool)
     /// loses; when both sides lose theirs in the same action, the game is
     /// a draw.
@@ -218,7 +208,6 @@ impl AbilityConfig {
         a.add(if self.direction_cross { Ability::DIRECTION_CROSS } else { NONE });
         a.add(if self.direction_diagonal { Ability::DIRECTION_DIAGONAL } else { NONE });
         a.add(if self.direction_shape_L { Ability::DIRECTION_SHAPE_L } else { NONE });
-        a.add(if self.divide { Ability::DIVIDE } else { NONE });
         a.add(if self.vital { Ability::VITAL } else { NONE });
         a.add(if self.draw { Ability::DRAW } else { NONE });
         a
@@ -299,7 +288,6 @@ const ABILITIES: &[(Ability, &str)] = &[
     (Ability::DIRECTION_CROSS, "direction_cross"),
     (Ability::DIRECTION_DIAGONAL, "direction_diagonal"),
     (Ability::DIRECTION_SHAPE_L, "direction_shape_L"),
-    (Ability::DIVIDE, "divide"),
     (Ability::VITAL, "vital"),
     (Ability::DRAW, "draw"),
 ];
