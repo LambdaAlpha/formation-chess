@@ -23,8 +23,9 @@ pub enum Action {
     Draw(Move),
     /// Skip the turn without moving.
     Pass(Player),
-    /// Concede: the opponent wins immediately.
-    Resign(Player),
+    /// Concede the side owning the vital piece at the coordinate. The
+    /// coordinate is ignored during the placement phase.
+    Resign(u8, u8),
 }
 
 /// Maximum number of board points changed by one action.

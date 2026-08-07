@@ -56,6 +56,8 @@ impl Piece {
         }
     }
 
+    pub const GENERAL_NAME: char = '将';
+
     const fn general(player: Player) -> Piece {
         let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {

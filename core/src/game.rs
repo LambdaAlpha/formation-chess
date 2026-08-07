@@ -325,8 +325,8 @@ impl Game {
                     game_result: self.result,
                 })
             },
-            Action::Resign(player) => {
-                let game_result = self.try_resign(player)?;
+            Action::Resign(x, y) => {
+                let game_result = self.try_resign((x, y))?;
                 Ok(Reaction {
                     changes: PositionChanges::empty(),
                     pool_change: PoolChange::Unchanged,
@@ -494,13 +494,32 @@ impl Game {
         self.check_player(player)
     }
 
-    fn try_resign(&self, player: Player) -> Result<GameResult, String> {
-        self.check_player(player)?;
-        let result = match self.player {
+    fn try_resign(&self, at: (u8, u8)) -> Result<GameResult, String> {
+        if self.phase() == Phase::Place {
+            return Ok(match self.player {
+                Player::Red => GameResult::BlackWin,
+                Player::Black => GameResult::RedWin,
+            });
+        }
+        if !self.board.in_bounds(at) {
+            return Err(format!("({},{}) is outside the board", at.0, at.1));
+        }
+        let Some(piece) = self.board.effective(at) else {
+            return Err(format!("no piece at ({},{})", at.0, at.1));
+        };
+        if !piece.ability.has(Ability::VITAL) {
+            return Err(format!("{} at ({},{}) is not a vital piece", piece, at.0, at.1));
+        }
+        if !piece.can_controlled_by(self.player) {
+            return Err(format!(
+                "player {} cannot control piece {} at ({},{})",
+                self.player, piece, at.0, at.1
+            ));
+        }
+        Ok(match piece.player {
             Player::Red => GameResult::BlackWin,
             Player::Black => GameResult::RedWin,
-        };
-        Ok(result)
+        })
     }
 
     fn check_player(&self, player: Player) -> Result<(), String> {
