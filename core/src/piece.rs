@@ -71,10 +71,10 @@ impl Piece {
                 push_enemy: true,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
-                pull_ally: false,
-                pull_enemy: false,
+                pull_ally: true,
+                pull_enemy: true,
                 pulled_by_ally: false,
-                pulled_by_enemy: false,
+                pulled_by_enemy: true,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -84,8 +84,8 @@ impl Piece {
                 capture_on_captured: false,
                 captured_on_capture: false,
                 any_distance: true,
-                direction_cross: true,
-                direction_diagonal: false,
+                direction_cross: false,
+                direction_diagonal: true,
                 direction_shape_L: false,
                 vital: true,
                 draw: true,
@@ -107,10 +107,10 @@ impl Piece {
                 push_enemy: true,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
-                pull_ally: false,
-                pull_enemy: false,
+                pull_ally: true,
+                pull_enemy: true,
                 pulled_by_ally: false,
-                pulled_by_enemy: false,
+                pulled_by_enemy: true,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -120,8 +120,8 @@ impl Piece {
                 capture_on_captured: false,
                 captured_on_capture: false,
                 any_distance: true,
-                direction_cross: true,
-                direction_diagonal: false,
+                direction_cross: false,
+                direction_diagonal: true,
                 direction_shape_L: false,
                 vital: false,
                 draw: false,
@@ -143,9 +143,189 @@ impl Piece {
                 push_enemy: true,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
-                pull_ally: false,
-                pull_enemy: false,
+                pull_ally: true,
+                pull_enemy: true,
                 pulled_by_ally: false,
+                pulled_by_enemy: true,
+                capture_on_push_blocked: true,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
+                capture: false,
+                captured: true,
+                capture_on_captured: false,
+                captured_on_capture: false,
+                any_distance: true,
+                direction_cross: false,
+                direction_diagonal: true,
+                direction_shape_L: false,
+                vital: false,
+                draw: false,
+            }
+            .build(),
+        }
+    }
+
+    const fn spy(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        Piece {
+            name: '谍',
+            player,
+            formation: Self::orient(player, Formation::SPY),
+            ability: AbilityConfig {
+                controlled_by_red,
+                controlled_by_black,
+                push_ally: true,
+                push_enemy: true,
+                pushed_by_ally: false,
+                pushed_by_enemy: true,
+                pull_ally: true,
+                pull_enemy: true,
+                pulled_by_ally: false,
+                pulled_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: true,
+                capture: false,
+                captured: true,
+                capture_on_captured: false,
+                captured_on_capture: false,
+                any_distance: true,
+                direction_cross: false,
+                direction_diagonal: true,
+                direction_shape_L: false,
+                vital: false,
+                draw: false,
+            }
+            .build(),
+        }
+    }
+
+    const fn wind(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        Piece {
+            name: '风',
+            player,
+            formation: Self::orient(player, Formation::WIND),
+            ability: AbilityConfig {
+                controlled_by_red,
+                controlled_by_black,
+                push_ally: true,
+                push_enemy: true,
+                pushed_by_ally: false,
+                pushed_by_enemy: true,
+                pull_ally: true,
+                pull_enemy: true,
+                pulled_by_ally: false,
+                pulled_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
+                capture: false,
+                captured: true,
+                capture_on_captured: false,
+                captured_on_capture: false,
+                any_distance: true,
+                direction_cross: true,
+                direction_diagonal: false,
+                direction_shape_L: false,
+                vital: false,
+                draw: false,
+            }
+            .build(),
+        }
+    }
+
+    const fn mountain(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        Piece {
+            name: '山',
+            player,
+            formation: Self::orient(player, Formation::MOUNTAIN),
+            ability: AbilityConfig {
+                controlled_by_red,
+                controlled_by_black,
+                push_ally: true,
+                push_enemy: true,
+                pushed_by_ally: true,
+                pushed_by_enemy: false,
+                pull_ally: true,
+                pull_enemy: true,
+                pulled_by_ally: false,
+                pulled_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
+                capture: false,
+                captured: true,
+                capture_on_captured: false,
+                captured_on_capture: false,
+                any_distance: true,
+                direction_cross: true,
+                direction_diagonal: false,
+                direction_shape_L: false,
+                vital: false,
+                draw: false,
+            }
+            .build(),
+        }
+    }
+
+    const fn fire(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        Piece {
+            name: '火',
+            player,
+            formation: Self::orient(player, Formation::FIRE),
+            ability: AbilityConfig {
+                controlled_by_red,
+                controlled_by_black,
+                push_ally: true,
+                push_enemy: true,
+                pushed_by_ally: false,
+                pushed_by_enemy: true,
+                pull_ally: true,
+                pull_enemy: true,
+                pulled_by_ally: false,
+                pulled_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
+                capture: false,
+                captured: true,
+                capture_on_captured: false,
+                captured_on_capture: false,
+                any_distance: true,
+                direction_cross: true,
+                direction_diagonal: false,
+                direction_shape_L: false,
+                vital: false,
+                draw: false,
+            }
+            .build(),
+        }
+    }
+
+    const fn forest(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        Piece {
+            name: '林',
+            player,
+            formation: Self::orient(player, Formation::FOREST),
+            ability: AbilityConfig {
+                controlled_by_red,
+                controlled_by_black,
+                push_ally: true,
+                push_enemy: true,
+                pushed_by_ally: false,
+                pushed_by_enemy: true,
+                pull_ally: true,
+                pull_enemy: true,
+                pulled_by_ally: true,
                 pulled_by_enemy: false,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
@@ -166,34 +346,143 @@ impl Piece {
         }
     }
 
-    const fn spy(player: Player) -> Piece {
+    const fn spear(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
-            name: '谍',
+            name: '矛',
             player,
-            formation: Self::orient(player, Formation::SPY),
+            formation: Self::orient(player, Formation::SPEAR),
             ability: AbilityConfig {
-                controlled_by_red: true,
-                controlled_by_black: true,
-                push_ally: true,
-                push_enemy: true,
+                controlled_by_red,
+                controlled_by_black,
+                push_ally: false,
+                push_enemy: false,
                 pushed_by_ally: false,
                 pushed_by_enemy: true,
                 pull_ally: false,
                 pull_enemy: false,
                 pulled_by_ally: false,
-                pulled_by_enemy: false,
+                pulled_by_enemy: true,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
                 pushed_on_capture_unblocked: false,
-                capture: false,
+                capture: true,
                 captured: true,
                 capture_on_captured: false,
                 captured_on_capture: false,
-                any_distance: true,
-                direction_cross: true,
+                any_distance: false,
+                direction_cross: false,
                 direction_diagonal: false,
-                direction_shape_L: false,
+                direction_shape_L: true,
+                vital: false,
+                draw: false,
+            }
+            .build(),
+        }
+    }
+
+    const fn shield(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        Piece {
+            name: '盾',
+            player,
+            formation: Self::orient(player, Formation::SHIELD),
+            ability: AbilityConfig {
+                controlled_by_red,
+                controlled_by_black,
+                push_ally: false,
+                push_enemy: false,
+                pushed_by_ally: false,
+                pushed_by_enemy: true,
+                pull_ally: false,
+                pull_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
+                capture: true,
+                captured: false,
+                capture_on_captured: false,
+                captured_on_capture: false,
+                any_distance: false,
+                direction_cross: false,
+                direction_diagonal: false,
+                direction_shape_L: true,
+                vital: false,
+                draw: false,
+            }
+            .build(),
+        }
+    }
+
+    const fn shell(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        Piece {
+            name: '弹',
+            player,
+            formation: Self::orient(player, Formation::SHELL),
+            ability: AbilityConfig {
+                controlled_by_red,
+                controlled_by_black,
+                push_ally: false,
+                push_enemy: false,
+                pushed_by_ally: false,
+                pushed_by_enemy: true,
+                pull_ally: false,
+                pull_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
+                capture: true,
+                captured: true,
+                capture_on_captured: false,
+                captured_on_capture: true,
+                any_distance: false,
+                direction_cross: false,
+                direction_diagonal: false,
+                direction_shape_L: true,
+                vital: false,
+                draw: false,
+            }
+            .build(),
+        }
+    }
+
+    const fn mine(player: Player) -> Piece {
+        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        Piece {
+            name: '雷',
+            player,
+            formation: Self::orient(player, Formation::MINE),
+            ability: AbilityConfig {
+                controlled_by_red,
+                controlled_by_black,
+                push_ally: false,
+                push_enemy: false,
+                pushed_by_ally: false,
+                pushed_by_enemy: true,
+                pull_ally: false,
+                pull_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: true,
+                capture_on_push_blocked: false,
+                captured_on_push_blocked: false,
+                push_on_capture_unblocked: false,
+                pushed_on_capture_unblocked: false,
+                capture: true,
+                captured: true,
+                capture_on_captured: true,
+                captured_on_capture: false,
+                any_distance: false,
+                direction_cross: false,
+                direction_diagonal: false,
+                direction_shape_L: true,
                 vital: false,
                 draw: false,
             }
@@ -217,7 +506,7 @@ impl Piece {
                 pull_ally: false,
                 pull_enemy: false,
                 pulled_by_ally: false,
-                pulled_by_enemy: false,
+                pulled_by_enemy: true,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -253,7 +542,7 @@ impl Piece {
                 pull_ally: false,
                 pull_enemy: false,
                 pulled_by_ally: false,
-                pulled_by_enemy: false,
+                pulled_by_enemy: true,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -263,42 +552,6 @@ impl Piece {
                 capture_on_captured: false,
                 captured_on_capture: false,
                 any_distance: false,
-                direction_cross: true,
-                direction_diagonal: false,
-                direction_shape_L: false,
-                vital: false,
-                draw: false,
-            }
-            .build(),
-        }
-    }
-
-    const fn rook(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
-        Piece {
-            name: '车',
-            player,
-            formation: Self::orient(player, Formation::ROOK),
-            ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
-                push_ally: false,
-                push_enemy: false,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: false,
-                pull_enemy: false,
-                pulled_by_ally: false,
-                pulled_by_enemy: false,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
-                capture: true,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: true,
                 direction_cross: true,
                 direction_diagonal: false,
                 direction_shape_L: false,
@@ -325,7 +578,7 @@ impl Piece {
                 pull_ally: false,
                 pull_enemy: false,
                 pulled_by_ally: false,
-                pulled_by_enemy: false,
+                pulled_by_enemy: true,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -345,120 +598,12 @@ impl Piece {
         }
     }
 
-    const fn wind(player: Player) -> Piece {
+    const fn rook(player: Player) -> Piece {
         let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
-            name: '风',
+            name: '车',
             player,
-            formation: Self::orient(player, Formation::WIND),
-            ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
-                push_ally: true,
-                push_enemy: true,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: false,
-                pull_enemy: false,
-                pulled_by_ally: false,
-                pulled_by_enemy: false,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
-                capture: false,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: true,
-                direction_cross: false,
-                direction_diagonal: true,
-                direction_shape_L: false,
-                vital: false,
-                draw: false,
-            }
-            .build(),
-        }
-    }
-
-    const fn mountain(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
-        Piece {
-            name: '山',
-            player,
-            formation: Self::orient(player, Formation::MOUNTAIN),
-            ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
-                push_ally: false,
-                push_enemy: false,
-                pushed_by_ally: true,
-                pushed_by_enemy: false,
-                pull_ally: false,
-                pull_enemy: false,
-                pulled_by_ally: false,
-                pulled_by_enemy: false,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
-                capture: false,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: true,
-                direction_cross: false,
-                direction_diagonal: true,
-                direction_shape_L: false,
-                vital: false,
-                draw: false,
-            }
-            .build(),
-        }
-    }
-
-    const fn fire(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
-        Piece {
-            name: '火',
-            player,
-            formation: Self::orient(player, Formation::FIRE),
-            ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
-                push_ally: true,
-                push_enemy: true,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: false,
-                pull_enemy: false,
-                pulled_by_ally: false,
-                pulled_by_enemy: false,
-                capture_on_push_blocked: true,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
-                capture: false,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: true,
-                direction_cross: false,
-                direction_diagonal: true,
-                direction_shape_L: false,
-                vital: false,
-                draw: false,
-            }
-            .build(),
-        }
-    }
-
-    const fn forest(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
-        Piece {
-            name: '林',
-            player,
-            formation: Self::orient(player, Formation::FOREST),
+            formation: Self::orient(player, Formation::ROOK),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -469,43 +614,7 @@ impl Piece {
                 pull_ally: false,
                 pull_enemy: false,
                 pulled_by_ally: false,
-                pulled_by_enemy: false,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: true,
-                capture: false,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: true,
-                direction_cross: false,
-                direction_diagonal: true,
-                direction_shape_L: false,
-                vital: false,
-                draw: false,
-            }
-            .build(),
-        }
-    }
-
-    const fn spear(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
-        Piece {
-            name: '矛',
-            player,
-            formation: Self::orient(player, Formation::SPEAR),
-            ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
-                push_ally: false,
-                push_enemy: false,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: false,
-                pull_enemy: false,
-                pulled_by_ally: false,
-                pulled_by_enemy: false,
+                pulled_by_enemy: true,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -515,117 +624,9 @@ impl Piece {
                 capture_on_captured: false,
                 captured_on_capture: false,
                 any_distance: true,
-                direction_cross: false,
+                direction_cross: true,
                 direction_diagonal: false,
-                direction_shape_L: true,
-                vital: false,
-                draw: false,
-            }
-            .build(),
-        }
-    }
-
-    const fn shield(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
-        Piece {
-            name: '盾',
-            player,
-            formation: Self::orient(player, Formation::SHIELD),
-            ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
-                push_ally: false,
-                push_enemy: false,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: false,
-                pull_enemy: false,
-                pulled_by_ally: false,
-                pulled_by_enemy: false,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
-                capture: false,
-                captured: false,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: true,
-                direction_cross: false,
-                direction_diagonal: false,
-                direction_shape_L: true,
-                vital: false,
-                draw: false,
-            }
-            .build(),
-        }
-    }
-
-    const fn shell(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
-        Piece {
-            name: '弹',
-            player,
-            formation: Self::orient(player, Formation::SHELL),
-            ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
-                push_ally: false,
-                push_enemy: false,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: false,
-                pull_enemy: false,
-                pulled_by_ally: false,
-                pulled_by_enemy: false,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
-                capture: false,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: true,
-                any_distance: true,
-                direction_cross: false,
-                direction_diagonal: false,
-                direction_shape_L: true,
-                vital: false,
-                draw: false,
-            }
-            .build(),
-        }
-    }
-
-    const fn mine(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
-        Piece {
-            name: '雷',
-            player,
-            formation: Self::orient(player, Formation::MINE),
-            ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
-                push_ally: false,
-                push_enemy: false,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: false,
-                pull_enemy: false,
-                pulled_by_ally: false,
-                pulled_by_enemy: false,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
-                capture: false,
-                captured: true,
-                capture_on_captured: true,
-                captured_on_capture: false,
-                any_distance: true,
-                direction_cross: false,
-                direction_diagonal: false,
-                direction_shape_L: true,
+                direction_shape_L: false,
                 vital: false,
                 draw: false,
             }
@@ -642,14 +643,6 @@ impl Piece {
     pub const BLACK_AGENT: Piece = Self::agent(Player::Black);
     pub const RED_SPY: Piece = Self::spy(Player::Red);
     pub const BLACK_SPY: Piece = Self::spy(Player::Black);
-    pub const RED_SCHOLAR: Piece = Self::scholar(Player::Red);
-    pub const BLACK_SCHOLAR: Piece = Self::scholar(Player::Black);
-    pub const RED_PAWN: Piece = Self::pawn(Player::Red);
-    pub const BLACK_PAWN: Piece = Self::pawn(Player::Black);
-    pub const RED_ROOK: Piece = Self::rook(Player::Red);
-    pub const BLACK_ROOK: Piece = Self::rook(Player::Black);
-    pub const RED_HORSE: Piece = Self::horse(Player::Red);
-    pub const BLACK_HORSE: Piece = Self::horse(Player::Black);
     pub const RED_WIND: Piece = Self::wind(Player::Red);
     pub const BLACK_WIND: Piece = Self::wind(Player::Black);
     pub const RED_MOUNTAIN: Piece = Self::mountain(Player::Red);
@@ -666,6 +659,14 @@ impl Piece {
     pub const BLACK_SHELL: Piece = Self::shell(Player::Black);
     pub const RED_MINE: Piece = Self::mine(Player::Red);
     pub const BLACK_MINE: Piece = Self::mine(Player::Black);
+    pub const RED_SCHOLAR: Piece = Self::scholar(Player::Red);
+    pub const BLACK_SCHOLAR: Piece = Self::scholar(Player::Black);
+    pub const RED_PAWN: Piece = Self::pawn(Player::Red);
+    pub const BLACK_PAWN: Piece = Self::pawn(Player::Black);
+    pub const RED_HORSE: Piece = Self::horse(Player::Red);
+    pub const BLACK_HORSE: Piece = Self::horse(Player::Black);
+    pub const RED_ROOK: Piece = Self::rook(Player::Red);
+    pub const BLACK_ROOK: Piece = Self::rook(Player::Black);
 
     /// The standard 16-piece red army, used as the default red pool.
     pub const RED_PLAYER_PIECES: [Piece; 16] = [
@@ -673,10 +674,6 @@ impl Piece {
         Piece::RED_ARMY,
         Piece::RED_AGENT,
         Piece::RED_SPY,
-        Piece::RED_SCHOLAR,
-        Piece::RED_PAWN,
-        Piece::RED_ROOK,
-        Piece::RED_HORSE,
         Piece::RED_WIND,
         Piece::RED_MOUNTAIN,
         Piece::RED_FIRE,
@@ -685,6 +682,10 @@ impl Piece {
         Piece::RED_SHIELD,
         Piece::RED_SHELL,
         Piece::RED_MINE,
+        Piece::RED_SCHOLAR,
+        Piece::RED_PAWN,
+        Piece::RED_HORSE,
+        Piece::RED_ROOK,
     ];
 
     /// The standard 16-piece black army, used as the default black pool.
@@ -693,10 +694,6 @@ impl Piece {
         Piece::BLACK_ARMY,
         Piece::BLACK_AGENT,
         Piece::BLACK_SPY,
-        Piece::BLACK_SCHOLAR,
-        Piece::BLACK_PAWN,
-        Piece::BLACK_ROOK,
-        Piece::BLACK_HORSE,
         Piece::BLACK_WIND,
         Piece::BLACK_MOUNTAIN,
         Piece::BLACK_FIRE,
@@ -705,6 +702,10 @@ impl Piece {
         Piece::BLACK_SHIELD,
         Piece::BLACK_SHELL,
         Piece::BLACK_MINE,
+        Piece::BLACK_SCHOLAR,
+        Piece::BLACK_PAWN,
+        Piece::BLACK_HORSE,
+        Piece::BLACK_ROOK,
     ];
 
     /// The canonical piece for a name and color, or None for an unknown
@@ -719,14 +720,6 @@ impl Piece {
             ('间', Player::Black) => Piece::BLACK_AGENT,
             ('谍', Player::Red) => Piece::RED_SPY,
             ('谍', Player::Black) => Piece::BLACK_SPY,
-            ('士', Player::Red) => Piece::RED_SCHOLAR,
-            ('士', Player::Black) => Piece::BLACK_SCHOLAR,
-            ('卒', Player::Red) => Piece::RED_PAWN,
-            ('卒', Player::Black) => Piece::BLACK_PAWN,
-            ('车', Player::Red) => Piece::RED_ROOK,
-            ('车', Player::Black) => Piece::BLACK_ROOK,
-            ('马', Player::Red) => Piece::RED_HORSE,
-            ('马', Player::Black) => Piece::BLACK_HORSE,
             ('风', Player::Red) => Piece::RED_WIND,
             ('风', Player::Black) => Piece::BLACK_WIND,
             ('山', Player::Red) => Piece::RED_MOUNTAIN,
@@ -743,6 +736,14 @@ impl Piece {
             ('弹', Player::Black) => Piece::BLACK_SHELL,
             ('雷', Player::Red) => Piece::RED_MINE,
             ('雷', Player::Black) => Piece::BLACK_MINE,
+            ('士', Player::Red) => Piece::RED_SCHOLAR,
+            ('士', Player::Black) => Piece::BLACK_SCHOLAR,
+            ('卒', Player::Red) => Piece::RED_PAWN,
+            ('卒', Player::Black) => Piece::BLACK_PAWN,
+            ('马', Player::Red) => Piece::RED_HORSE,
+            ('马', Player::Black) => Piece::BLACK_HORSE,
+            ('车', Player::Red) => Piece::RED_ROOK,
+            ('车', Player::Black) => Piece::BLACK_ROOK,
             _ => return None,
         };
         Some(piece)

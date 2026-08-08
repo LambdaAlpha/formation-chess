@@ -22,18 +22,18 @@ impl Formation {
     pub const ARMY: Self = Self { points: Self::CORNER, effect: Self::army };
     pub const AGENT: Self = Self { points: Self::CORNER, effect: Self::agent };
     pub const SPY: Self = Self { points: Self::CORNER, effect: Self::spy };
-    pub const SCHOLAR: Self = Self { points: Self::MIDDLE, effect: Self::scholar };
-    pub const PAWN: Self = Self { points: Self::MIDDLE, effect: Self::pawn };
-    pub const ROOK: Self = Self { points: Self::MIDDLE, effect: Self::rook };
-    pub const HORSE: Self = Self { points: Self::MIDDLE, effect: Self::horse };
-    pub const WIND: Self = Self { points: Self::UPPER_TRIANGLE, effect: Self::wind };
-    pub const MOUNTAIN: Self = Self { points: Self::UPPER_TRIANGLE, effect: Self::mountain };
-    pub const FIRE: Self = Self { points: Self::UPPER_TRIANGLE, effect: Self::fire };
-    pub const FOREST: Self = Self { points: Self::UPPER_TRIANGLE, effect: Self::forest };
-    pub const SPEAR: Self = Self { points: Self::LOWER_TRIANGLE, effect: Self::spear };
-    pub const SHIELD: Self = Self { points: Self::LOWER_TRIANGLE, effect: Self::shield };
-    pub const SHELL: Self = Self { points: Self::LOWER_TRIANGLE, effect: Self::shell };
-    pub const MINE: Self = Self { points: Self::LOWER_TRIANGLE, effect: Self::mine };
+    pub const WIND: Self = Self { points: Self::MIDDLE, effect: Self::wind };
+    pub const MOUNTAIN: Self = Self { points: Self::MIDDLE, effect: Self::mountain };
+    pub const FIRE: Self = Self { points: Self::MIDDLE, effect: Self::fire };
+    pub const FOREST: Self = Self { points: Self::MIDDLE, effect: Self::forest };
+    pub const SPEAR: Self = Self { points: Self::UPPER_TRIANGLE, effect: Self::spear };
+    pub const SHIELD: Self = Self { points: Self::UPPER_TRIANGLE, effect: Self::shield };
+    pub const SHELL: Self = Self { points: Self::UPPER_TRIANGLE, effect: Self::shell };
+    pub const MINE: Self = Self { points: Self::UPPER_TRIANGLE, effect: Self::mine };
+    pub const SCHOLAR: Self = Self { points: Self::LOWER_PENTAGON, effect: Self::scholar };
+    pub const PAWN: Self = Self { points: Self::LOWER_PENTAGON, effect: Self::pawn };
+    pub const HORSE: Self = Self { points: Self::LOWER_PENTAGON, effect: Self::horse };
+    pub const ROOK: Self = Self { points: Self::LOWER_PENTAGON, effect: Self::rook };
 
     // Point-set bit layout: bits 0-2 top row, 3-4 middle sides, 5-7 bottom
     // row, in the digit groups written as 0b<bottom>_<middle>_<top>.
@@ -41,7 +41,7 @@ impl Formation {
     pub const CORNER: u8 = 0b101_00_101;
     pub const MIDDLE: u8 = 0b010_11_010;
     pub const UPPER_TRIANGLE: u8 = 0b101_00_010;
-    pub const LOWER_TRIANGLE: u8 = 0b010_00_101;
+    pub const LOWER_PENTAGON: u8 = 0b010_11_101;
 
     pub const TOP_LEFT: u8 = 0b000_00_001;
     pub const TOP_MIDDLE: u8 = 0b000_00_010;
@@ -67,15 +67,8 @@ impl Formation {
         Self::grant_allies_strip_enemies(owner, object, Ability::DRAW)
     }
 
-    /// No effect; this formation is remapped in a later rules change.
-    pub fn army(_owner: Player, _object: Player) -> (Ability, Ability) {
-        (Ability::NONE, Ability::NONE)
-    }
-
-    /// Enemy pieces become also controlled by the agent's player;
-    /// allies have the opponent's control disabled (purges foreign
-    /// control from the agent's own side).
-    pub fn agent(owner: Player, object: Player) -> (Ability, Ability) {
+    /// Allies gain control; enemies lose control.
+    pub fn army(owner: Player, object: Player) -> (Ability, Ability) {
         match (owner, object) {
             (Player::Red, Player::Red) => (Ability::CONTROLLED_BY_BLACK, Ability::NONE),
             (Player::Red, Player::Black) => {
@@ -88,9 +81,26 @@ impl Formation {
         }
     }
 
-    /// No effect; this formation is remapped in a later rules change.
-    pub fn spy(_owner: Player, _object: Player) -> (Ability, Ability) {
-        (Ability::NONE, Ability::NONE)
+    /// Allies gain active push escalation; enemies gain passive escalation.
+    pub fn agent(owner: Player, object: Player) -> (Ability, Ability) {
+        let mask = Ability::CAPTURE_ON_PUSH_BLOCKED | Ability::CAPTURED_ON_PUSH_BLOCKED;
+        let update = if owner == object {
+            Ability::CAPTURE_ON_PUSH_BLOCKED
+        } else {
+            Ability::CAPTURED_ON_PUSH_BLOCKED
+        };
+        (mask, update)
+    }
+
+    /// Allies gain passive capture demotion; enemies gain active demotion.
+    pub fn spy(owner: Player, object: Player) -> (Ability, Ability) {
+        let mask = Ability::PUSH_ON_CAPTURE_UNBLOCKED | Ability::PUSHED_ON_CAPTURE_UNBLOCKED;
+        let update = if owner == object {
+            Ability::PUSHED_ON_CAPTURE_UNBLOCKED
+        } else {
+            Ability::PUSH_ON_CAPTURE_UNBLOCKED
+        };
+        (mask, update)
     }
 
     /// Allies gain DIRECTION_DIAGONAL; enemies lose it.
@@ -103,14 +113,14 @@ impl Formation {
         Self::grant_allies_strip_enemies(owner, object, Ability::DIRECTION_CROSS)
     }
 
-    /// Allies gain ANY_DISTANCE; enemies lose it.
-    pub fn rook(owner: Player, object: Player) -> (Ability, Ability) {
-        Self::grant_allies_strip_enemies(owner, object, Ability::ANY_DISTANCE)
-    }
-
     /// Allies gain DIRECTION_SHAPE_L; enemies lose it.
     pub fn horse(owner: Player, object: Player) -> (Ability, Ability) {
         Self::grant_allies_strip_enemies(owner, object, Ability::DIRECTION_SHAPE_L)
+    }
+
+    /// Allies gain ANY_DISTANCE; enemies lose it.
+    pub fn rook(owner: Player, object: Player) -> (Ability, Ability) {
+        Self::grant_allies_strip_enemies(owner, object, Ability::ANY_DISTANCE)
     }
 
     /// Allies gain both push abilities; enemies lose both.
@@ -128,27 +138,18 @@ impl Formation {
         (mask, update)
     }
 
-    /// Allies gain active push escalation and lose passive; enemies gain
-    /// passive and lose active.
+    /// Allies gain both pull abilities; enemies lose both.
     pub fn fire(owner: Player, object: Player) -> (Ability, Ability) {
-        let mask = Ability::CAPTURE_ON_PUSH_BLOCKED | Ability::CAPTURED_ON_PUSH_BLOCKED;
-        let update = if owner == object {
-            Ability::CAPTURE_ON_PUSH_BLOCKED
-        } else {
-            Ability::CAPTURED_ON_PUSH_BLOCKED
-        };
-        (mask, update)
+        let mask = Ability::PULL_ALLY | Ability::PULL_ENEMY;
+        Self::grant_allies_strip_enemies(owner, object, mask)
     }
 
-    /// Allies gain passive capture demotion and lose active; enemies gain
-    /// active and lose passive.
+    /// Takes over both pulled-by abilities: allies become pullable by
+    /// allies only, enemies pullable by the forest's side only.
     pub fn forest(owner: Player, object: Player) -> (Ability, Ability) {
-        let mask = Ability::PUSH_ON_CAPTURE_UNBLOCKED | Ability::PUSHED_ON_CAPTURE_UNBLOCKED;
-        let update = if owner == object {
-            Ability::PUSHED_ON_CAPTURE_UNBLOCKED
-        } else {
-            Ability::PUSH_ON_CAPTURE_UNBLOCKED
-        };
+        let mask = Ability::PULLED_BY_ALLY | Ability::PULLED_BY_ENEMY;
+        let update =
+            if owner == object { Ability::PULLED_BY_ALLY } else { Ability::PULLED_BY_ENEMY };
         (mask, update)
     }
 
