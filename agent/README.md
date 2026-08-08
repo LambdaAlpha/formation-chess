@@ -16,11 +16,12 @@ The framework prepares phase-specific AgentInput values:
   The agent reads the current player's pool and board occupancy directly from
   Game, so the framework does not materialize every piece-position action.
 - Movement receives the current Game and an explicit slice containing every
-  legal movement action plus Pass. Resign is excluded and remains a
-  higher-level policy decision.
+  legal core movement action, including targeted Resign actions for controlled
+  Vital pieces, followed by Pass as the final candidate.
 
 prepare_turn creates a PreparedTurn that borrows the exact immutable Game and
-owns any enumerated movement actions. Orchestrators can inspect and reuse this
+owns any enumerated movement actions. Core enumeration order is preserved, and
+Pass is appended after those actions. Orchestrators can inspect and reuse this
 prepared input without enumerating legal actions a second time.
 analyze_prepared validates an agent against that prepared input. analyze_agent
 is the convenience wrapper that prepares and analyzes in one call.
@@ -54,9 +55,9 @@ positions or attempt to play well.
 
 MctsAgent implements seeded UCT without static evaluation, action priors, or
 hand-authored move ordering. Each node expands legal actions in a seeded random
-order. Rollouts choose uniformly from every legal action, including Pass during
-movement. Only terminal game results are scored: win is 1, loss is -1, and draw
-is 0 from the root player's perspective.
+order. Rollouts choose uniformly from every legal action, including Pull, targeted
+Resign, and Pass during movement. Only terminal game results are scored: win is
+1, loss is -1, and draw is 0 from the root player's perspective.
 
 MctsConfig::baseline() uses 128 iterations, exploration 0.7, and a hard
 simulation limit of 128 actions from the analyzed root. Placement actions count
@@ -97,12 +98,13 @@ group to a fixed signed range, exposes each weighted contribution, and performs
 all aggregation with integer arithmetic. Finished games receive exact utility;
 non-terminal utility remains strictly inside that bound.
 
-The evaluator covers vital safety, current abilities, formation changes,
-control, safe mobility, concrete capture/push/divide opportunities, white-piece
-resources, low-weight material, side-to-move tempo, and explicit control ×
-ability × mobility interactions. Draw actions are detected but deliberately do
-not become a positive soft feature because their value depends on whether the
-position is favorable or unfavorable; search compares their exact zero utility.
+The evaluator covers Vital safety, current abilities, formation changes,
+control, safe mobility, concrete capture/push/pull opportunities, low-weight
+Red/Black material, side-to-move tempo, and explicit control × ability ×
+mobility interactions. Draw actions exchange the two Vital pieces and are
+scored only through their exact terminal utility of zero; they do not become a
+positive soft feature. Targeted Resign actions are present in the legal action
+list and receive the exact win or loss implied by the selected Vital piece.
 
 MinAgent implements deterministic placement analysis. It scans unique
 piece-position combinations lazily rather than materializing the Cartesian

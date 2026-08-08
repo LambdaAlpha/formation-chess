@@ -2,33 +2,38 @@
 
 [简体中文](notation.zh-Hans.md) · [Game rules](rules.md) · [Project overview](../README.md)
 
-This specification defines Formation Chess's Chinese-character text protocol. It covers four kinds of text: **game-state snapshots**, **actions**, **action results**, and **game records**.
-
-Snapshots, actions, and action results describe positions, requests, and responses. A game record combines an optional starting snapshot with actions in play order.
+This specification defines the Chinese-character text protocol for complete
+game snapshots, actions, action results, and line-oriented complete game
+records.
 
 ## Format conventions
 
 - Text is UTF-8.
 - Fixed labels use the full-width colon `：`.
-- List entries in actions and results are separated by one space. Writers should emit the canonical form without extra whitespace.
-- Snapshots are line-oriented. Readers accept both `\n` and `\r\n`; writers normally emit `\n`.
-- Coordinates, row labels, and step counts use Chinese numerals. Game-record round numbers use Arabic digits.
+- List entries are separated by exactly one space, with no leading or trailing
+  spaces.
+- Line endings may be `\n` or `\r\n`; canonical text uses `\n`.
+- Coordinates, row labels, and step counts use Chinese numerals.
+- All snapshot and action coordinates are 1-based.
 
-A structurally valid string is not necessarily legal in a particular position. An action must also satisfy the current board, phase, player, abilities, path, target, and game-result constraints.
+Structural validity does not imply legality in the stated position. A legal
+action must also satisfy the phase, player, control, effective-ability, path,
+target, and current-result requirements.
 
 ## Numerals and coordinates
-
-The protocol uses these numeral characters:
 
 | Value | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Character | 一 | 二 | 三 | 四 | 五 | 六 | 七 | 八 | 九 | 十 | 甲 | 乙 | 丙 | 丁 | 戊 | 己 |
 
-The standard game uses a 9×10 board; the protocol supports boards up to 16×16. A coordinate is always **column first, then row**: `三二` means column 3, row 2. Columns increase from left to right and rows from top to bottom. Red advances upward; Black advances downward.
+A coordinate is always column first, then row. `三二` means column 3, row 2.
+Columns increase left to right and rows increase top to bottom. Red advances
+toward smaller row numbers; Black advances toward larger row numbers.
 
-## Game-state snapshots
+## Game snapshots
 
-A complete snapshot contains four state lines, a `棋盘：` marker, and the board grid:
+A complete snapshot contains four state lines, a `棋盘：` marker, and the board
+grid:
 
 ```text
 行棋方：黑
@@ -46,124 +51,123 @@ A complete snapshot contains four state lines, a `棋盘：` marker, and the boa
 ### State lines
 
 - `行棋方：红` or `行棋方：黑` identifies the player who acts next.
-- `红方：[...]` and `黑方：[...]` list pieces not yet placed. Pool entries use the one-character piece name without a color prefix, are separated by one space, and use `[]` for an empty pool.
-- `胜负：未分`, `红胜`, `黑胜`, or `和棋` records the persistent game result. Once the value is not `未分`, the game accepts no further action.
+- `红方：[...]` and `黑方：[...]` contain the pieces not yet placed by that
+  owner. Entries use one-character piece names separated by one space; an empty
+  pool is `[]`.
+- `胜负：未分`, `红胜`, `黑胜`, or `和棋` states the current game result.
+- The snapshot has exactly the Red and Black placement-pool lines shown above.
 
 ### Board grid
 
-After `棋盘：`, the first grid line is the column header. It begins with `零[` and gives every column a `numeral + 路` label, such as `一路`.
+The header starts with `零[` and contains one `numeral + 路` label per column.
+Each board row starts with its numeral and contains one cell per column.
 
-Each following line starts with its row numeral and contains one entry per point:
+- Empty point: `一一`.
+- Occupied point: owner prefix plus piece name, such as `红车` or `黑将`.
 
-- an empty point is `一一`;
-- a Red or Black piece is its color prefix plus one-character name, such as `红车` or `黑将`.
+Every cell is two characters wide. Header width and row widths must agree, and
+neither board dimension may exceed 16.
 
-Every cell is exactly two characters wide. The header width and every row width must agree. Neither dimension may exceed 16.
+### Snapshot validation
 
-### Custom snapshots and validity
+A custom snapshot need not be reachable from the standard opening, but an
+acceptable snapshot must satisfy all of these consistency rules:
 
-A snapshot may describe a position that normal play from the standard start could never reach. If either player pool is non-empty, the snapshot is still in the placement phase and must respect each side's half of the board. For a custom board of height `h`, Red may occupy placement rows numbered greater than `⌈h/2⌉`, and Black rows numbered at most `⌊h/2⌋`. On an odd-height board, the center row belongs to neither placement half.
+- every Red pool entry is a Red piece and every Black pool entry is a Black
+  piece;
+- each owner has at most one Vital piece across its pool and board;
+- when either pool is non-empty, every on-board piece lies in its owner's
+  placement half;
+- placement pool sizes and the declared next player/result are compatible with
+  strict Red-then-Black alternation;
+- an unfinished snapshot retains a Vital piece for both owners;
+- a declared Red or Black win retains a Vital piece for the winner; and
+- a draw cannot be declared while the game is still in placement.
 
-A snapshot is invalid if it violates any of these conditions:
-
-- either side has more than one piece with the Vital ability;
-- a placement-phase piece lies outside its side's half;
-- while pools remain, their sizes and the player to move could not result from alternating Red and Black placements;
-- a snapshot declared `未分` does not leave both sides a Vital piece, or a declared Red or Black win does not leave the winner a Vital piece.
-
-A snapshot only needs internally consistent structure and a consistent declared result. The position need not be reachable from the standard opening.
+On an odd-height board, the center row belongs to neither placement half.
 
 ## Actions
 
-Most actions have this form:
+Most actions use:
 
 ```text
 piece reference + destination + optional suffix
 ```
 
-Pass and resign are separate fixed phrases.
+Pass and resign use dedicated phrases.
 
 ### Piece references
 
-A piece on the board may be identified by a color-prefixed name, such as `红车` or `黑将`. A name is sufficient only when exactly one matching piece is on the board. If several matching pieces exist, identify the acting piece by its pre-action coordinate; for example, `一二` means the piece at column 1, row 2.
+A board piece may be named with its owner prefix, such as `红车` or `黑将`, when
+that identity occurs exactly once on the board. If duplicate identities exist,
+use the pre-action coordinate of the acting piece, such as `一二`.
 
-Placement must use a color-prefixed piece name because the piece comes from a player pool. A coordinate cannot identify a piece that is not yet on the board.
+Placement must name a pool piece with an owner-prefixed identity. A coordinate
+cannot refer to a piece that is still outside the board.
 
 ### Destinations
 
-An **absolute destination** is a column numeral followed by a row numeral, such as `三二`.
+An absolute destination is a column numeral followed by a row numeral, such as
+`三二`.
 
-A **relative destination** uses one of four operators:
+A relative destination uses one of four operators:
 
 - `平` + column: move to that column on the same row;
 - `直` + row: move to that row in the same column;
-- `进` + steps: move forward—toward smaller row numbers for Red, larger row numbers for Black;
-- `退` + steps: move backward.
+- `进` + steps: move forward for the named piece's owner;
+- `退` + steps: move backward for the named piece's owner.
 
-`进` and `退` require a color-prefixed name because the direction depends on the piece's player. A coordinate-identified piece may use only `平`, `直`, or an absolute destination.
+`进` and `退` require an owner-prefixed piece name because direction depends on
+the piece owner. A coordinate-identified piece may use only an absolute
+destination, `平`, or `直`.
 
-### Suffixes and action intent
+### Suffixes
 
-| Suffix | Intent | Destination must be |
+| Suffix | Action | Destination |
 |---|---|---|
-| none | placement during the placement phase; ordinary movement during the movement phase | empty |
+| none | placement in the placement phase; ordinary move in the movement phase | empty |
 | `捉` | capture | occupied |
 | `推` | push | occupied |
 | `拉` | pull the piece behind the origin | empty |
-| `和` | draw action | occupied by an opposing Vital piece |
+| `和` | exchange with an opposing Vital piece and draw | occupied |
 
-A suffix declares intent; it does not prove legality. For example, `红车三四捉` may be structurally valid, but whether it can be played still depends on control, movement, path, capture ability, and the target's effective abilities in the current position.
+There is no `分` suffix. A suffix declares intent but does not prove legality.
 
-### Placement versus movement
+### Placement and movement examples
 
-The current phase determines the meaning of an unsuffixed expression:
+```text
+红将五十
+红士三四
+黑车进二
+一二三二
+红马四五捉
+红火五四推
+红风平四拉
+红将五一和
+```
 
-- **Placement phase:** a color-prefixed name plus an absolute destination, such as `红车三四`, places that piece from Red's pool.
-- **Movement phase:** an unsuffixed expression moves a piece already on the board to an empty point.
-
-Expressions ending in `捉`, `推`, `拉`, or `和` always describe movement-phase actions and cannot place a piece.
+The same unsuffixed `红将五十` form means placement when the named piece is in
+the current pool, and an ordinary move when the game is already in the movement
+phase and the piece is uniquely present on the board.
 
 ### Pass and resign
-
-- `红将按兵` / `黑将按兵`: the current player names their General and passes without changing the board. Passing is allowed only in the movement phase.
-- `红将认负` / `黑将认负`: names the General whose side resigns. During the movement phase, the current player must control that General; the opposing side wins immediately. During placement, a player resigns by naming their own General.
-
-A named General must be unique on the board when the action needs an on-board target. Again, a phrase may parse successfully while being illegal in the current game.
-
-### Action examples
-
-Move the Red Advisor from column 2, row 3 to column 3, row 4:
-
-```text
-红士三四
-```
-
-Advance the Black Rook two steps:
-
-```text
-黑车进二
-```
-
-When two Red Rooks exist, move the one at column 1, row 2 horizontally to column 3:
-
-```text
-一二三二
-```
-
-Move the Red Wind horizontally to column 4 and pull the allied Pawn behind it into the Wind's origin:
-
-```text
-红风平四拉
-```
 
 ```text
 红将按兵
 黑将认负
 ```
 
+- `按兵` is legal only in the movement phase. The phrase must name the current
+  player's unique on-board General. The General is the required notation marker
+  for Pass and does not move.
+- `认负` must name a General. During movement, it must uniquely identify an
+  on-board Vital piece controlled by the current player; the named piece's owner
+  loses. During placement, the phrase must name the current player's General,
+  and the current player loses directly.
+
 ## Action results
 
-An action result is either a successful reaction or a one-line error. A successful reaction always has two lines:
+An action result is either a successful two-line block or a one-line error.
 
 ```text
 变化：[{change entry} {change entry} ...]
@@ -172,21 +176,23 @@ An action result is either a successful reaction or a one-line error. A successf
 
 ### Change entries
 
-Every entry is interpreted against the **same pre-action board snapshot**. Entries do not carry the action suffixes `捉`, `推`, `拉`, or `和`:
+Every change entry is interpreted against the same complete **pre-action
+position**. Entries never carry the action suffixes `捉`, `推`, `拉`, or
+`和`.
 
-- `piece + destination`: the piece now occupies that point. Only during the
-  placement phase does a color-prefixed name plus an absolute destination mean
-  placement from a pool; during the movement phase it means an on-board move.
-- `piece + 失`: the piece leaves the board and no replacement occupies its origin.
-- `piece + destination + 占`: explicitly states that a piece entered from off-board at that destination.
+- `piece + destination`: move an on-board piece. During placement only, a named
+  piece plus an absolute destination may also mean placement from the pool.
+- `piece + destination + 占`: explicitly place a piece arriving from off-board.
+- `piece + 失`: remove a piece without a replacement at its origin.
 
-Ordinary movement and capture usually need only the arriving piece; an original occupant of the destination is overwritten and need not also receive a `失` entry. If both pieces leave the board, each receives its own `失` entry.
+Departures and arrivals are interpreted together and combined by board point.
+If a point is both vacated and occupied, occupancy takes precedence. Swaps and
+cycles therefore do not depend on entry order.
 
-Entry order does not affect meaning. A reader first resolves every entry against the pre-action board, then combines the resulting clears and occupancies by point. If the same point is both cleared and occupied, occupancy wins. This permits cyclic moves and position swaps to be represented without applying entries sequentially.
+All board and pool references use the pre-action position. During placement, a
+named off-board arrival must match a piece in the corresponding pre-action pool.
 
-The core `NotationResolver` is constructed with the complete **pre-action `Game`**, not only its board. The board resolves departures and arrivals, and the current placement pool restores the exact removed piece and index. Therefore the text protocol can reconstruct a complete reversible `Reaction`.
-
-Examples follow.
+### Examples
 
 Ordinary movement or capture:
 
@@ -195,76 +201,90 @@ Ordinary movement or capture:
 胜负：未分
 ```
 
-The pushing piece enters the target point and the target moves one step farther:
+A push moves the active piece and the target:
 
 ```text
-变化：[红风平二 红车平三]
+变化：[红火平二 红车平三]
 胜负：未分
 ```
 
-A piece enters from a pool or another off-board source:
+A pull can change the active destination, the vacated origin, and the pulled
+source:
+
+```text
+变化：[红卒平三 红风平四]
+胜负：未分
+```
+
+An explicit off-board arrival uses `占`:
 
 ```text
 变化：[红车四四占]
 胜负：未分
 ```
 
-During the placement phase, an unsuffixed change entry may also represent
-placement from a pool:
+During placement, the unsuffixed form is also accepted for a pool arrival:
 
 ```text
 变化：[红车四四]
 胜负：未分
 ```
 
-Two pieces swap points. Both entries refer to the pre-action coordinates:
+A generic two-piece swap is expressed relative to the pre-action coordinates:
 
 ```text
 变化：[一二三四 三四一二]
 胜负：未分
 ```
 
-The capturing piece and target both leave the board:
+A successful Draw action uses the same two replacements and declares a draw:
+
+```text
+变化：[一二三四 三四一二]
+胜负：和棋
+```
+
+Mutual destruction removes both pieces:
 
 ```text
 变化：[红雷失 黑车失]
 胜负：未分
 ```
 
-Pass has no board changes:
+Pass produces no changes:
 
 ```text
 变化：[]
 胜负：未分
 ```
 
-An action may also decide the game:
+A winning action or resignation declares the resulting win:
 
 ```text
 变化：[红车平二]
 胜负：红胜
 ```
 
-Resignation and an already-confirmed draw likewise have no board changes:
-
 ```text
 变化：[]
 胜负：红胜
 ```
+
+A draw result with no position changes is also structurally valid:
 
 ```text
 变化：[]
 胜负：和棋
 ```
 
-### Result line
+### Result values
 
-The result is exactly one of:
-
-- `未分`: the game continues;
+- `未分`: unfinished;
 - `红胜`: Red wins;
 - `黑胜`: Black wins;
 - `和棋`: draw.
+
+Once a game result is not `未分`, no further action is legal.
 
 ### Errors
 
@@ -272,33 +292,34 @@ The result is exactly one of:
 错误：{single-line message}
 ```
 
-`错误：` is the stable protocol prefix. The remaining message is for people, may change between versions, and must not be parsed by machines. An error reaction occupies one line and leaves the entire game state unchanged.
-
-For example:
+Only the `错误：` prefix is a stable protocol marker. The remaining
+human-readable text has no stable protocol semantics. An error leaves the board,
+pools, player, and result unchanged.
 
 ```text
 错误：path blocked, cannot reach destination
 ```
 
-## Game records
+## Game-record convention
 
-A game record stores an optional starting snapshot followed by actions in play order, providing a common interchange format for complete games.
+A complete record may contain an optional starting snapshot followed by actions
+in play order.
 
-- When the game does not start from the standard initial state, write the complete snapshot followed by one blank line.
-- Each round occupies one line: an Arabic round number, a period, one space, then Red's and Black's half-moves.
-- If the starting snapshot has Black to move, write `……` for the missing Red half-move.
-- The final round may contain only one half-move, and a record may stop after any half-move.
-
-Example:
+- For a non-standard start, write the complete snapshot followed by one blank
+  line.
+- Each round uses an Arabic number, `. `, Red's half-move, and optionally Black's
+  half-move.
+- If the starting snapshot has Black to act, write `……` for the absent Red
+  half-move.
+- The final round may contain only one half-move, and a record may stop after any
+  half-move.
 
 ```text
 1. 红将五十 黑将五一
 2. 红盾四十 黑车五二
 ```
 
-## Appendix: grammar
-
-The following is a simplified EBNF for the complete format. Terminals are quoted; `{ x }` means zero or more repetitions and `[ x ]` means optional.
+## Simplified grammar
 
 ```ebnf
 game-state   = player-line , pool-line , pool-line , result-line , board ;
@@ -323,11 +344,11 @@ position     = coordinate | relative ;
 relative     = ( "平" | "直" | "进" | "退" ) , numeral ;
 suffix       = "捉" | "推" | "拉" | "和" ;
 
-reaction     = success | error ;
+action-result = success | error ;
 success      = "变化：[" , [ change , { " " , change } ] , "]" , newline ,
                "胜负：" , result ;
 change       = ( piece , "失" )
-             | ( piece , position , "占" )
+             | ( named-piece , coordinate , "占" )
              | ( piece , position ) ;
 error        = "错误：" , text ;
 
@@ -337,7 +358,7 @@ half-move    = action | "……" ;
 
 side         = "红" | "黑" ;
 result       = "未分" | "红胜" | "黑胜" | "和棋" ;
-name         = "将" | "军" | "间" | "谍" | "风" | "山" | "火" | "林"
+name         = "将" | "计" | "势" | "变" | "风" | "林" | "火" | "山"
              | "矛" | "盾" | "弹" | "雷" | "士" | "卒" | "马" | "车" ;
 numeral      = "一" | "二" | "三" | "四" | "五" | "六" | "七" | "八"
              | "九" | "十" | "甲" | "乙" | "丙" | "丁" | "戊" | "己" ;
@@ -346,13 +367,6 @@ text         = (* free-form text without a line break *) ;
 newline      = "\n" | "\r\n" ;
 ```
 
-The grammar does not capture every semantic constraint:
-
-- `进` / `退` require a player-prefixed piece name.
-- Placement requires a player-prefixed piece name and an absolute destination.
-- A coordinate-identified piece cannot use `进` / `退`.
-- `按兵` requires the current player's unique General and is legal only during movement.
-- `认负` names a General; during movement, the current player must control that on-board target.
-- `拉` requires an empty destination and a pullable piece one movement step behind the origin.
-- Change entries never carry action suffixes; `占` only means entering from off-board, and `失` only means leaving without a replacement at the origin.
-- The final line may omit a trailing newline. These format details do not change whether an action is legal in the game.
+The grammar omits semantic constraints such as board bounds, uniqueness,
+control, phase, legal movement, and effective abilities. The final line may omit
+a trailing newline.

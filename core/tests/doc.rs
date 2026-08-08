@@ -31,7 +31,8 @@ const DOCUMENTED_PROTOCOL_SNIPPETS: &[&str] = &[
     "红士三四",
     "黑车进二",
     "一二三二",
-    "红火平四拉",
+    "红风平四拉",
+    "变化：[红卒平三 红风平四]\n胜负：未分",
     "红将按兵",
     "黑将认负",
     "变化：[红车平五]\n胜负：未分",
@@ -53,25 +54,13 @@ fn text_protocol_examples() {
     support::spec::run_tests(include_str!("doc.txt"));
 }
 
-fn migrate_legacy_piece_names(source: &str) -> String {
-    let mut migrated = source.replace('\u{519b}', "计");
-    migrated = migrated.replace('\u{95f4}', "势");
-    migrated = migrated.replace('\u{8c0d}', "变");
-    migrated = migrated.replace('\u{98ce}', "\u{7131}");
-    migrated = migrated.replace('\u{706b}', "风");
-    migrated.replace('\u{7131}', "火")
-}
-
 /// The protocol fixture and both notation documents share the same concrete examples.
 #[test]
 fn documented_protocol_examples_match_the_fixtures() {
     let sources = [
-        ("doc.txt", include_str!("doc.txt").to_owned()),
-        ("notation.md", migrate_legacy_piece_names(include_str!("../../docs/notation.md"))),
-        (
-            "notation.zh-Hans.md",
-            migrate_legacy_piece_names(include_str!("../../docs/notation.zh-Hans.md")),
-        ),
+        ("doc.txt", include_str!("doc.txt")),
+        ("notation.md", include_str!("../../docs/notation.md")),
+        ("notation.zh-Hans.md", include_str!("../../docs/notation.zh-Hans.md")),
     ];
 
     for (name, source) in sources {

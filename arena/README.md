@@ -40,10 +40,11 @@ to the runner.
 Every successful action retains its player, phase, action, score, selected
 candidate rank, reaction, and movement legal-action count. Each seat receives a
 separately seeded ActionSelector using the run's recorded selection policy.
-Technical decision timing is intentionally omitted.
-A run ends with a core game result, a configured total-action limit (capped at 128, including placement), or the
-exact AgentError produced by a failed analysis. Persistent recording, strict
-replay verification, and per-game descriptive metrics are provided below.
+Technical decision timing is intentionally omitted. A run ends with a core
+game result, a configured total-action limit (capped at 128, including
+placement), or the exact AgentError produced by a failed analysis. Persistent
+recording, strict replay verification, and per-game descriptive metrics are
+provided below.
 
 ## Persistent records
 
@@ -64,14 +65,21 @@ Each dataset contains:
 Each executed action records its zero-based index, player, phase, structured
 0-based coordinates, human-readable notation, agent score, one-based selected
 candidate rank, movement legal-action count, structured reaction, reaction
-notation, and post-action state hash. The
-full movement legal-action list is deterministic from the recorded state and is
-therefore recomputed during analysis rather than duplicated in the dataset;
+notation, and post-action state hash. Structured actions include Pull, the two
+coordinates of a Draw exchange, and the target coordinate of Resign. Reactions
+record the resulting point values, so a Draw normally contains two replacements
+and Resign contains no position changes. The full movement legal-action list is
+deterministic from the recorded state and is therefore recomputed during
+analysis rather than duplicated in the dataset;
 placement records have no legal-action count. The initial hash plus each
 post-action hash verifies deterministic replay without duplicating full state at
 every step; hashes are integrity metadata, not gameplay metrics. JSON
 serialization handles quotes, newlines, and other escaping inside agent error
 messages.
+
+The current `RECORD_SCHEMA_VERSION` remains `1`. The crate does not migrate or
+repair records written under earlier rules; such records may fail current replay
+validation even when they also declare schema version 1.
 
 JsonlDatasetReader validates the manifest when opened and then streams one
 `games.jsonl` record at a time without loading the dataset into memory. It
@@ -123,12 +131,12 @@ Each GameMetrics value contains:
 
 - game, pair, seat, participant, result, termination, and last-action dimensions;
 - separate Red and Black placement/movement action counts;
-- counts and all-action ratios for placement, move, capture, push, draw, divide,
+- counts and all-action ratios for placement, move, capture, push, pull, draw,
   pass, and resignation actions;
 - count, minimum, maximum, mean, median, P25, P75, P90, and P95 of movement
   legal-action counts;
 - occupancy additions, removals, and replacements across reactions;
-- final board counts by color plus Red, Black, and White pool counts; and
+- final board counts by owning player plus Red and Black placement-pool counts; and
 - total state visits, unique states, repeated visits, and unique-state ratio.
 
 Action-type ratios use all actions in the game as their denominator. A zero-action
@@ -178,7 +186,7 @@ The JSON summary contains:
 - each participant's overall, Red-seat, and Black-seat win/loss/draw/unfinished
   counts and rates, plus agent-failure count and rate;
 - exact per-game total/placement/movement action distributions for all actions
-  and for each color, global action-type counts and rates, and the exact
+  and for each player, global action-type counts and rates, and the exact
   all-movement legal-action distribution;
 - reaction totals and per-game distributions;
 - per-game final board and pool material distributions; and

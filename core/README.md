@@ -1,29 +1,33 @@
 # formation-chess-core
 
 `formation-chess-core` is the dependency-free Rust rules engine for
-[Formation Chess (阵棋)](../README.md). It implements the board, pieces,
-formations, abilities, action validation, result tracking, and the Chinese
-text protocol. It does not provide an AI, a user interface, networking, file
-I/O, or game persistence.
+[Formation Chess (阵棋)](../README.md). It owns the board model, canonical
+pieces, formations, effective abilities, action validation, result tracking,
+undo, and Chinese text notation. It does not provide AI, networking, file I/O,
+persistence, or a user interface.
 
-The [game rules](../docs/rules.md) describe the player-facing rules. This file
-focuses on the crate's boundaries and the APIs that a frontend or server uses.
+The player-facing rules are in [`docs/rules.md`](../docs/rules.md). This README
+focuses on crate boundaries and integration APIs.
 
-## What the engine models
+## Engine model
 
-- **Board and pieces.** A rectangular board of at most 16×16, with Red and
-  Black pieces.
-- **Effective abilities.** A piece's stored definition is combined with the
-  formations of its neighboring pieces when the board is queried. Use
-  `Board::effective` when a caller needs the abilities that apply in the
-  current position.
-- **Actions.** Placement, ordinary movement, capture, push, pull, draw, pass,
-  and resign. An invalid action returns an error without changing the
-  game.
-- **Results.** `Unfinished`, `RedWin`, `BlackWin`, and `Draw` are persistent;
-  once a game is decided, further actions are rejected.
-- **Notation.** Snapshots, actions, reactions, and position changes use the
-  Chinese text format documented in [`docs/notation.md`](../docs/notation.md).
+- **Board:** rectangular geometry from 1×1 through 16×16.
+- **Pieces:** Red and Black ownership, stable `PieceId` identity, canonical
+  definitions, and position-dependent effective abilities.
+- **Phases:** alternating placement while either pool is non-empty, followed by
+  movement when both pools are empty.
+- **Actions:** place, move, capture, push, pull, draw exchange, pass, and
+  targeted resign.
+- **Results:** `Unfinished`, `RedWin`, `BlackWin`, and `Draw`; decided games
+  reject further actions.
+- **Reactions:** reversible board changes plus the exact placement-pool change
+  and resulting game status.
+- **Notation:** snapshots, actions, and reactions documented in
+  [`docs/notation.md`](../docs/notation.md).
+
+`Board::effective` combines a piece's stored definition with every active
+neighboring formation. Callers that display or analyze current capabilities
+should use the effective piece rather than the raw board value.
 
 ## Quick start
 
@@ -34,7 +38,7 @@ cargo run -p formation-chess-core --example readme
 cargo run -p formation-chess-core --example readme_custom
 ```
 
-The first example starts a standard game and performs two placement actions:
+The first starts a standard game and performs two placements:
 
 ```rust
 use formation_chess_core::game::{Game, GameConfig};
@@ -55,39 +59,40 @@ fn main() -> Result<(), String> {
 }
 ```
 
-After those two placements, the remaining pool lines are:
+The remaining pool lines are:
 
 ```text
 红方：[计 势 变 风 林 火 山 矛 盾 弹 雷 士 卒 马 车]
 黑方：[计 势 变 风 林 火 山 矛 盾 弹 雷 士 卒 马 车]
 ```
 
-The resolver must be built from the board **before** an action. This matters
-when formatting or resolving a reaction, because change entries refer to the
-same pre-action snapshot.
+A `NotationResolver` is tied to one game snapshot. Format or parse a reaction
+with the **pre-action** game because change entries identify departures and
+placement-pool removals from that state.
 
 ## Text protocol at a glance
 
-Coordinates in the text protocol are 1-based Chinese numerals, column first.
-The meaning of an unsuffixed piece-plus-position expression depends on the
-phase: it places a named pool piece during placement, and moves an on-board
-piece during movement.
+Coordinates are 1-based Chinese numerals, column first. An unsuffixed
+piece-plus-position expression places a pool piece during placement and moves an
+on-board piece during movement.
 
 | Text | Meaning |
 |---|---|
 | `红将五十` | Place or move the Red General to column 5, row 10, depending on phase |
-| `红车平五` | Move the named Red Rook horizontally to column 5 |
-| `黑车进二` | Move the Black Rook forward two rows |
-| `一二三二` | Move the piece currently at column 1, row 2 to column 3, row 2 |
-| `红马四五捉` | Declare a capture at the destination |
-| `红火五四推` | Declare a push at the destination |
-| `红火平四拉` | Move to column 4 and pull the piece behind the origin |
-| `红将按兵` / `黑将认负` | Pass / resign using the vital piece notation |
+| `红车平五` | Move the unique Red Rook horizontally to column 5 |
+| `黑车进二` | Advance the unique Black Rook two rows |
+| `一二三二` | Move the piece at column 1, row 2 to column 3, row 2 |
+| `红马四五捉` | Declare capture intent at the destination |
+| `红火五四推` | Declare push intent at the destination |
+| `红风平四拉` | Move the Wind and pull the piece behind its origin |
+| `红将五一和` | Exchange with an opposing Vital piece and draw |
+| `红将按兵` | Pass during movement |
+| `黑将认负` | Resign the controlled Black General |
 
-An action result is either a success:
+A formatted outcome is either a successful reaction:
 
 ```text
-变化：[红火平二 黑马进一]
+变化：[红火平二 红车平三]
 胜负：未分
 ```
 
@@ -97,28 +102,40 @@ or one error line:
 错误：{single-line message}
 ```
 
-`NotationResolver` provides `parse_action`, `fmt_action`, `parse_reaction`,
-and `fmt_reaction`. It resolves names, coordinates, and relative positions
-against the game supplied at construction time. For reactions, pass the
-pre-action `Game`; the resolver uses its board and placement pools to rebuild
-the complete reversible `Reaction`.
+`NotationResolver` provides `parse_action`, `fmt_action`, `parse_reaction`, and
+`fmt_reaction`. Errors keep the game unchanged. Successful reactions can be
+passed to `Game::undo` in strict last-in-first-out order.
+
+## Legal action enumeration
+
+- `Game::valid_moves(x, y)` returns all legal movement-phase actions for one
+  piece controlled by the current player.
+- `Game::all_valid_moves(&mut actions)` appends actions for every currently
+  controlled board piece.
+- The board enumeration includes `Move`, `Capture`, `Push`, `Pull`, `Draw`, and
+  `Resign` for controlled Vital pieces.
+- Placement and `Pass` are caller-level concerns; the Agent crate appends Pass
+  to the core movement action list.
+
+Every returned action is still executed through `Game::action`, which performs
+the authoritative validation and produces the reversible reaction.
 
 ## Custom positions
 
 `Game` implements `Display` and `FromStr` for complete snapshots, and
-`GameConfig` can be constructed directly. Custom configurations may use any
-rectangular board supported by `Board`, arbitrary board contents, and explicit
-piece pools. `Game::new` validates the configuration before returning a game,
-including:
+`GameConfig` can be constructed directly. Custom configurations may contain
+arbitrary board contents and explicit Red and Black placement pools.
 
-- pool colors and turn alternation during placement;
-- the placement half occupied by each color while pools remain;
-- at most one vital piece per side;
-- consistency between the declared result and the vital pieces still in the
-  board or pools.
+`Game::new` validates:
 
-For example, this valid snapshot is still in the placement phase because both
-pools are non-empty and Black is next:
+- pool piece ownership;
+- placement halves while either pool remains;
+- Red/Black placement alternation and the next player;
+- at most one Vital piece per owner across board and pool; and
+- consistency between the persistent result and the Vital pieces that remain.
+
+This valid custom snapshot is still in placement because both pools are
+non-empty and Black acts next:
 
 ```text
 行棋方：黑
@@ -133,34 +150,33 @@ pools are non-empty and Black is next:
 四[一一 一一 红车 一一 一一]
 ```
 
-The parser's snapshot example is also available as
-`core/examples/readme_custom.rs`.
+The same example is executable in `core/examples/readme_custom.rs`.
 
 ## API map
 
 | Module | Main contents |
 |---|---|
-| `game` | `Game`, `GameConfig`, phases, turn flow, validation, result tracking, and `Game::undo(Reaction)` |
-| `action` | `Action`, `Move`, `Place`, `Reaction`, `PositionChange`, `PoolChange`, `GameResult`; placement actions use `PieceId`, while reversible reactions carry complete `Piece` values |
-| `board` | board geometry, effective pieces, movement, push, pull, capture, draw, and legal-action enumeration |
-| `piece` | `Piece`, lightweight `PieceId`, `Player`, canonical `Piece` constants, and `Piece::id()` for identity conversion |
-| `formation` | active neighbor patterns and ability-rewriting effects |
-| `ability` | the ability bitmask and `AbilityConfig` builder |
-| `notation` | notation data types and `NotationResolver` |
+| `game` | `Game`, `GameConfig`, `Phase`, action flow, configuration validation, result tracking, and `Game::undo` |
+| `action` | `Action`, `Move`, `Place`, `Reaction`, `PositionChange`, `PoolChange`, and `GameResult` |
+| `board` | geometry, raw/effective pieces, movement interactions, and legal-action enumeration |
+| `piece` | `Piece`, `PieceId`, `Player`, canonical piece constants, and ownership/control helpers |
+| `formation` | four local patterns, Black vertical mirroring, and ability-rewriting effects |
+| `ability` | the `Ability` bitset and exhaustive `AbilityConfig` builder |
+| `notation` | notation data types and the game-aware `NotationResolver` |
 
-## Tests and examples
+## Tests
 
 From the workspace root:
 
 ```sh
-cargo test -p formation-chess-core
-cargo test --workspace
+cargo +nightly test -p formation-chess-core
+cargo +nightly test --workspace
 ```
 
-The crate's tests combine API tests with data-driven scenarios in
-`core/tests/*.txt`. The scenarios are useful as executable examples of edge
-cases such as blocked pushes, pulls, capture conversion, mutual destruction,
-placement validation, and draw exchanges.
+The crate combines API tests with data-driven scenarios in `core/tests/*.txt`.
+They cover placement validation, formation overlap, same-owner capture, push and
+pull permissions, conversion rules, mutual destruction, draw exchanges,
+targeted resignation, undo, and notation round trips.
 
 ## License
 

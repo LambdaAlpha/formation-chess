@@ -3,48 +3,56 @@
 [简体中文](README.zh-Hans.md)
 
 Formation Chess (阵棋) is a two-player abstract strategy game about local
-influence. It uses a 9×10 board and a set of Xiangqi-inspired piece names,
-but not Xiangqi's palace, river, check, or fixed opening.
+influence. It uses a 9×10 board and Xiangqi-inspired piece names, but it has no
+palace, river, check, checkmate, or fixed opening.
 
-Each colored piece projects a **formation** over selected neighboring points;
-the neutral White piece projects no active formation. A piece standing in a
-formation may gain or lose abilities: movement directions,
-range, control, pushing, capturing, or one of the game's special interactions.
-The same named piece can therefore play very differently from one position to
-the next.
+Each piece projects a **formation** onto selected neighboring points. A piece
+standing in those points may gain or lose movement, range, control, push, pull,
+capture, or special conversion abilities. Actions always use the resulting
+effective abilities, so the same named piece can behave very differently as the
+position changes.
 
-The standard game starts with an empty board. Red and Black each place their
-16 unique pieces on their own half of the board, then alternate movement
-actions. Captured pieces are recycled into a shared white-piece pool, and a
-piece with the **Divide** ability can bring one back onto the board.
+The standard game starts on an empty board. Red and Black each place 16 unique
+pieces in their own half, then alternate movement-phase actions. The four piece
+groups are:
+
+```text
+Strategy:        将 计 势 变
+Restraint:       风 林 火 山
+Offense/Defense: 矛 盾 弹 雷
+Mobility:        士 卒 马 车
+```
+
+Movement play supports ordinary moves, allied or opposing captures, pushes,
+pulls, Vital-piece draw exchanges, pass, and target-based resignation.
 
 ## Learn the game
 
-- **[Game rules](docs/rules.md)** — the complete standard rulebook, including
-  abilities, formations, movement, combat, white pieces, and end conditions.
-- **[Text notation](docs/notation.md)** — the canonical text format for
-  snapshots, actions, results, and the documented game-record format.
-- **[Chinese rules (Web copy)](web/static/rules.zh-Hans.md)** — the Chinese
-  rule text embedded by the local Web client.
+- **[Game rules](docs/rules.md)** — setup, abilities, formations, all action
+  types, the current piece groups, and end conditions.
+- **[Text notation](docs/notation.md)** — canonical snapshots, actions,
+  reactions, and the documented whole-game record convention.
+- **[Chinese Web rules](web/static/rules.zh-Hans.md)** — the Chinese rule text
+  embedded in the local browser client.
 
-## What is in this repository
+## Workspace crates
 
-- **`core/` — `formation-chess-core`**: the dependency-free Rust rules engine
-  and text-notation implementation. It has no AI, persistence, or user
-  interface.
-- **`agent/` — `formation-chess-agent`**: phase-specific agent interfaces,
-  compact geometric placement input, legal movement enumeration, validated
-  turn execution, and seedable Random, pure MCTS, and Min agents.
-- **`tui/` — `formation-chess-tui`**: a small terminal client with standard,
+- **`core/` — `formation-chess-core`**: dependency-free rules engine, legal
+  action enumeration, undo, snapshots, and Chinese text notation.
+- **`agent/` — `formation-chess-agent`**: phase-specific ranked analysis,
+  validated turn execution, and seedable Random, pure MCTS, and Min agents.
+- **`arena/` — `formation-chess-arena`**: reproducible schedules, JSONL game
+  records, strict replay verification, metrics, and dataset analysis.
+- **`tui/` — `formation-chess-tui`**: interactive terminal client with standard,
   random-layout, and snapshot-loading modes.
-- **`web/` — `formation-chess-web`**: a local browser client and HTTP server.
-  It serves the frontend from the binary and keeps one in-memory game.
+- **`web/` — `formation-chess-web`**: local Axum server and embedded browser UI
+  with independent Human or Min AI control for Red and Black.
 - **`docs/`**: the source rulebook and notation specification.
-- **`core/tests/`**: data-driven and API-level tests for the engine.
 
-The clients are local reference interfaces. They do not yet expose the random
-agent as an opponent. This repository does not include network matchmaking, an
-online service, or durable game storage.
+The TUI and Web clients are local reference interfaces. The repository does not
+provide network matchmaking, an online service, authentication, or durable Web
+game storage. Arena datasets are written only when the Arena CLI is given an
+explicit output directory.
 
 ## Quick start
 
@@ -67,11 +75,17 @@ Run the browser client:
 cargo run -p formation-chess-web
 ```
 
-The Web server binds to loopback, chooses an available port when none is
-given, and attempts to open the browser. To request a port explicitly:
+The Web server binds to `127.0.0.1`, chooses an available port when none is
+provided, and attempts to open the default browser. To request a port:
 
 ```sh
 cargo run -p formation-chess-web -- 4000
+```
+
+Inspect the Arena command line:
+
+```sh
+cargo run -p formation-chess-arena -- --help
 ```
 
 The core crate also ships two executable examples:
@@ -81,13 +95,13 @@ cargo run -p formation-chess-core --example readme
 cargo run -p formation-chess-core --example readme_custom
 ```
 
-The first starts a standard game and plays two placement actions. The second
-loads and validates a custom text snapshot.
+The first starts a standard game and plays two placements. The second loads and
+validates a custom text snapshot.
 
-## A minimal engine session
+## Minimal engine session
 
-The engine accepts notation only after it has been resolved against the
-current board and phase:
+Notation is resolved against the current game because phase, board identity,
+relative movement, pass, and targeted resignation all depend on that snapshot.
 
 ```rust
 use formation_chess_core::game::{Game, GameConfig};
@@ -108,16 +122,26 @@ fn main() -> Result<(), String> {
 }
 ```
 
-For the public API, snapshot validation, and the text protocol, start with
+For public API boundaries, reversible reactions, and custom snapshots, see
 [`core/README.md`](core/README.md).
 
 ## Custom boards
 
-`GameConfig` and the snapshot protocol can describe rectangular boards up to
-16×16 and positions that do not arise from a standard game. The engine still
-validates colors, vital-piece counts, placement halves, pool alternation, and
-the declared result. The [notation document](docs/notation.md) describes the
-accepted snapshot format and its limits.
+`GameConfig` and the snapshot protocol support rectangular boards up to 16×16
+and internally consistent positions that need not be reachable from the standard
+opening. Validation still checks pool ownership, placement halves, alternating
+pool sizes, Vital-piece counts, and the declared result. See
+[Text notation](docs/notation.md) for the accepted format.
+
+## Development checks
+
+The repository's full validation commands are:
+
+```sh
+cargo +nightly fmt --all -- --check
+cargo +nightly test --workspace
+cargo +nightly clippy --workspace --all-targets --all-features -- -D warnings
+```
 
 ## License
 

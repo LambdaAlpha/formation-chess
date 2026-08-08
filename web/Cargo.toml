@@ -2,7 +2,7 @@
 name = "formation-chess-web"
 version = "0.2.0"
 edition = "2024"
-description = "Rules engine and text notation for Formation Chess (阵棋), a strategy board game where piece formations reshape nearby abilities"
+description = "Local browser interface and HTTP server for Formation Chess (阵棋)"
 repository = "https://github.com/LambdaAlpha/formation-chess"
 license = "MIT OR Apache-2.0"
 keywords = ["board-game", "abstract-game", "chess", "xiangqi", "strategy"]
