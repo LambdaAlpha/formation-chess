@@ -73,69 +73,69 @@ impl Ability {
     pub const PUSHED_BY_ENEMY: Ability = Ability(1 << 5);
     /// Pulling an ally requires mover PULL_ALLY **or** target
     /// PULLED_BY_ALLY; either side's consent suffices.
-    pub const PULL_ALLY: Ability = Ability(1 << 22);
+    pub const PULL_ALLY: Ability = Ability(1 << 6);
     /// Pulling an enemy requires mover PULL_ENEMY **and** target
     /// PULLED_BY_ENEMY; both must agree.
-    pub const PULL_ENEMY: Ability = Ability(1 << 23);
+    pub const PULL_ENEMY: Ability = Ability(1 << 7);
     /// Can be pulled by an ally; see [`Self::PULL_ALLY`].
-    pub const PULLED_BY_ALLY: Ability = Ability(1 << 24);
+    pub const PULLED_BY_ALLY: Ability = Ability(1 << 8);
     /// Can be pulled by an enemy; see [`Self::PULL_ENEMY`].
-    pub const PULLED_BY_ENEMY: Ability = Ability(1 << 25);
+    pub const PULLED_BY_ENEMY: Ability = Ability(1 << 9);
     /// Push escalation (active): when this piece pushes and the push is
     /// blocked (target cannot land), the push becomes a capture —
     /// destroying the target regardless of its abilities or color.
-    pub const CAPTURE_ON_PUSH_BLOCKED: Ability = Ability(1 << 6);
+    pub const CAPTURE_ON_PUSH_BLOCKED: Ability = Ability(1 << 10);
     /// Push escalation (passive): when this piece is pushed and the push
     /// is blocked, the pusher captures it. See
     /// [`Self::CAPTURE_ON_PUSH_BLOCKED`].
-    pub const CAPTURED_ON_PUSH_BLOCKED: Ability = Ability(1 << 7);
+    pub const CAPTURED_ON_PUSH_BLOCKED: Ability = Ability(1 << 11);
     /// Capture demotion (active): when this piece captures without blockers
     /// on the path, the capture becomes a push — shoving the target one
     /// step farther instead of capturing it.
-    pub const PUSH_ON_CAPTURE_UNBLOCKED: Ability = Ability(1 << 8);
+    pub const PUSH_ON_CAPTURE_UNBLOCKED: Ability = Ability(1 << 12);
     /// Capture demotion (passive): when this piece would be captured
     /// without blockers on the path, it is pushed instead. See
     /// [`Self::PUSH_ON_CAPTURE_UNBLOCKED`].
-    pub const PUSHED_ON_CAPTURE_UNBLOCKED: Ability = Ability(1 << 9);
+    pub const PUSHED_ON_CAPTURE_UNBLOCKED: Ability = Ability(1 << 13);
     /// Normal capture: move onto an enemy-occupied point and remove that
     /// piece. Requires attacker CAPTURE and target CAPTURED, and every
     /// piece on the path must not block the move. Also succeeds when
     /// the attacker has CAPTURED_ON_CAPTURE (sacrifice, ignores target's
     /// CAPTURED) or the target has CAPTURE_ON_CAPTURED (retaliation,
     /// ignores attacker's CAPTURE).
-    pub const CAPTURE: Ability = Ability(1 << 10);
+    pub const CAPTURE: Ability = Ability(1 << 14);
     /// Required for normal capture. Escalated pushes and retaliation
     /// (CAPTURE_ON_CAPTURED) bypass this bit — a blocked push destroys
     /// the target regardless of CAPTURED, and a piece with
     /// CAPTURE_ON_CAPTURED is capturable even without CAPTURED.
-    pub const CAPTURED: Ability = Ability(1 << 11);
+    pub const CAPTURED: Ability = Ability(1 << 15);
     /// Retaliation: when this piece is captured, the capturer is
     /// destroyed as well. Also makes this piece capturable even by
     /// pieces without CAPTURE — the capturer's CAPTURE requirement is
     /// bypassed.
-    pub const CAPTURE_ON_CAPTURED: Ability = Ability(1 << 12);
+    pub const CAPTURE_ON_CAPTURED: Ability = Ability(1 << 16);
     /// Sacrifice: when this piece captures another, it dies as well.
     /// Also allows capturing targets even without CAPTURED — the
     /// target's CAPTURED requirement is bypassed.
-    pub const CAPTURED_ON_CAPTURE: Ability = Ability(1 << 13);
+    pub const CAPTURED_ON_CAPTURE: Ability = Ability(1 << 17);
     /// Slide any number of steps along one allowed direction instead of a
     /// single step. For L-shaped moves this chains knight moves along the
     /// same line: (0,0) → (1,2) → (2,4) → (3,6).
-    pub const ANY_DISTANCE: Ability = Ability(1 << 15);
+    pub const ANY_DISTANCE: Ability = Ability(1 << 18);
     /// Move in cross (horizontal/vertical) directions.
-    pub const DIRECTION_CROSS: Ability = Ability(1 << 16);
+    pub const DIRECTION_CROSS: Ability = Ability(1 << 19);
     /// Move in diagonal directions.
-    pub const DIRECTION_DIAGONAL: Ability = Ability(1 << 17);
+    pub const DIRECTION_DIAGONAL: Ability = Ability(1 << 20);
     /// Move in L-shape (knight, 日) directions.
-    pub const DIRECTION_SHAPE_L: Ability = Ability(1 << 18);
+    pub const DIRECTION_SHAPE_L: Ability = Ability(1 << 21);
     /// A side with no vital piece left (on the board or in its pool)
     /// loses; when both sides lose theirs in the same action, the game is
     /// a draw.
-    pub const VITAL: Ability = Ability(1 << 20);
+    pub const VITAL: Ability = Ability(1 << 22);
     /// Can exchange positions with an opponent's vital piece to end the
     /// game in a draw (the `Draw` action). Granted to allies by the General's
     /// formation.
-    pub const DRAW: Ability = Ability(1 << 21);
+    pub const DRAW: Ability = Ability(1 << 23);
 
     /// Whether **any** of the bits in `ability` is set. For single-bit
     /// queries this is a plain membership test; multi-bit queries are
