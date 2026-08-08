@@ -14,6 +14,7 @@ import { postLegalActions, getRules } from './api.js';
 
 let gameState = null;
 let selection = { type: null };
+let resignableAt = null;
 let onCommand = null;
 let busy = false;
 let analysisBusy = false;
@@ -53,7 +54,7 @@ function bindToolbar() {
         submitAction({ type: 'pass' });
     });
     document.getElementById('btn-resign').addEventListener('click', () => {
-        submitAction({ type: 'resign', at: [0, 0] });
+        submitAction({ type: 'resign', at: resignableAt || [0, 0] });
     });
 }
 
@@ -227,6 +228,7 @@ function refreshInteractivity() {
     const movement = phase() === 'movement';
     const human = canHumanAct();
     const canStep = unfinished && gameState.can_agent_step;
+    const canResign = placement || Boolean(resignableAt);
 
     document.getElementById('btn-new').disabled = busy;
     document.getElementById('btn-custom').disabled = busy;
@@ -235,8 +237,8 @@ function refreshInteractivity() {
     document.getElementById('btn-agent-step').disabled = busy || !canStep;
     document.getElementById('btn-pass').classList.toggle('hidden', !movement || !unfinished);
     document.getElementById('btn-pass').disabled = !human;
-    document.getElementById('btn-resign').classList.toggle('hidden', !placement || !unfinished);
-    document.getElementById('btn-resign').disabled = !human;
+    document.getElementById('btn-resign').classList.toggle('hidden', !unfinished);
+    document.getElementById('btn-resign').disabled = !human || !canResign;
     document.getElementById('btn-undo').disabled = busy || !gameState.can_undo;
     document.getElementById('board-wrap').classList.toggle('interaction-locked', !human);
     document.getElementById('sidebar').classList.toggle('interaction-locked', !human);
@@ -274,11 +276,13 @@ function clearStatus() {
 
 function clearInteraction() {
     selection = { type: null };
+    resignableAt = null;
     clearHints();
     clearBoardSelection();
     clearPlayedAction();
     hidePopup();
     clearPoolSelection();
+    refreshInteractivity();
 }
 
 function clearPoolSelection() {
@@ -289,11 +293,13 @@ function clearPoolSelection() {
 
 function clearManualSelectionForPreview() {
     selection = { type: null };
+    resignableAt = null;
     clearHints();
     clearBoardSelection();
     clearPlayedAction();
     hidePopup();
     clearPoolSelection();
+    refreshInteractivity();
 }
 
 async function handleBoardClick(x, y) {
@@ -340,10 +346,10 @@ async function handleBoardClick(x, y) {
             });
             if (!gameState || response.revision !== gameState.revision) return;
             showMoveHints(response.actions);
-            const menuActions = response.actions.filter((action) => !action.to);
-            if (menuActions.length > 0) {
-                showPopup(x, y, menuActions.map((action) => action.type));
-            }
+            resignableAt = response.actions.some((action) => action.type === 'resign')
+                ? [x, y]
+                : null;
+            refreshInteractivity();
             if (response.actions.length === 0) {
                 setStatus('该棋子无可行动作', true);
             }
@@ -364,10 +370,6 @@ function isOwnHalf(y, player) {
 }
 
 function executeHintAction(actionType, x, y) {
-    if (actionType === 'resign') {
-        submitAction({ type: 'resign', at: [x, y] });
-        return;
-    }
     submitAction({ type: actionType, from: selectedBoardPosition(), to: [x, y] });
 }
 
@@ -423,7 +425,6 @@ function actionOption(type) {
         case 'capture': return { label: '捉子', className: 'capture-opt' };
         case 'push': return { label: '推子', className: 'push-opt' };
         case 'pull': return { label: '拉子', className: 'pull-opt' };
-        case 'resign': return { label: '认负', className: 'resign-opt' };
         default: return { label: type, className: '' };
     }
 }
