@@ -12,8 +12,10 @@ use formation_chess_agent::legal_movement_actions;
 use formation_chess_agent::placement_area;
 use formation_chess_agent::play_agent_turn;
 use formation_chess_agent::prepare_turn;
+use formation_chess_core::ability::Ability;
 use formation_chess_core::action::Action;
 use formation_chess_core::action::GameResult;
+use formation_chess_core::action::Move;
 use formation_chess_core::action::Place;
 use formation_chess_core::board::Board;
 use formation_chess_core::game::Game;
@@ -98,8 +100,6 @@ fn placement_game(width: u8, height: u8) -> Game {
         board: Board::new(width, height),
         red_pool: vec![Piece::RED_GENERAL],
         black_pool: vec![Piece::BLACK_GENERAL],
-        white: Piece::WHITE,
-        white_pool: 0,
         result: GameResult::Unfinished,
     })
     .expect("valid placement game")
@@ -114,8 +114,6 @@ fn movement_game() -> Game {
         board,
         red_pool: Vec::new(),
         black_pool: Vec::new(),
-        white: Piece::WHITE,
-        white_pool: 0,
         result: GameResult::Unfinished,
     })
     .expect("valid movement game")
@@ -165,28 +163,79 @@ fn odd_height_placement_area_excludes_middle_row() {
 #[test]
 fn board_iterator_yields_positions_for_duplicate_pieces() {
     let mut board = Board::new(3, 3);
-    board[(2, 0)] = Some(Piece::WHITE);
-    board[(0, 2)] = Some(Piece::WHITE);
+    board[(2, 0)] = Some(Piece::RED_PAWN);
+    board[(0, 2)] = Some(Piece::RED_PAWN);
 
     assert_eq!(board.iter().collect::<Vec<_>>(), vec![
-        ((2, 0), Piece::WHITE),
-        ((0, 2), Piece::WHITE)
+        ((2, 0), Piece::RED_PAWN),
+        ((0, 2), Piece::RED_PAWN)
     ]);
 }
 
 #[test]
-fn movement_actions_include_pass_but_not_place_or_resign() {
+fn movement_actions_include_controlled_vital_resign_and_pass() {
     let game = movement_game();
     let actions = collected_movement_actions(&game);
 
+    assert!(actions.contains(&Action::Resign(0, 4)));
+    assert!(!actions.contains(&Action::Resign(4, 0)));
     assert_eq!(actions.last(), Some(&Action::Pass(Player::Red)));
-    assert!(!actions.iter().any(|action| matches!(action, Action::Place(_) | Action::Resign(_))));
+    assert!(!actions.iter().any(|action| matches!(action, Action::Place(_))));
+}
+
+#[test]
+fn movement_actions_include_controlled_opponent_vital_resign() {
+    let mut black_general = Piece::BLACK_GENERAL;
+    black_general.ability.add(Ability::CONTROLLED_BY_RED);
+    let mut board = Board::new(5, 5);
+    board[(0, 4)] = Some(Piece::RED_GENERAL);
+    board[(4, 0)] = Some(black_general);
+    let game = Game::new(GameConfig {
+        player: Player::Red,
+        board,
+        red_pool: Vec::new(),
+        black_pool: Vec::new(),
+        result: GameResult::Unfinished,
+    })
+    .expect("valid controlled-vital game");
+
+    let actions = collected_movement_actions(&game);
+    let resign = Action::Resign(4, 0);
+
+    assert!(actions.contains(&resign));
+    assert_eq!(
+        game.try_action(resign).expect("controlled opponent resign").game_result,
+        GameResult::RedWin
+    );
+}
+
+#[test]
+fn movement_actions_include_pull() {
+    let mut board = Board::new(5, 5);
+    board[(0, 4)] = Some(Piece::RED_GENERAL);
+    board[(4, 0)] = Some(Piece::BLACK_GENERAL);
+    board[(2, 2)] = Some(Piece::RED_WIND);
+    board[(2, 3)] = Some(Piece::RED_PAWN);
+    let game = Game::new(GameConfig {
+        player: Player::Red,
+        board,
+        red_pool: Vec::new(),
+        black_pool: Vec::new(),
+        result: GameResult::Unfinished,
+    })
+    .expect("valid pull game");
+    let pull = Action::Pull(Move { from: (2, 2), to: (2, 1) });
+
+    let actions = collected_movement_actions(&game);
+
+    assert!(actions.contains(&pull));
+    game.try_action(pull).expect("enumerated pull must be legal");
 }
 
 #[test]
 fn movement_actions_append_to_existing_buffer() {
     let game = movement_game();
-    let prefix = Action::Resign(Player::Black);
+    let prefix = Action::Resign(4, 0);
     let mut actions = vec![prefix];
 
     legal_movement_actions(&game, &mut actions);
@@ -351,10 +400,10 @@ fn analysis_rejects_duplicate_actions() {
 #[test]
 fn analysis_rejects_movement_action_outside_supplied_list() {
     let game = movement_game();
-    let mut agent = TestAgent::new(Vec::new(), vec![scored(Action::Resign(Player::Red), 1.0)]);
+    let mut agent = TestAgent::new(Vec::new(), vec![scored(Action::Resign(2, 2), 1.0)]);
 
     let error = analyze_agent(&game, &mut agent, NonZeroU8::MIN)
-        .expect_err("resign is not a movement candidate");
+        .expect_err("unlisted resign is not a movement candidate");
 
     assert!(matches!(error, AgentError::InvalidAnalysis(_)));
 }
@@ -377,7 +426,7 @@ fn analysis_rejects_invalid_placement() {
 #[test]
 fn analysis_rejects_finished_game_without_calling_agent() {
     let mut game = movement_game();
-    game.action(Action::Resign(Player::Red)).expect("finish game");
+    game.action(Action::Resign(0, 4)).expect("finish game");
     let mut agent = TestAgent::new(
         vec![scored(Action::Place(Place { piece: Piece::BLACK_GENERAL.id(), to: (0, 0) }), 1.0)],
         vec![scored(Action::Pass(Player::Black), 1.0)],

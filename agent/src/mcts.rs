@@ -25,6 +25,7 @@ use crate::AgentError;
 use crate::AgentInput;
 use crate::PlacementArea;
 use crate::ScoredAction;
+use crate::legal_movement_actions;
 use crate::placement_area;
 
 /// Schema version of the serialized MCTS configuration.
@@ -560,8 +561,7 @@ fn legal_actions(game: &Game, actions: &mut Vec<Action>) -> Result<(), AgentErro
             placement_actions(game, area, actions)
         },
         Phase::Move => {
-            game.all_valid_moves(actions);
-            actions.push(Action::Pass(game.player()));
+            legal_movement_actions(game, actions);
             Ok(())
         },
     }

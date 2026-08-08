@@ -42,8 +42,6 @@ fn placement_game() -> Game {
         board: Board::new(2, 2),
         red_pool: vec![Piece::RED_GENERAL, Piece::RED_ROOK],
         black_pool: vec![Piece::BLACK_GENERAL, Piece::BLACK_ROOK],
-        white: Piece::WHITE,
-        white_pool: 0,
         result: GameResult::Unfinished,
     })
     .expect("valid test placement game")

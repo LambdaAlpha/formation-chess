@@ -6,7 +6,6 @@ use formation_chess_core::action::PositionChanges;
 use formation_chess_core::board::Board;
 use formation_chess_core::game::Game;
 use formation_chess_core::game::Phase;
-use formation_chess_core::piece::Color;
 use formation_chess_core::piece::Piece;
 use formation_chess_core::piece::Player;
 
@@ -33,7 +32,6 @@ pub struct MinFeatureVector {
     pub control: i16,
     pub mobility: i16,
     pub action_effects: i16,
-    pub white_resources: i16,
     pub material: i16,
     pub tempo: i16,
     pub interactions: i16,
@@ -49,7 +47,6 @@ impl MinFeatureVector {
             control: -self.control,
             mobility: -self.mobility,
             action_effects: -self.action_effects,
-            white_resources: -self.white_resources,
             material: -self.material,
             tempo: -self.tempo,
             interactions: -self.interactions,
@@ -66,7 +63,6 @@ pub struct MinFeatureContributions {
     pub control: i64,
     pub mobility: i64,
     pub action_effects: i64,
-    pub white_resources: i64,
     pub material: i64,
     pub tempo: i64,
     pub interactions: i64,
@@ -81,7 +77,6 @@ impl MinFeatureContributions {
             + self.control
             + self.mobility
             + self.action_effects
-            + self.white_resources
             + self.material
             + self.tempo
             + self.interactions
@@ -96,7 +91,6 @@ impl MinFeatureContributions {
             control: -self.control,
             mobility: -self.mobility,
             action_effects: -self.action_effects,
-            white_resources: -self.white_resources,
             material: -self.material,
             tempo: -self.tempo,
             interactions: -self.interactions,
@@ -232,7 +226,6 @@ struct SideAnalysis {
     vital_control_units: i64,
     vital_resilience_units: i64,
 
-    controlled_white: i64,
     interaction_units: i64,
     actions: ActionAnalysis,
 }
@@ -243,7 +236,7 @@ struct ActionAnalysis {
     losing_actions: u32,
     capture_actions: u32,
     push_actions: u32,
-    divide_actions: u32,
+    pull_actions: u32,
     positive_exchange_actions: u32,
     safe_movable_pieces: u32,
     safe_reachable_destinations: u32,
@@ -261,7 +254,7 @@ impl Default for ActionAnalysis {
             losing_actions: 0,
             capture_actions: 0,
             push_actions: 0,
-            divide_actions: 0,
+            pull_actions: 0,
             positive_exchange_actions: 0,
             safe_movable_pieces: 0,
             safe_reachable_destinations: 0,
@@ -316,15 +309,7 @@ fn analyze_board(board: &Board, analysis: &mut PositionAnalysis) {
 }
 
 fn analyze_owned_piece(piece: Piece, effective: Piece, analysis: &mut PositionAnalysis) {
-    let owner = match piece.color {
-        Color::Red => Some(Player::Red),
-        Color::Black => Some(Player::Black),
-        Color::White => None,
-    };
-    let Some(owner) = owner else {
-        return;
-    };
-
+    let owner = piece.player;
     let opponent = opponent(owner);
     let side = analysis.side_mut(owner);
     let base_units = ability_units(piece.ability);
@@ -350,10 +335,7 @@ fn analyze_owned_piece(piece: Piece, effective: Piece, analysis: &mut PositionAn
 fn analyze_control(piece: Piece, analysis: &mut PositionAnalysis) {
     for player in [Player::Red, Player::Black] {
         let controlled = piece.can_controlled_by(player);
-        analysis.side_mut(player).control_units += control_units(player, piece.color, controlled);
-        if piece.color == Color::White && controlled {
-            analysis.side_mut(player).controlled_white += 1;
-        }
+        analysis.side_mut(player).control_units += control_units(player, piece.player, controlled);
     }
 }
 
@@ -367,7 +349,7 @@ fn analyze_player_actions(game: &Game, player: Player, analysis: &mut ActionAnal
             continue;
         }
         actions.clear();
-        board.valid_moves(player, position, game.white_pool() > 0, &mut actions);
+        board.valid_moves(player, position, &mut actions);
         analyze_piece_actions(board, player, position, piece, &actions, analysis);
     }
     analysis.safe_movable_pieces = count_true(&analysis.safe_movers);
@@ -380,13 +362,14 @@ fn analyze_piece_actions(
 ) {
     let from_index = board_index(board, position);
     for &action in actions {
-        let move_ = action_move(action).expect("board movement list must contain movement actions");
         let outcome = analyze_action_outcome(board, player, action);
+        record_action_result(outcome.game_result, player, analysis);
+        let Some(move_) = action_move(action) else {
+            continue;
+        };
         let safe = !is_loss(outcome.game_result, player);
         let soft_usable = safe && outcome.game_result != GameResult::Draw;
         let destination_index = board_index(board, move_.to);
-
-        record_action_result(outcome.game_result, player, analysis);
 
         if soft_usable {
             analysis.safe_actions += 1;
@@ -394,7 +377,7 @@ fn analyze_piece_actions(
             analysis.safe_destinations[destination_index] = true;
             record_action_kind(action, analysis);
             record_exchange(outcome.exchange_units, analysis);
-            if piece.color == player.color() && piece.ability.has(Ability::VITAL) {
+            if piece.player == player && piece.ability.has(Ability::VITAL) {
                 analysis.vital_safe_actions += 1;
             }
         }
@@ -405,9 +388,9 @@ fn record_action_kind(action: Action, analysis: &mut ActionAnalysis) {
     match action {
         Action::Capture(_) => analysis.capture_actions += 1,
         Action::Push(_) => analysis.push_actions += 1,
-        Action::Divide(_) => analysis.divide_actions += 1,
+        Action::Pull(_) => analysis.pull_actions += 1,
         Action::Move(_) | Action::Draw(_) => {},
-        Action::Place(_) | Action::Pass(_) | Action::Resign(_) => {
+        Action::Place(_) | Action::Pass(_) | Action::Resign(..) => {
             unreachable!("Board::valid_moves returned a non-movement action")
         },
     }
@@ -442,15 +425,30 @@ fn analyze_action_outcome(board: &Board, player: Player, action: Action) -> Acti
             player,
             board.try_push(move_.from, move_.to).expect("enumerated push must remain valid"),
         ),
+        Action::Pull(move_) => outcome_from_changes(
+            player,
+            board.try_pull(move_.from, move_.to).expect("enumerated pull must remain valid"),
+        ),
         Action::Draw(move_) => {
-            board.try_draw(move_.from, move_.to).expect("enumerated draw must remain valid");
-            ActionOutcome { game_result: GameResult::Draw, exchange_units: 0 }
+            let changes =
+                board.try_draw(move_.from, move_.to).expect("enumerated draw must remain valid");
+            ActionOutcome {
+                game_result: GameResult::Draw,
+                exchange_units: exchange_units(changes.as_slice(), player),
+            }
         },
-        Action::Divide(_) => {
-            ActionOutcome { game_result: GameResult::Unfinished, exchange_units: 0 }
+        Action::Resign(x, y) => {
+            let piece = board
+                .effective((x, y))
+                .expect("enumerated resignation must retain its vital piece");
+            let game_result = match piece.player {
+                Player::Red => GameResult::BlackWin,
+                Player::Black => GameResult::RedWin,
+            };
+            ActionOutcome { game_result, exchange_units: 0 }
         },
-        Action::Place(_) | Action::Pass(_) | Action::Resign(_) => {
-            unreachable!("Board::valid_moves returned a non-movement action")
+        Action::Place(_) | Action::Pass(_) => {
+            unreachable!("Board::valid_moves returned a non-board action")
         },
     }
 }
@@ -464,8 +462,8 @@ fn outcome_from_changes(player: Player, changes: PositionChanges) -> ActionOutco
 }
 
 fn result_after_changes(changes: &[PositionChange]) -> GameResult {
-    let red_alive = vital_survives(changes, Color::Red);
-    let black_alive = vital_survives(changes, Color::Black);
+    let red_alive = vital_survives(changes, Player::Red);
+    let black_alive = vital_survives(changes, Player::Black);
     match (red_alive, black_alive) {
         (false, false) => GameResult::Draw,
         (false, true) => GameResult::BlackWin,
@@ -474,18 +472,18 @@ fn result_after_changes(changes: &[PositionChange]) -> GameResult {
     }
 }
 
-fn vital_survives(changes: &[PositionChange], color: Color) -> bool {
+fn vital_survives(changes: &[PositionChange], player: Player) -> bool {
     let mut removed = false;
     let mut added = false;
     for change in changes {
         if let Some(old) = change.old
-            && old.color == color
+            && old.player == player
             && old.ability.has(Ability::VITAL)
         {
             removed = true;
         }
         if let Some(new) = change.new
-            && new.color == color
+            && new.player == player
             && new.ability.has(Ability::VITAL)
         {
             added = true;
@@ -507,11 +505,11 @@ fn exchange_units(changes: &[PositionChange], player: Player) -> i64 {
 }
 
 fn exchange_piece_units(piece: Piece, player: Player) -> i32 {
-    if piece.color == Color::White || piece.ability.has(Ability::VITAL) {
+    if piece.ability.has(Ability::VITAL) {
         return 0;
     }
     let magnitude = (32 + ability_units(piece.ability)).max(8);
-    if piece.color == player.color() { magnitude } else { -magnitude }
+    if piece.player == player { magnitude } else { -magnitude }
 }
 
 fn analyze_interactions(game: &Game, analysis: &mut PositionAnalysis) {
@@ -543,7 +541,7 @@ fn analyze_piece_interaction(
     effective: Piece, formation_delta: i32, side: &mut SideAnalysis,
 ) {
     if !effective.can_controlled_by(player) {
-        if piece.color == player.color() && formation_delta > 0 {
+        if piece.player == player && formation_delta > 0 {
             side.interaction_units -= i64::from(formation_delta);
         }
         return;
@@ -557,7 +555,7 @@ fn analyze_piece_interaction(
     };
     side.interaction_units += i64::from(active_power_units(effective.ability) * mobility_factor);
 
-    if piece.color != player.color() {
+    if piece.player != player {
         return;
     }
     if formation_delta > 0 {
@@ -588,10 +586,6 @@ fn red_feature_vector(game: &Game, analysis: &PositionAnalysis) -> MinFeatureVec
         action_effects: normalized_feature(
             action_effect_units(red) - action_effect_units(black),
             128,
-        ),
-        white_resources: normalized_feature(
-            white_resource_units(red) - white_resource_units(black),
-            32,
         ),
         material: normalized_feature(red.material_units - black.material_units, 4),
         tempo: match game.player() {
@@ -625,11 +619,7 @@ fn action_effect_units(side: &SideAnalysis) -> i64 {
         + i64::from(side.actions.positive_exchange_actions) * 6
         + i64::from(side.actions.capture_actions) * 2
         + i64::from(side.actions.push_actions)
-        + i64::from(side.actions.divide_actions) * 2
-}
-
-fn white_resource_units(side: &SideAnalysis) -> i64 {
-    side.controlled_white * 16 + i64::from(side.actions.divide_actions) * 2
+        + i64::from(side.actions.pull_actions)
 }
 
 fn weighted_contributions(
@@ -645,7 +635,6 @@ fn weighted_contributions(
         control: weighted_feature(features.control, weights.control),
         mobility: weighted_feature(features.mobility, weights.mobility),
         action_effects: weighted_feature(features.action_effects, weights.action_effects),
-        white_resources: weighted_feature(features.white_resources, weights.white_resources),
         material: weighted_feature(features.material, weights.material),
         tempo: weighted_feature(features.tempo, weights.tempo),
         interactions: weighted_feature(features.interactions, weights.interactions),
@@ -697,6 +686,10 @@ fn ability_units(ability: Ability) -> i32 {
         + ability_weight(ability, Ability::PUSH_ENEMY, 4)
         + ability_weight(ability, Ability::PUSHED_BY_ALLY, 1)
         + ability_weight(ability, Ability::PUSHED_BY_ENEMY, -3)
+        + ability_weight(ability, Ability::PULL_ALLY, 1)
+        + ability_weight(ability, Ability::PULL_ENEMY, 4)
+        + ability_weight(ability, Ability::PULLED_BY_ALLY, 1)
+        + ability_weight(ability, Ability::PULLED_BY_ENEMY, -3)
         + ability_weight(ability, Ability::CAPTURE_ON_PUSH_BLOCKED, 4)
         + ability_weight(ability, Ability::CAPTURED_ON_PUSH_BLOCKED, -4)
         + ability_weight(ability, Ability::PUSH_ON_CAPTURE_UNBLOCKED, -1)
@@ -709,12 +702,13 @@ fn ability_units(ability: Ability) -> i32 {
         + ability_weight(ability, Ability::DIRECTION_CROSS, 2)
         + ability_weight(ability, Ability::DIRECTION_DIAGONAL, 2)
         + ability_weight(ability, Ability::DIRECTION_SHAPE_L, 3)
-        + ability_weight(ability, Ability::DIVIDE, 4)
 }
 
 fn active_power_units(ability: Ability) -> i32 {
     ability_weight(ability, Ability::PUSH_ALLY, 1)
         + ability_weight(ability, Ability::PUSH_ENEMY, 4)
+        + ability_weight(ability, Ability::PULL_ALLY, 1)
+        + ability_weight(ability, Ability::PULL_ENEMY, 4)
         + ability_weight(ability, Ability::CAPTURE_ON_PUSH_BLOCKED, 4)
         + ability_weight(ability, Ability::CAPTURE, 5)
         + ability_weight(ability, Ability::CAPTURED_ON_CAPTURE, 1)
@@ -722,11 +716,11 @@ fn active_power_units(ability: Ability) -> i32 {
         + ability_weight(ability, Ability::DIRECTION_CROSS, 2)
         + ability_weight(ability, Ability::DIRECTION_DIAGONAL, 2)
         + ability_weight(ability, Ability::DIRECTION_SHAPE_L, 3)
-        + ability_weight(ability, Ability::DIVIDE, 4)
 }
 
 fn resilience_units(ability: Ability) -> i32 {
     ability_weight(ability, Ability::PUSHED_BY_ENEMY, -4)
+        + ability_weight(ability, Ability::PULLED_BY_ENEMY, -4)
         + ability_weight(ability, Ability::CAPTURED_ON_PUSH_BLOCKED, -5)
         + ability_weight(ability, Ability::PUSHED_ON_CAPTURE_UNBLOCKED, 4)
         + if ability.has(Ability::CAPTURED) { -6 } else { 6 }
@@ -737,15 +731,14 @@ fn ability_weight(abilities: Ability, ability: Ability, weight: i32) -> i32 {
     if abilities.has(ability) { weight } else { 0 }
 }
 
-fn control_units(player: Player, color: Color, controlled: bool) -> i64 {
+fn control_units(player: Player, owner: Player, controlled: bool) -> i64 {
     if controlled {
-        return match color {
-            Color::White => 3,
-            color if color == player.color() => 4,
-            Color::Red | Color::Black => 5,
-        };
+        if owner == player {
+            return 4;
+        }
+        return 5;
     }
-    if color == player.color() { -3 } else { 0 }
+    if owner == player { -3 } else { 0 }
 }
 
 fn action_move(action: Action) -> Option<formation_chess_core::action::Move> {
@@ -753,9 +746,9 @@ fn action_move(action: Action) -> Option<formation_chess_core::action::Move> {
         Action::Move(move_)
         | Action::Capture(move_)
         | Action::Push(move_)
-        | Action::Draw(move_)
-        | Action::Divide(move_) => Some(move_),
-        Action::Place(_) | Action::Pass(_) | Action::Resign(_) => None,
+        | Action::Pull(move_)
+        | Action::Draw(move_) => Some(move_),
+        Action::Place(_) | Action::Pass(_) | Action::Resign(..) => None,
     }
 }
 
@@ -792,10 +785,16 @@ fn count_true(values: &[bool; BOARD_POINT_CAPACITY]) -> u32 {
 mod tests {
     use formation_chess_core::action::Action;
     use formation_chess_core::action::GameResult;
+    use formation_chess_core::action::Move;
     use formation_chess_core::game::Game;
 
+    use super::ActionAnalysis;
     use super::MinFeatureVector;
+    use super::SideAnalysis;
+    use super::action_effect_units;
     use super::analyze_action_outcome;
+    use super::exchange_units;
+    use super::record_action_kind;
     use super::weighted_contributions;
     use crate::ActionSelector;
     use crate::MinFeatureWeights;
@@ -812,10 +811,9 @@ mod tests {
             control: 4,
             mobility: 5,
             action_effects: 6,
-            white_resources: 7,
-            material: 8,
-            tempo: 9,
-            interactions: 10,
+            material: 7,
+            tempo: 8,
+            interactions: 9,
         };
         let weights = MinFeatureWeights {
             vital_safety: 11,
@@ -824,10 +822,9 @@ mod tests {
             control: 14,
             mobility: 15,
             action_effects: 16,
-            white_resources: 17,
-            material: 18,
-            tempo: 19,
-            interactions: 20,
+            material: 17,
+            tempo: 18,
+            interactions: 19,
         };
         let contributions = weighted_contributions(features, weights);
 
@@ -837,10 +834,21 @@ mod tests {
         assert_eq!(contributions.control, 56);
         assert_eq!(contributions.mobility, 75);
         assert_eq!(contributions.action_effects, 96);
-        assert_eq!(contributions.white_resources, 119);
-        assert_eq!(contributions.material, 144);
-        assert_eq!(contributions.tempo, 171);
-        assert_eq!(contributions.interactions, 200);
+        assert_eq!(contributions.material, 119);
+        assert_eq!(contributions.tempo, 144);
+        assert_eq!(contributions.interactions, 171);
+    }
+
+    #[test]
+    fn pull_actions_contribute_to_action_effects() {
+        let mut analysis = ActionAnalysis::default();
+        let pull = Action::Pull(Move { from: (1, 1), to: (1, 0) });
+
+        record_action_kind(pull, &mut analysis);
+
+        let side = SideAnalysis { actions: analysis, ..SideAnalysis::default() };
+        assert_eq!(side.actions.pull_actions, 1);
+        assert_eq!(action_effect_units(&side), 1);
     }
 
     #[test]
@@ -866,6 +874,11 @@ mod tests {
                 assert_eq!(
                     predicted.game_result, expected.game_result,
                     "predicted result differs for {action:?}"
+                );
+                assert_eq!(
+                    predicted.exchange_units,
+                    exchange_units(expected.changes.as_slice(), game.player()),
+                    "predicted exchange differs for {action:?}"
                 );
             }
             if game.result() != GameResult::Unfinished {

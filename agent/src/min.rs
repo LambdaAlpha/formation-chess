@@ -106,7 +106,6 @@ pub struct MinFeatureWeights {
     pub control: u16,
     pub mobility: u16,
     pub action_effects: u16,
-    pub white_resources: u16,
     pub material: u16,
     pub tempo: u16,
     pub interactions: u16,
@@ -121,7 +120,6 @@ impl MinFeatureWeights {
             + u32::from(self.control)
             + u32::from(self.mobility)
             + u32::from(self.action_effects)
-            + u32::from(self.white_resources)
             + u32::from(self.material)
             + u32::from(self.tempo)
             + u32::from(self.interactions)
@@ -160,8 +158,7 @@ impl MinConfig {
                     formation_effects: 240,
                     control: 140,
                     mobility: 60,
-                    action_effects: 40,
-                    white_resources: 20,
+                    action_effects: 60,
                     material: 20,
                     tempo: 20,
                     interactions: 160,
@@ -172,8 +169,7 @@ impl MinConfig {
                     formation_effects: 120,
                     control: 120,
                     mobility: 80,
-                    action_effects: 220,
-                    white_resources: 40,
+                    action_effects: 260,
                     material: 40,
                     tempo: 40,
                     interactions: 180,
@@ -256,7 +252,6 @@ impl MinConfig {
                 "evaluation.placement_weights.control={}\n",
                 "evaluation.placement_weights.mobility={}\n",
                 "evaluation.placement_weights.action_effects={}\n",
-                "evaluation.placement_weights.white_resources={}\n",
                 "evaluation.placement_weights.material={}\n",
                 "evaluation.placement_weights.tempo={}\n",
                 "evaluation.placement_weights.interactions={}\n",
@@ -266,7 +261,6 @@ impl MinConfig {
                 "evaluation.movement_weights.control={}\n",
                 "evaluation.movement_weights.mobility={}\n",
                 "evaluation.movement_weights.action_effects={}\n",
-                "evaluation.movement_weights.white_resources={}\n",
                 "evaluation.movement_weights.material={}\n",
                 "evaluation.movement_weights.tempo={}\n",
                 "evaluation.movement_weights.interactions={}\n",
@@ -292,7 +286,6 @@ impl MinConfig {
             self.evaluation.placement_weights.control,
             self.evaluation.placement_weights.mobility,
             self.evaluation.placement_weights.action_effects,
-            self.evaluation.placement_weights.white_resources,
             self.evaluation.placement_weights.material,
             self.evaluation.placement_weights.tempo,
             self.evaluation.placement_weights.interactions,
@@ -302,7 +295,6 @@ impl MinConfig {
             self.evaluation.movement_weights.control,
             self.evaluation.movement_weights.mobility,
             self.evaluation.movement_weights.action_effects,
-            self.evaluation.movement_weights.white_resources,
             self.evaluation.movement_weights.material,
             self.evaluation.movement_weights.tempo,
             self.evaluation.movement_weights.interactions,

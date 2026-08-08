@@ -638,11 +638,10 @@ impl Board {
 
     /// Append all legal actions for the piece at `from` to `actions`. The piece
     /// must be present on the board. Actions are [`Action::Move`], [`Action::Pull`],
-    /// [`Action::Capture`], [`Action::Push`], and [`Action::Draw`]; placement,
-    /// pass, and resign are the caller's concern.
+    /// [`Action::Capture`], [`Action::Push`], [`Action::Draw`], and
+    /// [`Action::Resign`]; placement and pass are the caller's concern.
     ///
-    /// `player` filters draw actions to own DRAW pieces targeting the
-    /// opponent's vital pieces.
+    /// `player` filters draw and resign actions by ownership and control.
     pub fn valid_moves(&self, player: Player, from: (u8, u8), actions: &mut Vec<Action>) {
         let Some(piece) = self.effective(from) else {
             return;
@@ -668,6 +667,9 @@ impl Board {
             {
                 self.enumerate_line(player, piece, from, dx, dy, max, actions);
             }
+        }
+        if piece.ability.has(Ability::VITAL) && piece.can_controlled_by(player) {
+            actions.push(Action::Resign(from.0, from.1));
         }
     }
 

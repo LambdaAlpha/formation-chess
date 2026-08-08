@@ -37,8 +37,6 @@ fn movement_game() -> Game {
         board,
         red_pool: Vec::new(),
         black_pool: Vec::new(),
-        white: Piece::WHITE,
-        white_pool: 0,
         result: GameResult::Unfinished,
     })
     .expect("valid movement game")
@@ -54,8 +52,6 @@ fn constrained_placement_game(area_is_full: bool) -> Game {
         board,
         red_pool: vec![Piece::RED_GENERAL],
         black_pool: vec![Piece::BLACK_GENERAL],
-        white: Piece::WHITE,
-        white_pool: 0,
         result: GameResult::Unfinished,
     })
     .expect("valid constrained placement game")

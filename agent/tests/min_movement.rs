@@ -51,8 +51,6 @@ fn movement_game_on(width: u8, height: u8, player: Player, pieces: &[((u8, u8), 
         board,
         red_pool: Vec::new(),
         black_pool: Vec::new(),
-        white: Piece::WHITE,
-        white_pool: 0,
         result: GameResult::Unfinished,
     })
     .expect("valid movement game")
@@ -161,13 +159,13 @@ fn two_ply_movement_matches_exhaustive_minimax_with_full_budget() {
 #[test]
 fn opponent_reply_turns_an_exposed_general_into_an_exact_loss() {
     let game = movement_game(Player::Red, &[
-        ((0, 4), Piece::RED_GENERAL),
+        ((2, 4), Piece::RED_GENERAL),
         ((4, 4), Piece::RED_ROOK),
         ((4, 0), Piece::BLACK_GENERAL),
         ((0, 0), Piece::BLACK_ROOK),
     ]);
     let legal_actions = collected_movement_actions(&game);
-    let exposed = Action::Move(Move { from: (0, 4), to: (0, 2) });
+    let exposed = Action::Move(Move { from: (2, 4), to: (0, 2) });
 
     assert!(legal_actions.contains(&exposed));
 
@@ -207,12 +205,12 @@ fn movement_search_is_deterministic_and_scans_all_roots_with_a_tiny_budget() {
 fn exact_win_outranks_exact_draw() {
     let game = movement_game(Player::Red, &[
         ((0, 4), Piece::RED_GENERAL),
-        ((4, 0), Piece::RED_ROOK),
-        ((0, 0), Piece::BLACK_GENERAL),
+        ((0, 0), Piece::RED_ROOK),
+        ((4, 0), Piece::BLACK_GENERAL),
     ]);
     let legal_actions = collected_movement_actions(&game);
-    let win = Action::Capture(Move { from: (4, 0), to: (0, 0) });
-    let draw = Action::Draw(Move { from: (0, 4), to: (0, 0) });
+    let win = Action::Capture(Move { from: (0, 0), to: (4, 0) });
+    let draw = Action::Draw(Move { from: (0, 4), to: (4, 0) });
 
     assert!(legal_actions.contains(&win));
     assert!(legal_actions.contains(&draw));
@@ -231,10 +229,10 @@ fn favorable_position_avoids_an_available_draw() {
     let game = movement_game(Player::Red, &[
         ((0, 4), Piece::RED_GENERAL),
         ((4, 4), Piece::RED_ROOK),
-        ((0, 0), Piece::BLACK_GENERAL),
+        ((4, 0), Piece::BLACK_GENERAL),
     ]);
     let legal_actions = collected_movement_actions(&game);
-    let draw = Action::Draw(Move { from: (0, 4), to: (0, 0) });
+    let draw = Action::Draw(Move { from: (0, 4), to: (4, 0) });
     let candidates = analyze(&game, MinConfig::best(), &legal_actions);
     let (_, draw_candidate) = candidate(&candidates, draw);
 
@@ -247,11 +245,11 @@ fn favorable_position_avoids_an_available_draw() {
 fn unfavorable_position_takes_an_available_draw() {
     let game = movement_game(Player::Red, &[
         ((0, 4), Piece::RED_GENERAL),
-        ((0, 0), Piece::BLACK_GENERAL),
-        ((4, 0), Piece::BLACK_ROOK),
+        ((4, 0), Piece::BLACK_GENERAL),
+        ((0, 0), Piece::BLACK_ROOK),
     ]);
     let legal_actions = collected_movement_actions(&game);
-    let draw = Action::Draw(Move { from: (0, 4), to: (0, 0) });
+    let draw = Action::Draw(Move { from: (0, 4), to: (4, 0) });
     let candidates = analyze(&game, MinConfig::best(), &legal_actions);
 
     assert_eq!(candidates[0], ScoredAction { action: draw, score: 0.0 });
@@ -264,11 +262,11 @@ fn immediate_loss_receives_exact_negative_score() {
     red_general.ability.add(Ability::CAPTURED_ON_CAPTURE);
     let game = movement_game(Player::Red, &[
         ((0, 4), red_general),
-        ((0, 2), Piece::BLACK_ROOK),
+        ((2, 2), Piece::BLACK_ROOK),
         ((4, 0), Piece::BLACK_GENERAL),
     ]);
     let legal_actions = collected_movement_actions(&game);
-    let loss = Action::Capture(Move { from: (0, 4), to: (0, 2) });
+    let loss = Action::Capture(Move { from: (0, 4), to: (2, 2) });
 
     assert!(legal_actions.contains(&loss));
 
@@ -277,4 +275,29 @@ fn immediate_loss_receives_exact_negative_score() {
 
     assert_eq!(loss_candidate.score, -1.0);
     assert_ne!(candidates[0].action, loss);
+}
+
+#[test]
+fn controlled_vital_resignations_receive_exact_terminal_scores() {
+    let mut controlled_black_general = Piece::BLACK_GENERAL;
+    controlled_black_general.ability.add(Ability::CONTROLLED_BY_RED);
+    let game = movement_game(Player::Red, &[
+        ((0, 4), Piece::RED_GENERAL),
+        ((4, 1), controlled_black_general),
+    ]);
+    let legal_actions = collected_movement_actions(&game);
+    let winning_resign = Action::Resign(4, 1);
+    let losing_resign = Action::Resign(0, 4);
+
+    assert!(legal_actions.contains(&winning_resign));
+    assert!(legal_actions.contains(&losing_resign));
+
+    let candidates = analyze(&game, MinConfig::best(), &legal_actions);
+    let (_, winning_candidate) = candidate(&candidates, winning_resign);
+    let (_, losing_candidate) = candidate(&candidates, losing_resign);
+
+    assert_eq!(winning_candidate.score, 1.0);
+    assert_eq!(losing_candidate.score, -1.0);
+    assert_eq!(candidates.first(), Some(&winning_candidate));
+    assert_eq!(candidates.last(), Some(&losing_candidate));
 }

@@ -16,6 +16,30 @@ use support::api::assert_pushes;
 use support::api::game_one;
 use support::api::game_with;
 
+#[test]
+fn board_valid_moves_appends_resign_for_controlled_vital() {
+    let mut controlled_black_general = Piece::BLACK_GENERAL;
+    controlled_black_general.ability.add(Ability::CONTROLLED_BY_RED);
+    let mut board = Board::new(5, 5);
+    board[(2, 2)] = Some(controlled_black_general);
+    let mut actions = Vec::new();
+
+    board.valid_moves(Player::Red, (2, 2), &mut actions);
+
+    assert_eq!(actions.last(), Some(&Action::Resign(2, 2)));
+}
+
+#[test]
+fn board_valid_moves_omits_resign_for_uncontrolled_vital() {
+    let mut board = Board::new(5, 5);
+    board[(2, 2)] = Some(Piece::BLACK_GENERAL);
+    let mut actions = Vec::new();
+
+    board.valid_moves(Player::Red, (2, 2), &mut actions);
+
+    assert!(!actions.iter().any(|action| matches!(action, Action::Resign(..))));
+}
+
 // -- all_valid_moves ---------------------------------------------------------
 
 #[test]
