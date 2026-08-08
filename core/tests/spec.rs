@@ -44,6 +44,6 @@ fn draw_spec() {
 }
 
 #[test]
-fn neutral_action_spec() {
-    support::spec::run_tests(include_str!("white.txt"));
+fn pull_spec() {
+    support::spec::run_tests(include_str!("pull.txt"));
 }

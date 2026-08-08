@@ -18,7 +18,6 @@ mod support;
 const GAME_STATE_SNAPSHOT: &str = "行棋方：黑
 红方：[弹 马]
 黑方：[将 士 盾]
-白方：0
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
@@ -30,12 +29,11 @@ const GAME_STATE_SNAPSHOT: &str = "行棋方：黑
 
 const DOCUMENTED_PROTOCOL_SNIPPETS: &[&str] = &[
     "红士三四",
-    "黑将进二",
+    "黑车进二",
     "一二三二",
-    "白子直二",
-    "红军直四分",
-    "红按兵",
-    "黑认负",
+    "红风平四拉",
+    "红将按兵",
+    "黑将认负",
     "变化：[红车平五]\n胜负：未分",
     "变化：[红雷失 黑车失]\n胜负：未分",
     "变化：[红风平二 红车平三]\n胜负：未分",
@@ -48,7 +46,7 @@ const DOCUMENTED_PROTOCOL_SNIPPETS: &[&str] = &[
 ];
 
 const DOCUMENTED_SWAP_REACTION: &str = "变化：[一二三四 三四一二]\n胜负：未分";
-const QUICK_START_POOL_LINES: &str = "红方：[军 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹 雷]\n黑方：[军 间 谍 士 卒 车 马 风 山 火 林 矛 盾 弹 雷]";
+const QUICK_START_POOL_LINES: &str = "红方：[军 间 谍 风 山 火 林 矛 盾 弹 雷 士 卒 马 车]\n黑方：[军 间 谍 风 山 火 林 矛 盾 弹 雷 士 卒 马 车]";
 
 #[test]
 fn text_protocol_examples() {

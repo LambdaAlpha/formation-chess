@@ -52,10 +52,14 @@ fn run_case(case: &TestCase) -> Result<(), String> {
     let mut last_result = None;
 
     for action_str in &case.actions {
-        let action = NotationResolver::new(&game)
-            .parse_action(action_str)
-            .map_err(|e| format!("parse action: {e}"))?;
         pre_game = game.clone();
+        let action = match NotationResolver::new(&game).parse_action(action_str) {
+            Ok(action) => action,
+            Err(error) => {
+                last_result = Some(Err(error));
+                break;
+            },
+        };
         last_result = Some(game.action(action));
     }
 
@@ -163,9 +167,7 @@ fn assert_game_eq(actual: &Game, expected: &Game) -> Result<(), String> {
     if actual.phase() != expected.phase() {
         return Err(format!("phase: {:?} != {:?}", actual.phase(), expected.phase()));
     }
-    if actual.white_pool() != expected.white_pool() {
-        return Err(format!("white_count: {} != {}", actual.white_pool(), expected.white_pool()));
-    }
+
     if actual.result() != expected.result() {
         return Err(format!("result: {} != {}", actual.result(), expected.result()));
     }

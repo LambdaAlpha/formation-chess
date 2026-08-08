@@ -11,7 +11,6 @@ use formation_chess_core::piece::Player;
 pub const SIMPLE: &str = "行棋方：红
 红方：[]
 黑方：[]
-白方：0
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
@@ -25,7 +24,6 @@ pub const SIMPLE: &str = "行棋方：红
 pub const SWAP_STATE: &str = "行棋方：红
 红方：[]
 黑方：[]
-白方：0
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
@@ -46,8 +44,6 @@ pub fn game_with(player: Player, pieces: &[(Piece, (u8, u8))], width: u8, height
         board,
         red_pool: vec![],
         black_pool: vec![],
-        white: Piece::WHITE,
-        white_pool: 0,
         result: GameResult::Unfinished,
     })
     .expect("valid")
@@ -104,13 +100,13 @@ pub fn assert_pushes(actions: &[Action], targets: &[(u8, u8)]) {
     assert_eq!(found, expected, "push targets mismatch");
 }
 
-pub fn assert_divides(actions: &[Action], targets: &[(u8, u8)]) {
+pub fn assert_pulls(actions: &[Action], targets: &[(u8, u8)]) {
     let mut found: Vec<(u8, u8)> = actions
         .iter()
-        .filter_map(|a| if let Action::Divide(m) = a { Some(m.to) } else { None })
+        .filter_map(|a| if let Action::Pull(m) = a { Some(m.to) } else { None })
         .collect();
     found.sort_unstable();
     let mut expected: Vec<_> = targets.to_vec();
     expected.sort_unstable();
-    assert_eq!(found, expected, "divide targets mismatch");
+    assert_eq!(found, expected, "pull targets mismatch");
 }

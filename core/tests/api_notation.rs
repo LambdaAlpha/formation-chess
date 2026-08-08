@@ -5,6 +5,7 @@ use formation_chess_core::action::Move;
 use formation_chess_core::action::PositionChange;
 use formation_chess_core::game::Game;
 use formation_chess_core::notation::NotationResolver;
+use formation_chess_core::piece::Player;
 
 mod support;
 use support::api::SIMPLE;
@@ -101,7 +102,6 @@ fn state_parser_rejects_invalid_vital_configuration() {
     let state = "行棋方：红
 红方：[将]
 黑方：[卒]
-白方：0
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
@@ -124,7 +124,6 @@ fn placement_notation_rejects_relative_position() {
     let state = "行棋方：红
 红方：[车]
 黑方：[将]
-白方：0
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
@@ -163,7 +162,7 @@ fn long_moves_on_tall_boards_format_and_parse() {
         rows.push_str("]\n");
     }
     let state = format!(
-        "行棋方：红\n红方：[]\n黑方：[]\n白方：0\n胜负：未分\n棋盘：\n零[一路 二路 三路 四路 五路]\n{rows}"
+        "行棋方：红\n红方：[]\n黑方：[]\n胜负：未分\n棋盘：\n零[一路 二路 三路 四路 五路]\n{rows}"
     );
     let game = Game::from_str(&state).expect("parse");
     let action = Action::Push(Move { from: (0, 14), to: (0, 0) });
@@ -181,7 +180,6 @@ fn state_formatter_preserves_decided_result() {
     let state = "行棋方：红
 红方：[]
 黑方：[]
-白方：0
 胜负：红胜
 棋盘：
 零[一路 二路 三路 四路 五路]
@@ -201,7 +199,6 @@ fn state_parser_requires_result_after_vital_loss() {
     let state = "行棋方：红
 红方：[]
 黑方：[]
-白方：0
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
@@ -222,7 +219,6 @@ fn state_parser_does_not_infer_draw_from_formation() {
     let state = "行棋方：红
 红方：[]
 黑方：[]
-白方：0
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
@@ -240,7 +236,6 @@ fn notation_rejects_out_of_bounds_placement() {
     let state = "行棋方：红
 红方：[车]
 黑方：[卒]
-白方：0
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
@@ -251,8 +246,8 @@ fn notation_rejects_out_of_bounds_placement() {
 五[红将 一一 一一 一一 一一]
 ";
     let game = Game::from_str(state).expect("parse");
-    let err = NotationResolver::new(&game).parse_action("红车九九分").expect_err("must fail");
-    assert!(err.contains("not on board"), "unexpected error: {err}");
+    let err = NotationResolver::new(&game).parse_action("红车九九").expect_err("must fail");
+    assert!(err.contains("outside the board"), "unexpected error: {err}");
 }
 
 #[test]
@@ -272,7 +267,7 @@ fn notation_rejects_zero_numerals() {
     assert!(err.contains("cannot resolve position"), "unexpected error: {err}");
     let err = resolver.parse_action("零一平二").expect_err("must fail");
     assert!(err.contains("outside the board"), "unexpected error: {err}");
-    let err = resolver.parse_action("红车零一分").expect_err("must fail");
+    let err = resolver.parse_action("红车零一拉").expect_err("must fail");
     assert!(err.contains("not on board"), "unexpected error: {err}");
 }
 
@@ -281,7 +276,6 @@ fn notation_rejects_advance_past_board_edge() {
     let state = "行棋方：红
 红方：[]
 黑方：[]
-白方：0
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
@@ -322,7 +316,6 @@ fn state_parser_rejects_uneven_placement_pools() {
     let state = "行棋方：红
 红方：[车 卒]
 黑方：[]
-白方：0
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
@@ -343,7 +336,6 @@ fn state_parser_rejects_malformed_board_header() {
     let state = "行棋方：红
 红方：[]
 黑方：[]
-白方：0
 胜负：未分
 棋盘x：
 零[一路 二路 三路 四路 五路]
@@ -360,7 +352,6 @@ fn state_parser_rejects_wrong_column_header() {
     let state = "行棋方：红
 红方：[]
 黑方：[]
-白方：0
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 六六]
@@ -377,7 +368,6 @@ fn state_parser_rejects_ragged_board_row() {
     let state = "行棋方：红
 红方：[]
 黑方：[]
-白方：0
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
@@ -396,7 +386,6 @@ fn state_parser_rejects_wrong_row_label() {
     let state = "行棋方：红
 红方：[]
 黑方：[]
-白方：0
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
@@ -419,8 +408,33 @@ fn notation_formats_action_intent() {
 }
 
 #[test]
-fn notation_formats_coordinate_action_with_vertical_direction() {
+fn notation_parses_coordinate_action_with_vertical_direction() {
+    let game = Game::from_str(SIMPLE).expect("parse");
+    let action =
+        NotationResolver::new(&game).parse_action("三三直二").expect("coordinate vertical action");
+    assert_eq!(action, Action::Move(Move { from: (2, 2), to: (2, 1) }));
+}
+
+#[test]
+fn notation_formats_missing_origin_with_absolute_position() {
     let game = Game::from_str(SIMPLE).expect("parse");
     let action = Action::Move(Move { from: (2, 3), to: (2, 1) });
-    assert_eq!(NotationResolver::new(&game).fmt_action(&action), "三四直二");
+    assert_eq!(NotationResolver::new(&game).fmt_action(&action), "三四三二");
+}
+
+#[test]
+fn notation_formats_and_parses_pull_action() {
+    let game = Game::from_str(SWAP_STATE).expect("parse");
+    let action = Action::Pull(Move { from: (0, 1), to: (0, 2) });
+    let notation = NotationResolver::new(&game).fmt_action(&action);
+    assert_eq!(notation, "红车退一拉");
+    assert_eq!(NotationResolver::new(&game).parse_action(&notation), Ok(action));
+}
+
+#[test]
+fn notation_resolves_pass_and_target_resign() {
+    let game = Game::from_str(SIMPLE).expect("parse");
+    let resolver = NotationResolver::new(&game);
+    assert_eq!(resolver.parse_action("红将按兵"), Ok(Action::Pass(Player::Red)));
+    assert_eq!(resolver.parse_action("红将认负"), Ok(Action::Resign(0, 4)));
 }

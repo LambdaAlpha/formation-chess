@@ -2,8 +2,8 @@ use formation_chess_core::ability::Ability;
 use formation_chess_core::board::Board;
 use formation_chess_core::board::Neighbor;
 use formation_chess_core::formation::Formation;
-use formation_chess_core::piece::Color;
 use formation_chess_core::piece::Piece;
+use formation_chess_core::piece::Player;
 
 #[test]
 fn formation_contains_rejects_offsets_outside_the_local_zone() {
@@ -25,9 +25,25 @@ fn formation_middle_constants_match_covered_offsets() {
 }
 
 #[test]
+fn formation_shapes_match_the_four_piece_groups() {
+    for formation in [Formation::GENERAL, Formation::ARMY, Formation::AGENT, Formation::SPY] {
+        assert_eq!(formation.points, Formation::CORNER);
+    }
+    for formation in [Formation::WIND, Formation::MOUNTAIN, Formation::FIRE, Formation::FOREST] {
+        assert_eq!(formation.points, Formation::MIDDLE);
+    }
+    for formation in [Formation::SPEAR, Formation::SHIELD, Formation::SHELL, Formation::MINE] {
+        assert_eq!(formation.points, Formation::UPPER_TRIANGLE);
+    }
+    for formation in [Formation::SCHOLAR, Formation::PAWN, Formation::HORSE, Formation::ROOK] {
+        assert_eq!(formation.points, Formation::LOWER_PENTAGON);
+    }
+}
+
+#[test]
 fn formation_black_orientation_flips_the_vertical_pattern() {
-    let red = Piece::RED_WIND.formation;
-    let black = Piece::BLACK_WIND.formation;
+    let red = Piece::RED_SPEAR.formation;
+    let black = Piece::BLACK_SPEAR.formation;
 
     assert!(red.contains(0, -1));
     assert!(red.contains(-1, 1));
@@ -41,48 +57,126 @@ fn formation_black_orientation_flips_the_vertical_pattern() {
 }
 
 #[test]
-fn formation_effects_ignore_neutral_targets_except_for_control() {
-    #[expect(clippy::type_complexity)]
-    let effects: [fn(Color, Color) -> (Ability, Ability); 12] = [
-        Formation::scholar,
-        Formation::pawn,
-        Formation::rook,
-        Formation::horse,
-        Formation::wind,
-        Formation::mountain,
-        Formation::fire,
-        Formation::forest,
-        Formation::spear,
-        Formation::shield,
-        Formation::shell,
-        Formation::mine,
+fn formation_effects_use_player_relationships() {
+    let grants = [
+        (Formation::general as fn(Player, Player) -> _, Ability::DRAW),
+        (Formation::scholar, Ability::DIRECTION_DIAGONAL),
+        (Formation::pawn, Ability::DIRECTION_CROSS),
+        (Formation::horse, Ability::DIRECTION_SHAPE_L),
+        (Formation::rook, Ability::ANY_DISTANCE),
+        (Formation::wind, Ability::PUSH_ALLY | Ability::PUSH_ENEMY),
+        (Formation::fire, Ability::PULL_ALLY | Ability::PULL_ENEMY),
+        (Formation::spear, Ability::CAPTURE),
+        (Formation::shell, Ability::CAPTURED_ON_CAPTURE),
+        (Formation::mine, Ability::CAPTURE_ON_CAPTURED),
     ];
 
-    for owner in [Color::Red, Color::Black] {
-        for effect in effects {
-            assert_eq!(effect(owner, Color::White), (Ability::NONE, Ability::NONE));
+    for (effect, ability) in grants {
+        assert_eq!(effect(Player::Red, Player::Red), (ability, ability));
+        assert_eq!(effect(Player::Red, Player::Black), (ability, Ability::NONE));
+    }
+
+    assert_eq!(Formation::shield(Player::Red, Player::Red), (Ability::CAPTURED, Ability::NONE));
+    assert_eq!(
+        Formation::shield(Player::Red, Player::Black),
+        (Ability::CAPTURED, Ability::CAPTURED)
+    );
+    assert_eq!(
+        Formation::mountain(Player::Red, Player::Red),
+        (Ability::PUSHED_BY_ALLY | Ability::PUSHED_BY_ENEMY, Ability::PUSHED_BY_ALLY)
+    );
+    assert_eq!(
+        Formation::mountain(Player::Red, Player::Black),
+        (Ability::PUSHED_BY_ALLY | Ability::PUSHED_BY_ENEMY, Ability::PUSHED_BY_ENEMY)
+    );
+    assert_eq!(
+        Formation::forest(Player::Red, Player::Red),
+        (Ability::PULLED_BY_ALLY | Ability::PULLED_BY_ENEMY, Ability::PULLED_BY_ALLY)
+    );
+    assert_eq!(
+        Formation::forest(Player::Red, Player::Black),
+        (Ability::PULLED_BY_ALLY | Ability::PULLED_BY_ENEMY, Ability::PULLED_BY_ENEMY)
+    );
+    assert_eq!(
+        Formation::army(Player::Red, Player::Black),
+        (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED)
+    );
+}
+
+#[test]
+fn formation_control_effects_use_player_relationships() {
+    assert_eq!(
+        Formation::army(Player::Red, Player::Red),
+        (Ability::CONTROLLED_BY_BLACK, Ability::NONE)
+    );
+    assert_eq!(
+        Formation::army(Player::Black, Player::Black),
+        (Ability::CONTROLLED_BY_RED, Ability::NONE)
+    );
+    assert_eq!(
+        Formation::army(Player::Black, Player::Red),
+        (Ability::CONTROLLED_BY_BLACK, Ability::CONTROLLED_BY_BLACK)
+    );
+}
+
+#[test]
+fn control_and_push_pull_groups_have_active_push_pull_capabilities() {
+    let pieces = [
+        Piece::RED_GENERAL,
+        Piece::RED_ARMY,
+        Piece::RED_AGENT,
+        Piece::RED_SPY,
+        Piece::RED_WIND,
+        Piece::RED_MOUNTAIN,
+        Piece::RED_FIRE,
+        Piece::RED_FOREST,
+    ];
+    let required =
+        [Ability::PUSH_ALLY, Ability::PUSH_ENEMY, Ability::PULL_ALLY, Ability::PULL_ENEMY];
+
+    for piece in pieces {
+        for ability in required {
+            assert!(piece.ability.has(ability), "{} is missing {:?}", piece, ability);
         }
     }
 }
 
 #[test]
-fn formation_control_effects_can_control_neutral_targets() {
-    assert_eq!(
-        Formation::general(Color::Red, Color::White),
-        (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED)
-    );
-    assert_eq!(
-        Formation::army(Color::Red, Color::White),
-        (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED)
-    );
-    assert_eq!(
-        Formation::agent(Color::Black, Color::White),
-        (Ability::CONTROLLED_BY_BLACK, Ability::CONTROLLED_BY_BLACK)
-    );
-    assert_eq!(
-        Formation::spy(Color::Red, Color::White),
-        (Ability::CONTROLLED_BY_BLACK, Ability::CONTROLLED_BY_BLACK)
-    );
+fn control_and_push_pull_groups_have_expected_passive_capabilities() {
+    let pieces = [
+        (Piece::RED_GENERAL, false, true, false, true),
+        (Piece::RED_ARMY, false, true, false, true),
+        (Piece::RED_AGENT, false, true, false, true),
+        (Piece::RED_SPY, false, true, false, true),
+        (Piece::RED_WIND, false, true, false, true),
+        (Piece::RED_MOUNTAIN, true, false, false, true),
+        (Piece::RED_FIRE, false, true, false, true),
+        (Piece::RED_FOREST, false, true, true, false),
+    ];
+
+    for (piece, pushed_by_ally, pushed_by_enemy, pulled_by_ally, pulled_by_enemy) in pieces {
+        assert_eq!(piece.ability.has(Ability::PUSHED_BY_ALLY), pushed_by_ally, "{piece}");
+        assert_eq!(piece.ability.has(Ability::PUSHED_BY_ENEMY), pushed_by_enemy, "{piece}");
+        assert_eq!(piece.ability.has(Ability::PULLED_BY_ALLY), pulled_by_ally, "{piece}");
+        assert_eq!(piece.ability.has(Ability::PULLED_BY_ENEMY), pulled_by_enemy, "{piece}");
+    }
+}
+
+#[test]
+fn capture_and_movement_groups_have_capture_ability() {
+    let pieces = [
+        Piece::RED_SPEAR,
+        Piece::RED_SHIELD,
+        Piece::RED_SHELL,
+        Piece::RED_MINE,
+        Piece::RED_SCHOLAR,
+        Piece::RED_PAWN,
+        Piece::RED_HORSE,
+        Piece::RED_ROOK,
+    ];
+    for piece in pieces {
+        assert!(piece.ability.has(Ability::CAPTURE), "{} is missing CAPTURE", piece);
+    }
 }
 
 #[test]
@@ -104,10 +198,10 @@ fn effective_formation_updates_are_order_independent_and_denial_wins() {
 }
 
 #[test]
-fn neutral_target_keeps_base_abilities_under_non_control_formation() {
+fn effective_piece_keeps_its_base_abilities_without_a_covering_formation() {
     let mut board = Board::new(3, 3);
-    board[(1, 0)] = Some(Piece::RED_ROOK);
-    board[(1, 1)] = Some(Piece::WHITE);
+    board[(0, 0)] = Some(Piece::RED_ROOK);
+    board[(2, 2)] = Some(Piece::RED_PAWN);
 
-    assert_eq!(board.effective((1, 1)).expect("neutral target").ability, Piece::WHITE.ability);
+    assert_eq!(board.effective((2, 2)).expect("uncovered piece").ability, Piece::RED_PAWN.ability);
 }

@@ -10,8 +10,8 @@ use formation_chess_core::piece::Player;
 
 mod support;
 use support::api::assert_captures;
-use support::api::assert_divides;
 use support::api::assert_moves;
+use support::api::assert_pulls;
 use support::api::assert_pushes;
 use support::api::game_one;
 use support::api::game_with;
@@ -45,7 +45,7 @@ fn all_valid_moves_matches_controlled_piece_queries() {
 #[test]
 fn all_valid_moves_appends_to_existing_actions() {
     let g = game_one(Player::Red, Piece::RED_ROOK, (2, 2));
-    let prefix = Action::Resign(Player::Black);
+    let prefix = Action::Resign(9, 9);
     let mut actions = vec![prefix];
 
     g.all_valid_moves(&mut actions);
@@ -56,13 +56,13 @@ fn all_valid_moves_appends_to_existing_actions() {
 
 #[test]
 fn all_valid_moves_outside_unfinished_movement_phase_appends_nothing() {
-    let sentinel = Action::Resign(Player::Black);
+    let sentinel = Action::Resign(9, 9);
     let mut actions = vec![sentinel];
     Game::default().all_valid_moves(&mut actions);
     assert_eq!(actions, [sentinel]);
 
     let mut g = game_one(Player::Red, Piece::RED_ROOK, (2, 2));
-    g.action(Action::Resign(Player::Red)).expect("resign");
+    g.action(Action::Resign(0, 4)).expect("resign");
     g.all_valid_moves(&mut actions);
     assert_eq!(actions, [sentinel]);
 }
@@ -85,8 +85,6 @@ fn valid_moves_during_placement_phase_returns_empty() {
         board,
         red_pool: vec![Piece::RED_ROOK],
         black_pool: vec![Piece::BLACK_PAWN],
-        white: Piece::WHITE,
-        white_pool: 0,
         result: GameResult::Unfinished,
     })
     .expect("valid");
@@ -96,7 +94,7 @@ fn valid_moves_during_placement_phase_returns_empty() {
 #[test]
 fn valid_moves_decided_game_returns_empty() {
     let mut g = game_one(Player::Red, Piece::RED_ROOK, (2, 2));
-    g.action(Action::Resign(Player::Red)).expect("resign");
+    g.action(Action::Resign(0, 4)).expect("resign");
     assert!(g.valid_moves(0, 4).is_empty());
 }
 
@@ -117,19 +115,6 @@ fn valid_moves_wrong_player_returns_empty() {
 }
 
 #[test]
-fn valid_moves_neutral_origin_returns_empty() {
-    let g = game_with(
-        Player::Red,
-        &[(Piece::WHITE, (0, 1)), (Piece::RED_GENERAL, (0, 2)), (Piece::BLACK_GENERAL, (2, 0))],
-        3,
-        3,
-    );
-    assert!(g.valid_moves(1, 1).is_empty());
-}
-
-// -- DIRECTION_CROSS + ANY_DISTANCE ------------------------------------------
-
-#[test]
 fn valid_moves_cross_any_distance_on_open_board() {
     let g = game_one(Player::Red, Piece::RED_ROOK, (2, 2));
     let actions = g.valid_moves(2, 2);
@@ -138,12 +123,12 @@ fn valid_moves_cross_any_distance_on_open_board() {
 }
 
 #[test]
-fn valid_moves_cross_capture_neutral_target() {
+fn valid_moves_cross_capture_opponent_target() {
     let g = game_with(
         Player::Red,
         &[
             (Piece::RED_ROOK, (2, 2)),
-            (Piece::WHITE, (2, 0)),
+            (Piece::BLACK_PAWN, (2, 0)),
             (Piece::RED_GENERAL, (0, 4)),
             (Piece::BLACK_GENERAL, (4, 0)),
         ],
@@ -189,7 +174,7 @@ fn valid_moves_cross_capture_and_move() {
         Player::Red,
         &[
             (Piece::RED_PAWN, (2, 2)),
-            (Piece::WHITE, (2, 1)),
+            (Piece::BLACK_PAWN, (2, 1)),
             (Piece::RED_GENERAL, (0, 4)),
             (Piece::BLACK_GENERAL, (4, 0)),
         ],
@@ -218,7 +203,7 @@ fn valid_moves_diagonal_capture_and_move() {
         Player::Red,
         &[
             (Piece::RED_SCHOLAR, (2, 2)),
-            (Piece::WHITE, (1, 1)),
+            (Piece::BLACK_PAWN, (1, 1)),
             (Piece::RED_GENERAL, (0, 4)),
             (Piece::BLACK_GENERAL, (4, 0)),
         ],
@@ -247,7 +232,7 @@ fn valid_moves_shape_l_leg_blocking_removes_targets() {
         Player::Red,
         &[
             (Piece::RED_HORSE, (2, 2)),
-            (Piece::WHITE, (2, 1)),
+            (Piece::BLACK_PAWN, (2, 1)),
             (Piece::RED_GENERAL, (0, 4)),
             (Piece::BLACK_GENERAL, (4, 0)),
         ],
@@ -265,7 +250,7 @@ fn valid_moves_shape_l_capture_and_move() {
         Player::Red,
         &[
             (Piece::RED_HORSE, (2, 2)),
-            (Piece::WHITE, (0, 1)),
+            (Piece::BLACK_PAWN, (0, 1)),
             (Piece::RED_GENERAL, (0, 4)),
             (Piece::BLACK_GENERAL, (4, 0)),
         ],
@@ -281,7 +266,9 @@ fn valid_moves_shape_l_capture_and_move() {
 
 #[test]
 fn valid_moves_shape_l_any_distance_reaches_eight_points() {
-    let g = game_one(Player::Red, Piece::RED_SHELL, (2, 2));
+    let long_horse =
+        Piece { ability: Piece::RED_HORSE.ability | Ability::ANY_DISTANCE, ..Piece::RED_HORSE };
+    let g = game_one(Player::Red, long_horse, (2, 2));
     let actions = g.valid_moves(2, 2);
     // Shell moves L-shaped at any distance: chained knight moves
     // From (2,2): (0,1) (0,3) (1,0) (1,4) (3,0) (3,4) (4,1) (4,3)
@@ -313,7 +300,7 @@ fn valid_moves_shape_l_capture_target() {
 fn valid_moves_diagonal_any_distance_on_open_board() {
     let g = game_with(
         Player::Red,
-        &[(Piece::RED_WIND, (2, 2)), (Piece::RED_GENERAL, (4, 1)), (Piece::BLACK_GENERAL, (0, 3))],
+        &[(Piece::RED_ARMY, (2, 2)), (Piece::RED_GENERAL, (4, 1)), (Piece::BLACK_GENERAL, (0, 3))],
         5,
         5,
     );
@@ -327,7 +314,7 @@ fn valid_moves_diagonal_pushes_an_ally() {
     let g = game_with(
         Player::Red,
         &[
-            (Piece::RED_WIND, (2, 2)),
+            (Piece::RED_ARMY, (2, 2)),
             (Piece::RED_PAWN, (1, 1)),
             (Piece::RED_GENERAL, (4, 1)),
             (Piece::BLACK_GENERAL, (0, 3)),
@@ -341,12 +328,12 @@ fn valid_moves_diagonal_pushes_an_ally() {
 }
 
 #[test]
-fn valid_moves_diagonal_pushes_a_neutral_target() {
+fn valid_moves_diagonal_pushes_an_opponent_target() {
     let g = game_with(
         Player::Red,
         &[
-            (Piece::RED_WIND, (2, 2)),
-            (Piece::WHITE, (1, 1)),
+            (Piece::RED_ARMY, (2, 2)),
+            (Piece::BLACK_PAWN, (1, 1)),
             (Piece::RED_GENERAL, (4, 1)),
             (Piece::BLACK_GENERAL, (0, 3)),
         ],
@@ -363,7 +350,7 @@ fn valid_moves_diagonal_path_blocking_stops_scan() {
     let g = game_with(
         Player::Red,
         &[
-            (Piece::RED_WIND, (2, 2)),
+            (Piece::RED_ARMY, (2, 2)),
             (Piece::RED_PAWN, (1, 1)),
             (Piece::RED_GENERAL, (0, 4)),
             (Piece::BLACK_GENERAL, (4, 0)),
@@ -374,7 +361,8 @@ fn valid_moves_diagonal_path_blocking_stops_scan() {
     let actions = g.valid_moves(2, 2);
     assert_moves(&actions, &[(1, 3), (3, 1), (3, 3), (4, 4)]);
     assert_pushes(&actions, &[(1, 1)]);
-    assert_eq!(actions.len(), 5);
+    assert_pulls(&actions, &[(3, 3), (4, 4)]);
+    assert_eq!(actions.len(), 7);
 }
 
 // -- CONTROLLED_BY_* ----------------------------------------------------------
@@ -385,7 +373,7 @@ fn valid_moves_foreign_control_grant_allows_red() {
         Player::Red,
         &[
             (Piece::BLACK_ROOK, (1, 1)),
-            (Piece::RED_AGENT, (0, 0)),
+            (Piece::RED_ARMY, (0, 0)),
             (Piece::RED_GENERAL, (0, 2)),
             (Piece::BLACK_GENERAL, (2, 0)),
         ],
@@ -403,7 +391,7 @@ fn valid_moves_foreign_control_grant_allows_black() {
         Player::Black,
         &[
             (Piece::RED_ROOK, (1, 1)),
-            (Piece::BLACK_AGENT, (2, 2)),
+            (Piece::BLACK_ARMY, (2, 2)),
             (Piece::RED_GENERAL, (0, 2)),
             (Piece::BLACK_GENERAL, (2, 0)),
         ],
@@ -442,47 +430,42 @@ fn valid_moves_formation_grant_adds_capture_action() {
     let g = game_with(
         Player::Red,
         &[
-            (Piece::RED_SPEAR, (1, 3)),
+            (Piece::RED_SPEAR, (2, 3)),
             (Piece::RED_WIND, (2, 2)),
-            (Piece::BLACK_SCHOLAR, (1, 1)),
-            (Piece::RED_GENERAL, (4, 1)),
-            (Piece::BLACK_GENERAL, (0, 3)),
+            (Piece::BLACK_SCHOLAR, (2, 1)),
+            (Piece::RED_GENERAL, (0, 4)),
+            (Piece::BLACK_GENERAL, (4, 0)),
         ],
         5,
         5,
     );
-    // Wind at (2,2), Spear at (1,3): dx=-1, dy=+1 = BOTTOM_LEFT -> in LOWER_TRIANGLE
-    // Wind gains CAPTURE from spear formation. Can capture or push black scholar.
+    // The spear directly below the wind covers its top-middle point.
+    // The wind therefore gains CAPTURE while retaining its cross movement.
     let actions = g.valid_moves(2, 2);
-    assert_captures(&actions, &[(1, 1)]);
-    assert_pushes(&actions, &[(1, 1), (1, 3)]);
+    assert_captures(&actions, &[(2, 1), (2, 3)]);
+    assert_pushes(&actions, &[(2, 1), (2, 3)]);
 }
 
-/// A formation-granted CAPTURE ability does not make same-color targets capturable.
+/// Allied pieces are capturable when the normal CAPTURE/CAPTURED contract is met.
 #[test]
-fn valid_moves_same_color_targets_offer_push_without_capture() {
+fn valid_moves_same_player_targets_offer_capture_and_push() {
     let g = game_with(
         Player::Red,
         &[
-            (Piece::RED_SPEAR, (1, 1)),
+            (Piece::RED_SPEAR, (2, 3)),
             (Piece::RED_WIND, (2, 2)),
-            (Piece::RED_PAWN, (1, 3)),
-            (Piece::RED_GENERAL, (4, 1)),
-            (Piece::BLACK_GENERAL, (0, 3)),
+            (Piece::RED_PAWN, (2, 1)),
+            (Piece::RED_GENERAL, (0, 4)),
+            (Piece::BLACK_GENERAL, (4, 0)),
         ],
         5,
         5,
     );
-    // Wind at (2,2), Spear at (1,1): dx=-1, dy=-1 = TOP_LEFT -> in LOWER_TRIANGLE
-    // Wind gains CAPTURE. Wind can push ally spear at (1,1) and ally pawn at (1,3).
     let actions = g.valid_moves(2, 2);
-    assert_moves(&actions, &[(3, 1), (4, 0), (3, 3), (4, 4)]);
-    assert_pushes(&actions, &[(1, 1), (1, 3)]);
-    assert_eq!(actions.len(), 6);
-    assert!(
-        !actions.iter().any(|a| matches!(a, Action::Capture(Move { to: (1, 3), .. }))),
-        "should not offer capture on ally"
-    );
+    assert_moves(&actions, &[(0, 2), (1, 2), (3, 2), (4, 2)]);
+    assert_captures(&actions, &[(2, 1), (2, 3)]);
+    assert_pushes(&actions, &[(2, 1), (2, 3)]);
+    assert_eq!(actions.len(), 8);
 }
 
 // -- DRAW actions -------------------------------------------------------------
@@ -508,7 +491,8 @@ fn valid_moves_draw_requires_an_opponent_vital_target() {
     let g = game_with(
         Player::Red,
         &[
-            (Piece::RED_GENERAL, (2, 2)),
+            (Piece::RED_GENERAL, (1, 1)),
+            (Piece::RED_PAWN, (2, 2)),
             (Piece::BLACK_PAWN, (2, 1)),
             (Piece::BLACK_GENERAL, (4, 4)),
         ],
@@ -526,7 +510,7 @@ fn valid_moves_active_push_escalation_includes_blocked_landing() {
     let g = game_with(
         Player::Red,
         &[
-            (Piece::RED_FIRE, (1, 1)),
+            (Piece::RED_AGENT, (1, 1)),
             (Piece::BLACK_PAWN, (2, 0)),
             (Piece::RED_GENERAL, (0, 4)),
             (Piece::BLACK_GENERAL, (4, 0)),
@@ -540,12 +524,17 @@ fn valid_moves_active_push_escalation_includes_blocked_landing() {
 
 #[test]
 fn valid_moves_passive_push_escalation_includes_blocked_landing() {
+    let passive_target = Piece {
+        formation: Piece::RED_SPEAR.formation,
+        ability: Piece::BLACK_PAWN.ability | Ability::CAPTURED_ON_PUSH_BLOCKED,
+        ..Piece::BLACK_PAWN
+    };
     let g = game_with(
         Player::Red,
         &[
             (Piece::RED_WIND, (1, 1)),
-            (Piece::RED_FIRE, (2, 1)),
-            (Piece::BLACK_PAWN, (2, 0)),
+            (passive_target, (2, 1)),
+            (Piece::RED_PAWN, (3, 1)),
             (Piece::RED_GENERAL, (0, 4)),
             (Piece::BLACK_GENERAL, (4, 0)),
         ],
@@ -553,7 +542,7 @@ fn valid_moves_passive_push_escalation_includes_blocked_landing() {
         5,
     );
     let actions = g.valid_moves(1, 1);
-    assert_pushes(&actions, &[(2, 0)]);
+    assert_pushes(&actions, &[(2, 1)]);
 }
 
 // -- CAPTURE_ON_CAPTURED bypasses the attacker's CAPTURE requirement -------
@@ -564,7 +553,7 @@ fn valid_moves_mutual_destruction_target_bypasses_capture_ability() {
         Player::Red,
         &[
             (Piece::RED_ARMY, (2, 2)),
-            (Piece::BLACK_MINE, (2, 3)),
+            (Piece::BLACK_MINE, (3, 3)),
             (Piece::RED_GENERAL, (0, 4)),
             (Piece::BLACK_GENERAL, (4, 0)),
         ],
@@ -573,96 +562,72 @@ fn valid_moves_mutual_destruction_target_bypasses_capture_ability() {
     );
     assert!(!Piece::RED_ARMY.ability.has(Ability::CAPTURE));
     let actions = g.valid_moves(2, 2);
-    assert_captures(&actions, &[(2, 3)]);
+    assert_captures(&actions, &[(3, 3)]);
 }
 
-// -- DIVIDE actions -----------------------------------------------------------
+// -- PULL actions --------------------------------------------------------------
 
-/// A DIVIDE-capable action has both Move and Divide for empty destinations
-/// when white_pool > 0.
 #[test]
-fn valid_moves_divide_adds_action_alongside_move() {
-    let mut board = Board::new(5, 5);
-    board[(2, 2)] = Some(Piece::RED_ARMY);
-    board[(0, 4)] = Some(Piece::RED_GENERAL);
-    board[(4, 0)] = Some(Piece::BLACK_GENERAL);
-    let g = Game::new(GameConfig {
-        player: Player::Red,
-        board,
-        red_pool: vec![],
-        black_pool: vec![],
-        white: Piece::WHITE,
-        white_pool: 1,
-        result: GameResult::Unfinished,
-    })
-    .expect("valid");
+fn valid_moves_pull_adds_action_alongside_move() {
+    let g = game_with(
+        Player::Red,
+        &[
+            (Piece::RED_WIND, (2, 2)),
+            (Piece::RED_PAWN, (2, 3)),
+            (Piece::RED_GENERAL, (0, 4)),
+            (Piece::BLACK_GENERAL, (4, 0)),
+        ],
+        5,
+        5,
+    );
     let actions = g.valid_moves(2, 2);
-    let targets = &[(0, 2), (1, 2), (3, 2), (4, 2), (2, 0), (2, 1), (2, 3), (2, 4)];
-    assert_moves(&actions, targets);
-    assert_divides(&actions, targets);
+    assert_moves(&actions, &[(2, 0), (2, 1), (0, 2), (1, 2), (3, 2), (4, 2)]);
+    assert_pulls(&actions, &[(2, 0), (2, 1)]);
 }
 
-/// Divide not available when white_pool == 0.
 #[test]
-fn valid_moves_divide_requires_white_pool() {
-    let mut board = Board::new(5, 5);
-    board[(2, 2)] = Some(Piece::RED_ARMY);
-    board[(0, 4)] = Some(Piece::RED_GENERAL);
-    board[(4, 0)] = Some(Piece::BLACK_GENERAL);
-    let g = Game::new(GameConfig {
-        player: Player::Red,
-        board,
-        red_pool: vec![],
-        black_pool: vec![],
-        white: Piece::WHITE,
-        white_pool: 0,
-        result: GameResult::Unfinished,
-    })
-    .expect("valid");
+fn valid_moves_pull_requires_a_source_behind_the_origin() {
+    let g = game_with(
+        Player::Red,
+        &[(Piece::RED_WIND, (2, 2)), (Piece::RED_GENERAL, (0, 4)), (Piece::BLACK_GENERAL, (4, 0))],
+        5,
+        5,
+    );
     let actions = g.valid_moves(2, 2);
-    assert_divides(&actions, &[]);
+    assert_pulls(&actions, &[]);
 }
 
-/// DIVIDE is absent without the ability.
 #[test]
-fn valid_moves_divide_requires_ability() {
-    let mut board = Board::new(5, 5);
-    board[(2, 2)] = Some(Piece::RED_ROOK);
-    board[(0, 4)] = Some(Piece::RED_GENERAL);
-    board[(4, 0)] = Some(Piece::BLACK_GENERAL);
-    let g = Game::new(GameConfig {
-        player: Player::Red,
-        board,
-        red_pool: vec![],
-        black_pool: vec![],
-        white: Piece::WHITE,
-        white_pool: 1,
-        result: GameResult::Unfinished,
-    })
-    .expect("valid");
+fn valid_moves_pull_requires_the_mover_ability() {
+    let g = game_with(
+        Player::Red,
+        &[
+            (Piece::RED_PAWN, (2, 2)),
+            (Piece::RED_PAWN, (2, 3)),
+            (Piece::RED_GENERAL, (0, 4)),
+            (Piece::BLACK_GENERAL, (4, 0)),
+        ],
+        5,
+        5,
+    );
     let actions = g.valid_moves(2, 2);
-    assert_divides(&actions, &[]);
+    assert_pulls(&actions, &[]);
 }
 
-/// DIVIDE targets only empty points, not occupied ones.
 #[test]
-fn valid_moves_divide_skips_occupied_destinations() {
-    let mut board = Board::new(5, 5);
-    board[(2, 2)] = Some(Piece::RED_ARMY);
-    board[(2, 1)] = Some(Piece::RED_PAWN);
-    board[(0, 4)] = Some(Piece::RED_GENERAL);
-    board[(4, 0)] = Some(Piece::BLACK_GENERAL);
-    let g = Game::new(GameConfig {
-        player: Player::Red,
-        board,
-        red_pool: vec![],
-        black_pool: vec![],
-        white: Piece::WHITE,
-        white_pool: 1,
-        result: GameResult::Unfinished,
-    })
-    .expect("valid");
+fn valid_moves_pull_requires_an_empty_destination() {
+    let g = game_with(
+        Player::Red,
+        &[
+            (Piece::RED_WIND, (2, 2)),
+            (Piece::RED_PAWN, (2, 3)),
+            (Piece::BLACK_PAWN, (2, 1)),
+            (Piece::RED_GENERAL, (0, 4)),
+            (Piece::BLACK_GENERAL, (4, 0)),
+        ],
+        5,
+        5,
+    );
     let actions = g.valid_moves(2, 2);
-    // (2,1) is occupied, so no Move or Divide there.
-    assert_divides(&actions, &[(0, 2), (1, 2), (3, 2), (4, 2), (2, 3), (2, 4)]);
+    assert_pulls(&actions, &[]);
 }
