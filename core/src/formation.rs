@@ -19,13 +19,13 @@ pub struct Formation {
 
 impl Formation {
     pub const GENERAL: Self = Self { points: Self::CORNER, effect: Self::general };
-    pub const ARMY: Self = Self { points: Self::CORNER, effect: Self::army };
-    pub const AGENT: Self = Self { points: Self::CORNER, effect: Self::agent };
-    pub const SPY: Self = Self { points: Self::CORNER, effect: Self::spy };
+    pub const STRATAGEM: Self = Self { points: Self::CORNER, effect: Self::stratagem };
+    pub const MOMENTUM: Self = Self { points: Self::CORNER, effect: Self::momentum };
+    pub const ADAPTATION: Self = Self { points: Self::CORNER, effect: Self::adaptation };
     pub const WIND: Self = Self { points: Self::MIDDLE, effect: Self::wind };
-    pub const MOUNTAIN: Self = Self { points: Self::MIDDLE, effect: Self::mountain };
-    pub const FIRE: Self = Self { points: Self::MIDDLE, effect: Self::fire };
     pub const FOREST: Self = Self { points: Self::MIDDLE, effect: Self::forest };
+    pub const FIRE: Self = Self { points: Self::MIDDLE, effect: Self::fire };
+    pub const MOUNTAIN: Self = Self { points: Self::MIDDLE, effect: Self::mountain };
     pub const SPEAR: Self = Self { points: Self::UPPER_TRIANGLE, effect: Self::spear };
     pub const SHIELD: Self = Self { points: Self::UPPER_TRIANGLE, effect: Self::shield };
     pub const SHELL: Self = Self { points: Self::UPPER_TRIANGLE, effect: Self::shell };
@@ -68,7 +68,7 @@ impl Formation {
     }
 
     /// Allies gain control; enemies lose control.
-    pub fn army(owner: Player, object: Player) -> (Ability, Ability) {
+    pub fn stratagem(owner: Player, object: Player) -> (Ability, Ability) {
         match (owner, object) {
             (Player::Red, Player::Red) => (Ability::CONTROLLED_BY_BLACK, Ability::NONE),
             (Player::Red, Player::Black) => {
@@ -82,7 +82,7 @@ impl Formation {
     }
 
     /// Allies gain active push escalation; enemies gain passive escalation.
-    pub fn agent(owner: Player, object: Player) -> (Ability, Ability) {
+    pub fn momentum(owner: Player, object: Player) -> (Ability, Ability) {
         let mask = Ability::CAPTURE_ON_PUSH_BLOCKED | Ability::CAPTURED_ON_PUSH_BLOCKED;
         let update = if owner == object {
             Ability::CAPTURE_ON_PUSH_BLOCKED
@@ -93,7 +93,7 @@ impl Formation {
     }
 
     /// Allies gain passive capture demotion; enemies gain active demotion.
-    pub fn spy(owner: Player, object: Player) -> (Ability, Ability) {
+    pub fn adaptation(owner: Player, object: Player) -> (Ability, Ability) {
         let mask = Ability::PUSH_ON_CAPTURE_UNBLOCKED | Ability::PUSHED_ON_CAPTURE_UNBLOCKED;
         let update = if owner == object {
             Ability::PUSHED_ON_CAPTURE_UNBLOCKED
@@ -123,23 +123,8 @@ impl Formation {
         Self::grant_allies_strip_enemies(owner, object, Ability::ANY_DISTANCE)
     }
 
-    /// Allies gain both push abilities; enemies lose both.
-    pub fn wind(owner: Player, object: Player) -> (Ability, Ability) {
-        let mask = Ability::PUSH_ALLY | Ability::PUSH_ENEMY;
-        Self::grant_allies_strip_enemies(owner, object, mask)
-    }
-
-    /// Takes over both pushed-by abilities: allies become pushable by
-    /// allies only, enemies pushable by the mountain's side only.
-    pub fn mountain(owner: Player, object: Player) -> (Ability, Ability) {
-        let mask = Ability::PUSHED_BY_ALLY | Ability::PUSHED_BY_ENEMY;
-        let update =
-            if owner == object { Ability::PUSHED_BY_ALLY } else { Ability::PUSHED_BY_ENEMY };
-        (mask, update)
-    }
-
     /// Allies gain both pull abilities; enemies lose both.
-    pub fn fire(owner: Player, object: Player) -> (Ability, Ability) {
+    pub fn wind(owner: Player, object: Player) -> (Ability, Ability) {
         let mask = Ability::PULL_ALLY | Ability::PULL_ENEMY;
         Self::grant_allies_strip_enemies(owner, object, mask)
     }
@@ -150,6 +135,21 @@ impl Formation {
         let mask = Ability::PULLED_BY_ALLY | Ability::PULLED_BY_ENEMY;
         let update =
             if owner == object { Ability::PULLED_BY_ALLY } else { Ability::PULLED_BY_ENEMY };
+        (mask, update)
+    }
+
+    /// Allies gain both push abilities; enemies lose both.
+    pub fn fire(owner: Player, object: Player) -> (Ability, Ability) {
+        let mask = Ability::PUSH_ALLY | Ability::PUSH_ENEMY;
+        Self::grant_allies_strip_enemies(owner, object, mask)
+    }
+
+    /// Takes over both pushed-by abilities: allies become pushable by
+    /// allies only, enemies pushable by the mountain's side only.
+    pub fn mountain(owner: Player, object: Player) -> (Ability, Ability) {
+        let mask = Ability::PUSHED_BY_ALLY | Ability::PUSHED_BY_ENEMY;
+        let update =
+            if owner == object { Ability::PUSHED_BY_ALLY } else { Ability::PUSHED_BY_ENEMY };
         (mask, update)
     }
 

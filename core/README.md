@@ -58,8 +58,8 @@ fn main() -> Result<(), String> {
 After those two placements, the remaining pool lines are:
 
 ```text
-红方：[军 间 谍 风 山 火 林 矛 盾 弹 雷 士 卒 马 车]
-黑方：[军 间 谍 风 山 火 林 矛 盾 弹 雷 士 卒 马 车]
+红方：[计 势 变 风 林 火 山 矛 盾 弹 雷 士 卒 马 车]
+黑方：[计 势 变 风 林 火 山 矛 盾 弹 雷 士 卒 马 车]
 ```
 
 The resolver must be built from the board **before** an action. This matters
@@ -80,14 +80,14 @@ piece during movement.
 | `黑车进二` | Move the Black Rook forward two rows |
 | `一二三二` | Move the piece currently at column 1, row 2 to column 3, row 2 |
 | `红马四五捉` | Declare a capture at the destination |
-| `红风五四推` | Declare a push at the destination |
-| `红风平四拉` | Move to column 4 and pull the piece behind the origin |
+| `红火五四推` | Declare a push at the destination |
+| `红火平四拉` | Move to column 4 and pull the piece behind the origin |
 | `红将按兵` / `黑将认负` | Pass / resign using the vital piece notation |
 
 An action result is either a success:
 
 ```text
-变化：[红风平二 黑马进一]
+变化：[红火平二 黑马进一]
 胜负：未分
 ```
 

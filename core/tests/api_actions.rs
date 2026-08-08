@@ -95,73 +95,73 @@ fn try_move_changes_keep_the_original_piece_configuration() {
 fn try_capture_changes_keep_the_original_mover_configuration() {
     let mut board = Board::new(5, 5);
     board[(2, 3)] = Some(Piece::RED_SPEAR);
-    board[(2, 2)] = Some(Piece::RED_WIND);
+    board[(2, 2)] = Some(Piece::RED_FIRE);
     board[(2, 1)] = Some(Piece::BLACK_PAWN);
     board[(0, 4)] = Some(Piece::RED_GENERAL);
     board[(4, 0)] = Some(Piece::BLACK_GENERAL);
 
     let effective = board.effective((2, 2)).expect("moving piece");
     assert!(effective.ability.has(Ability::CAPTURE));
-    assert!(!Piece::RED_WIND.ability.has(Ability::CAPTURE));
+    assert!(!Piece::RED_FIRE.ability.has(Ability::CAPTURE));
 
     let changes = board.try_capture((2, 2), (2, 1)).expect("capture should succeed");
     assert_eq!(changes.as_slice(), &[
-        PositionChange { at: (2, 2), old: Some(Piece::RED_WIND), new: None },
-        PositionChange { at: (2, 1), old: Some(Piece::BLACK_PAWN), new: Some(Piece::RED_WIND) },
+        PositionChange { at: (2, 2), old: Some(Piece::RED_FIRE), new: None },
+        PositionChange { at: (2, 1), old: Some(Piece::BLACK_PAWN), new: Some(Piece::RED_FIRE) },
     ]);
     board.apply(changes.as_slice());
-    assert_eq!(board[(2, 1)].expect("capturing piece").ability, Piece::RED_WIND.ability);
+    assert_eq!(board[(2, 1)].expect("capturing piece").ability, Piece::RED_FIRE.ability);
 }
 
 #[test]
 fn try_push_changes_keep_the_original_piece_configurations() {
     let mut board = Board::new(5, 5);
     board[(1, 3)] = Some(Piece::RED_SCHOLAR);
-    board[(2, 2)] = Some(Piece::RED_WIND);
+    board[(2, 2)] = Some(Piece::RED_FIRE);
     board[(3, 3)] = Some(Piece::BLACK_PAWN);
     board[(0, 4)] = Some(Piece::RED_GENERAL);
     board[(4, 0)] = Some(Piece::BLACK_GENERAL);
 
     let effective = board.effective((2, 2)).expect("moving piece");
     assert!(effective.ability.has(Ability::DIRECTION_DIAGONAL));
-    assert!(!Piece::RED_WIND.ability.has(Ability::DIRECTION_DIAGONAL));
+    assert!(!Piece::RED_FIRE.ability.has(Ability::DIRECTION_DIAGONAL));
 
     let changes = board.try_push((2, 2), (3, 3)).expect("push should succeed");
     assert_eq!(changes.as_slice(), &[
-        PositionChange { at: (2, 2), old: Some(Piece::RED_WIND), new: None },
-        PositionChange { at: (3, 3), old: Some(Piece::BLACK_PAWN), new: Some(Piece::RED_WIND) },
+        PositionChange { at: (2, 2), old: Some(Piece::RED_FIRE), new: None },
+        PositionChange { at: (3, 3), old: Some(Piece::BLACK_PAWN), new: Some(Piece::RED_FIRE) },
         PositionChange { at: (4, 4), old: None, new: Some(Piece::BLACK_PAWN) },
     ]);
     board.apply(changes.as_slice());
-    assert_eq!(board[(3, 3)].expect("pushing piece").ability, Piece::RED_WIND.ability);
+    assert_eq!(board[(3, 3)].expect("pushing piece").ability, Piece::RED_FIRE.ability);
     assert_eq!(board[(4, 4)].expect("pushed piece").ability, Piece::BLACK_PAWN.ability);
 }
 
 #[test]
 fn try_push_omits_an_unchanged_middle_point() {
     let mut board = Board::new(5, 5);
-    board[(1, 2)] = Some(Piece::RED_WIND);
-    board[(2, 2)] = Some(Piece::RED_WIND);
+    board[(1, 2)] = Some(Piece::RED_FIRE);
+    board[(2, 2)] = Some(Piece::RED_FIRE);
 
     let changes = board.try_push((1, 2), (2, 2)).expect("ally push should succeed");
     assert_eq!(changes.as_slice(), &[
-        PositionChange { at: (1, 2), old: Some(Piece::RED_WIND), new: None },
-        PositionChange { at: (3, 2), old: None, new: Some(Piece::RED_WIND) },
+        PositionChange { at: (1, 2), old: Some(Piece::RED_FIRE), new: None },
+        PositionChange { at: (3, 2), old: None, new: Some(Piece::RED_FIRE) },
     ]);
     for change in changes.as_slice() {
         assert_ne!(change.old, change.new);
     }
 
     board.apply(changes.as_slice());
-    assert_eq!(board[(2, 2)], Some(Piece::RED_WIND));
-    assert_eq!(board[(3, 2)], Some(Piece::RED_WIND));
+    assert_eq!(board[(2, 2)], Some(Piece::RED_FIRE));
+    assert_eq!(board[(3, 2)], Some(Piece::RED_FIRE));
 }
 
 #[test]
 fn blocked_push_capture_omits_an_unchanged_destination() {
     let piece = Piece {
-        ability: Piece::RED_WIND.ability | Ability::CAPTURE_ON_PUSH_BLOCKED,
-        ..Piece::RED_WIND
+        ability: Piece::RED_FIRE.ability | Ability::CAPTURE_ON_PUSH_BLOCKED,
+        ..Piece::RED_FIRE
     };
     let mut board = Board::new(5, 5);
     board[(1, 2)] = Some(piece);
@@ -179,7 +179,7 @@ fn blocked_push_capture_omits_an_unchanged_destination() {
 #[test]
 fn try_draw_exchanges_both_piece_configurations() {
     let red_vital = Piece::RED_GENERAL;
-    let black_vital = Piece { formation: Piece::RED_WIND.formation, ..Piece::BLACK_GENERAL };
+    let black_vital = Piece { formation: Piece::RED_FIRE.formation, ..Piece::BLACK_GENERAL };
     let mut board = Board::new(3, 3);
     board[(1, 1)] = Some(red_vital);
     board[(2, 2)] = Some(black_vital);
@@ -197,7 +197,7 @@ fn try_draw_exchanges_both_piece_configurations() {
 #[test]
 fn try_pull_changes_keep_original_piece_configurations() {
     let mut board = Board::new(5, 5);
-    board[(1, 2)] = Some(Piece::RED_FIRE);
+    board[(1, 2)] = Some(Piece::RED_WIND);
     board[(2, 2)] = Some(Piece::RED_PAWN);
     board[(2, 3)] = Some(Piece::BLACK_SPEAR);
     board[(0, 4)] = Some(Piece::RED_GENERAL);
@@ -222,35 +222,35 @@ fn try_pull_changes_keep_original_piece_configurations() {
 #[test]
 fn try_pull_omits_an_unchanged_origin() {
     let mut board = Board::new(3, 3);
-    board[(1, 1)] = Some(Piece::RED_WIND);
-    board[(1, 2)] = Some(Piece::RED_WIND);
+    board[(1, 1)] = Some(Piece::RED_FIRE);
+    board[(1, 2)] = Some(Piece::RED_FIRE);
 
     let changes = board.try_pull((1, 1), (1, 0)).expect("ally pull should succeed");
     assert_eq!(changes.as_slice(), &[
-        PositionChange { at: (1, 0), old: None, new: Some(Piece::RED_WIND) },
-        PositionChange { at: (1, 2), old: Some(Piece::RED_WIND), new: None },
+        PositionChange { at: (1, 0), old: None, new: Some(Piece::RED_FIRE) },
+        PositionChange { at: (1, 2), old: Some(Piece::RED_FIRE), new: None },
     ]);
     for change in changes.as_slice() {
         assert_ne!(change.old, change.new);
     }
 
     board.apply(changes.as_slice());
-    assert_eq!(board[(1, 0)], Some(Piece::RED_WIND));
-    assert_eq!(board[(1, 1)], Some(Piece::RED_WIND));
+    assert_eq!(board[(1, 0)], Some(Piece::RED_FIRE));
+    assert_eq!(board[(1, 1)], Some(Piece::RED_FIRE));
     assert_eq!(board[(1, 2)], None);
 }
 
 #[test]
 fn capture_action_uses_mutual_destruction_bypass() {
     let mut board = Board::new(5, 5);
-    board[(2, 2)] = Some(Piece::RED_ARMY);
+    board[(2, 2)] = Some(Piece::RED_STRATAGEM);
     board[(3, 3)] = Some(Piece::BLACK_MINE);
     board[(0, 4)] = Some(Piece::RED_GENERAL);
     board[(4, 0)] = Some(Piece::BLACK_GENERAL);
 
     let changes = board.try_capture((2, 2), (3, 3)).expect("retaliating target can be captured");
     assert_eq!(changes.as_slice(), &[
-        PositionChange { at: (2, 2), old: Some(Piece::RED_ARMY), new: None },
+        PositionChange { at: (2, 2), old: Some(Piece::RED_STRATAGEM), new: None },
         PositionChange { at: (3, 3), old: Some(Piece::BLACK_MINE), new: None },
     ]);
 }
@@ -378,7 +378,7 @@ fn undo_restores_captured_custom_piece() {
 #[test]
 fn undo_restores_mutual_destruction_and_push() {
     let mut capture_board = Board::new(5, 5);
-    capture_board[(2, 2)] = Some(Piece::RED_ARMY);
+    capture_board[(2, 2)] = Some(Piece::RED_STRATAGEM);
     capture_board[(3, 3)] = Some(Piece::BLACK_MINE);
     capture_board[(0, 4)] = Some(Piece::RED_GENERAL);
     capture_board[(4, 0)] = Some(Piece::BLACK_GENERAL);
@@ -391,7 +391,7 @@ fn undo_restores_mutual_destruction_and_push() {
     assert_same_game(&capture_game, &capture_before);
 
     let mut push_board = Board::new(5, 5);
-    push_board[(2, 2)] = Some(Piece::RED_WIND);
+    push_board[(2, 2)] = Some(Piece::RED_FIRE);
     push_board[(3, 2)] = Some(Piece::BLACK_SHIELD);
     push_board[(0, 4)] = Some(Piece::RED_GENERAL);
     push_board[(4, 0)] = Some(Piece::BLACK_GENERAL);
@@ -407,7 +407,7 @@ fn undo_restores_draw_exchange_and_pull() {
     let mut draw_board = Board::new(5, 5);
     draw_board[(1, 2)] = Some(Piece::RED_GENERAL);
     draw_board[(2, 1)] =
-        Some(Piece { formation: Piece::RED_WIND.formation, ..Piece::BLACK_GENERAL });
+        Some(Piece { formation: Piece::RED_FIRE.formation, ..Piece::BLACK_GENERAL });
     let mut draw_game = movement_game(draw_board);
     let draw_before = draw_game.clone();
     let reaction = draw_game.action(Action::Draw(Move { from: (1, 2), to: (2, 1) })).expect("draw");
@@ -418,7 +418,7 @@ fn undo_restores_draw_exchange_and_pull() {
     assert_same_game(&draw_game, &draw_before);
 
     let mut pull_board = Board::new(5, 5);
-    pull_board[(1, 1)] = Some(Piece::RED_WIND);
+    pull_board[(1, 1)] = Some(Piece::RED_FIRE);
     pull_board[(1, 2)] = Some(Piece::RED_PAWN);
     pull_board[(0, 4)] = Some(Piece::RED_GENERAL);
     pull_board[(4, 0)] = Some(Piece::BLACK_GENERAL);

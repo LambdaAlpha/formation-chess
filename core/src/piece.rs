@@ -94,12 +94,12 @@ impl Piece {
         }
     }
 
-    const fn army(player: Player) -> Piece {
+    const fn stratagem(player: Player) -> Piece {
         let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
-            name: '军',
+            name: '计',
             player,
-            formation: Self::orient(player, Formation::ARMY),
+            formation: Self::orient(player, Formation::STRATAGEM),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -130,12 +130,12 @@ impl Piece {
         }
     }
 
-    const fn agent(player: Player) -> Piece {
+    const fn momentum(player: Player) -> Piece {
         let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
-            name: '间',
+            name: '势',
             player,
-            formation: Self::orient(player, Formation::AGENT),
+            formation: Self::orient(player, Formation::MOMENTUM),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -166,12 +166,12 @@ impl Piece {
         }
     }
 
-    const fn spy(player: Player) -> Piece {
+    const fn adaptation(player: Player) -> Piece {
         let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
-            name: '谍',
+            name: '变',
             player,
-            formation: Self::orient(player, Formation::SPY),
+            formation: Self::orient(player, Formation::ADAPTATION),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
@@ -238,23 +238,23 @@ impl Piece {
         }
     }
 
-    const fn mountain(player: Player) -> Piece {
+    const fn forest(player: Player) -> Piece {
         let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
-            name: '山',
+            name: '林',
             player,
-            formation: Self::orient(player, Formation::MOUNTAIN),
+            formation: Self::orient(player, Formation::FOREST),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
                 push_ally: true,
                 push_enemy: true,
-                pushed_by_ally: true,
-                pushed_by_enemy: false,
+                pushed_by_ally: false,
+                pushed_by_enemy: true,
                 pull_ally: true,
                 pull_enemy: true,
-                pulled_by_ally: false,
-                pulled_by_enemy: true,
+                pulled_by_ally: true,
+                pulled_by_enemy: false,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -310,23 +310,23 @@ impl Piece {
         }
     }
 
-    const fn forest(player: Player) -> Piece {
+    const fn mountain(player: Player) -> Piece {
         let (controlled_by_red, controlled_by_black) = Self::controlled(player);
         Piece {
-            name: '林',
+            name: '山',
             player,
-            formation: Self::orient(player, Formation::FOREST),
+            formation: Self::orient(player, Formation::MOUNTAIN),
             ability: AbilityConfig {
                 controlled_by_red,
                 controlled_by_black,
                 push_ally: true,
                 push_enemy: true,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
+                pushed_by_ally: true,
+                pushed_by_enemy: false,
                 pull_ally: true,
                 pull_enemy: true,
-                pulled_by_ally: true,
-                pulled_by_enemy: false,
+                pulled_by_ally: false,
+                pulled_by_enemy: true,
                 capture_on_push_blocked: false,
                 captured_on_push_blocked: false,
                 push_on_capture_unblocked: false,
@@ -637,20 +637,20 @@ impl Piece {
     // Canonical piece definitions, one constant per (name, color).
     pub const RED_GENERAL: Piece = Self::general(Player::Red);
     pub const BLACK_GENERAL: Piece = Self::general(Player::Black);
-    pub const RED_ARMY: Piece = Self::army(Player::Red);
-    pub const BLACK_ARMY: Piece = Self::army(Player::Black);
-    pub const RED_AGENT: Piece = Self::agent(Player::Red);
-    pub const BLACK_AGENT: Piece = Self::agent(Player::Black);
-    pub const RED_SPY: Piece = Self::spy(Player::Red);
-    pub const BLACK_SPY: Piece = Self::spy(Player::Black);
+    pub const RED_STRATAGEM: Piece = Self::stratagem(Player::Red);
+    pub const BLACK_STRATAGEM: Piece = Self::stratagem(Player::Black);
+    pub const RED_MOMENTUM: Piece = Self::momentum(Player::Red);
+    pub const BLACK_MOMENTUM: Piece = Self::momentum(Player::Black);
+    pub const RED_ADAPTATION: Piece = Self::adaptation(Player::Red);
+    pub const BLACK_ADAPTATION: Piece = Self::adaptation(Player::Black);
     pub const RED_WIND: Piece = Self::wind(Player::Red);
     pub const BLACK_WIND: Piece = Self::wind(Player::Black);
-    pub const RED_MOUNTAIN: Piece = Self::mountain(Player::Red);
-    pub const BLACK_MOUNTAIN: Piece = Self::mountain(Player::Black);
-    pub const RED_FIRE: Piece = Self::fire(Player::Red);
-    pub const BLACK_FIRE: Piece = Self::fire(Player::Black);
     pub const RED_FOREST: Piece = Self::forest(Player::Red);
     pub const BLACK_FOREST: Piece = Self::forest(Player::Black);
+    pub const RED_FIRE: Piece = Self::fire(Player::Red);
+    pub const BLACK_FIRE: Piece = Self::fire(Player::Black);
+    pub const RED_MOUNTAIN: Piece = Self::mountain(Player::Red);
+    pub const BLACK_MOUNTAIN: Piece = Self::mountain(Player::Black);
     pub const RED_SPEAR: Piece = Self::spear(Player::Red);
     pub const BLACK_SPEAR: Piece = Self::spear(Player::Black);
     pub const RED_SHIELD: Piece = Self::shield(Player::Red);
@@ -668,16 +668,16 @@ impl Piece {
     pub const RED_ROOK: Piece = Self::rook(Player::Red);
     pub const BLACK_ROOK: Piece = Self::rook(Player::Black);
 
-    /// The standard 16-piece red army, used as the default red pool.
+    /// The standard 16-piece red set, used as the default red pool.
     pub const RED_PLAYER_PIECES: [Piece; 16] = [
         Piece::RED_GENERAL,
-        Piece::RED_ARMY,
-        Piece::RED_AGENT,
-        Piece::RED_SPY,
+        Piece::RED_STRATAGEM,
+        Piece::RED_MOMENTUM,
+        Piece::RED_ADAPTATION,
         Piece::RED_WIND,
-        Piece::RED_MOUNTAIN,
-        Piece::RED_FIRE,
         Piece::RED_FOREST,
+        Piece::RED_FIRE,
+        Piece::RED_MOUNTAIN,
         Piece::RED_SPEAR,
         Piece::RED_SHIELD,
         Piece::RED_SHELL,
@@ -688,16 +688,16 @@ impl Piece {
         Piece::RED_ROOK,
     ];
 
-    /// The standard 16-piece black army, used as the default black pool.
+    /// The standard 16-piece black set, used as the default black pool.
     pub const BLACK_PLAYER_PIECES: [Piece; 16] = [
         Piece::BLACK_GENERAL,
-        Piece::BLACK_ARMY,
-        Piece::BLACK_AGENT,
-        Piece::BLACK_SPY,
+        Piece::BLACK_STRATAGEM,
+        Piece::BLACK_MOMENTUM,
+        Piece::BLACK_ADAPTATION,
         Piece::BLACK_WIND,
-        Piece::BLACK_MOUNTAIN,
-        Piece::BLACK_FIRE,
         Piece::BLACK_FOREST,
+        Piece::BLACK_FIRE,
+        Piece::BLACK_MOUNTAIN,
         Piece::BLACK_SPEAR,
         Piece::BLACK_SHIELD,
         Piece::BLACK_SHELL,
@@ -714,20 +714,20 @@ impl Piece {
         let piece = match (name, player) {
             ('将', Player::Red) => Piece::RED_GENERAL,
             ('将', Player::Black) => Piece::BLACK_GENERAL,
-            ('军', Player::Red) => Piece::RED_ARMY,
-            ('军', Player::Black) => Piece::BLACK_ARMY,
-            ('间', Player::Red) => Piece::RED_AGENT,
-            ('间', Player::Black) => Piece::BLACK_AGENT,
-            ('谍', Player::Red) => Piece::RED_SPY,
-            ('谍', Player::Black) => Piece::BLACK_SPY,
+            ('计', Player::Red) => Piece::RED_STRATAGEM,
+            ('计', Player::Black) => Piece::BLACK_STRATAGEM,
+            ('势', Player::Red) => Piece::RED_MOMENTUM,
+            ('势', Player::Black) => Piece::BLACK_MOMENTUM,
+            ('变', Player::Red) => Piece::RED_ADAPTATION,
+            ('变', Player::Black) => Piece::BLACK_ADAPTATION,
             ('风', Player::Red) => Piece::RED_WIND,
             ('风', Player::Black) => Piece::BLACK_WIND,
-            ('山', Player::Red) => Piece::RED_MOUNTAIN,
-            ('山', Player::Black) => Piece::BLACK_MOUNTAIN,
-            ('火', Player::Red) => Piece::RED_FIRE,
-            ('火', Player::Black) => Piece::BLACK_FIRE,
             ('林', Player::Red) => Piece::RED_FOREST,
             ('林', Player::Black) => Piece::BLACK_FOREST,
+            ('火', Player::Red) => Piece::RED_FIRE,
+            ('火', Player::Black) => Piece::BLACK_FIRE,
+            ('山', Player::Red) => Piece::RED_MOUNTAIN,
+            ('山', Player::Black) => Piece::BLACK_MOUNTAIN,
             ('矛', Player::Red) => Piece::RED_SPEAR,
             ('矛', Player::Black) => Piece::BLACK_SPEAR,
             ('盾', Player::Red) => Piece::RED_SHIELD,

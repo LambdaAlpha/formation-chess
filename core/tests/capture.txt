@@ -70,12 +70,12 @@ CAPTURE rejects an attacker without CAPTURE
 棋盘：
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
-二[红军 一一 一一 一一 一一]
+二[红计 一一 一一 一一 一一]
 三[一一 黑卒 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 -----
-红军二三捉
+红计二三捉
 -----
 行棋方：红
 红方：[]
@@ -84,7 +84,7 @@ CAPTURE rejects an attacker without CAPTURE
 棋盘：
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
-二[红军 一一 一一 一一 一一]
+二[红计 一一 一一 一一 一一]
 三[一一 黑卒 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
@@ -161,11 +161,11 @@ CAPTURE_ON_CAPTURED bypasses missing CAPTURE and destroys both pieces
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 黑雷 一一 一一 一一]
-三[红军 一一 一一 一一 一一]
+三[红计 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 -----
-红军二二捉
+红计二二捉
 -----
 行棋方：黑
 红方：[]
@@ -179,7 +179,7 @@ CAPTURE_ON_CAPTURED bypasses missing CAPTURE and destroys both pieces
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 -----
-变化：[红军失 黑雷失]
+变化：[红计失 黑雷失]
 胜负：未分
 =====
 CAPTURED_ON_CAPTURE bypasses missing CAPTURED and destroys both pieces
@@ -253,7 +253,7 @@ PUSH_ON_CAPTURE_UNBLOCKED demotes CAPTURE to a push
 棋盘：
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
-二[一一 红谍 一一 一一 一一]
+二[一一 红变 一一 一一 一一]
 三[一一 红士 黑车 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[一一 一一 一一 一一 红将]
@@ -267,7 +267,7 @@ PUSH_ON_CAPTURE_UNBLOCKED demotes CAPTURE to a push
 棋盘：
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
-二[一一 红谍 一一 一一 一一]
+二[一一 红变 一一 一一 一一]
 三[红士 黑车 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[一一 一一 一一 一一 红将]
@@ -284,7 +284,7 @@ PUSHED_ON_CAPTURE_UNBLOCKED demotes CAPTURE to a push
 棋盘：
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
-二[红谍 一一 一一 一一 一一]
+二[红变 一一 一一 一一 一一]
 三[一一 红士 黑车 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[一一 一一 一一 一一 红将]
@@ -298,7 +298,7 @@ PUSHED_ON_CAPTURE_UNBLOCKED demotes CAPTURE to a push
 棋盘：
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
-二[红谍 一一 一一 一一 一一]
+二[红变 一一 一一 一一 一一]
 三[红士 黑车 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[一一 一一 一一 一一 红将]
@@ -314,7 +314,7 @@ blocked capture demotion falls back to ordinary CAPTURE
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
-一[红谍 一一 一一 一一 黑将]
+一[红变 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[红盾 红士 黑车 一一 一一]
 四[一一 一一 一一 一一 一一]
@@ -328,7 +328,7 @@ blocked capture demotion falls back to ordinary CAPTURE
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
-一[红谍 一一 一一 一一 黑将]
+一[红变 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[红盾 黑车 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
@@ -348,7 +348,7 @@ DIRECTION_SHAPE_L capture demotion pushes to the next knight point
 一[红矛 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 黑卒 一一 一一 一一]
-四[一一 一一 黑谍 一一 一一]
+四[一一 一一 黑变 一一 一一]
 五[一一 一一 一一 一一 红将]
 -----
 红矛二三捉
@@ -362,7 +362,7 @@ DIRECTION_SHAPE_L capture demotion pushes to the next knight point
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 红矛 一一 一一 一一]
-四[一一 一一 黑谍 一一 一一]
+四[一一 一一 黑变 一一 一一]
 五[一一 一一 黑卒 一一 红将]
 -----
 变化：[红矛二三 黑卒三五]
@@ -379,7 +379,7 @@ DIRECTION_SHAPE_L capture demotion falls back when the pushed leg is blocked
 一[红矛 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 黑卒 一一 一一 一一]
-四[一一 红盾 黑谍 一一 一一]
+四[一一 红盾 黑变 一一 一一]
 五[一一 一一 一一 一一 红将]
 -----
 红矛二三捉
@@ -393,7 +393,7 @@ DIRECTION_SHAPE_L capture demotion falls back when the pushed leg is blocked
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 红矛 一一 一一 一一]
-四[一一 红盾 黑谍 一一 一一]
+四[一一 红盾 黑变 一一 一一]
 五[一一 一一 一一 一一 红将]
 -----
 变化：[红矛二三]
@@ -410,7 +410,7 @@ DIRECTION_SHAPE_L capture demotion falls back when the landing is occupied
 一[红矛 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 黑卒 一一 一一 一一]
-四[一一 一一 黑谍 一一 一一]
+四[一一 一一 黑变 一一 一一]
 五[一一 一一 红盾 一一 红将]
 -----
 红矛二三捉
@@ -424,7 +424,7 @@ DIRECTION_SHAPE_L capture demotion falls back when the landing is occupied
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
 三[一一 红矛 一一 一一 一一]
-四[一一 一一 黑谍 一一 一一]
+四[一一 一一 黑变 一一 一一]
 五[一一 一一 红盾 一一 红将]
 -----
 变化：[红矛二三]

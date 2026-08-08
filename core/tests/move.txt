@@ -102,10 +102,10 @@ ANY_DISTANCE extends an enabled direction beyond one step
 一[黑将 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
-四[一一 红军 一一 一一 一一]
+四[一一 红计 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 -----
-红军五一
+红计五一
 -----
 行棋方：黑
 红方：[]
@@ -113,13 +113,13 @@ ANY_DISTANCE extends an enabled direction beyond one step
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
-一[黑将 一一 一一 一一 红军]
+一[黑将 一一 一一 一一 红计]
 二[一一 一一 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 -----
-变化：[红军五一]
+变化：[红计五一]
 胜负：未分
 =====
 one-step movement rejects a farther destination

@@ -300,7 +300,11 @@ fn valid_moves_shape_l_capture_target() {
 fn valid_moves_diagonal_any_distance_on_open_board() {
     let g = game_with(
         Player::Red,
-        &[(Piece::RED_ARMY, (2, 2)), (Piece::RED_GENERAL, (4, 1)), (Piece::BLACK_GENERAL, (0, 3))],
+        &[
+            (Piece::RED_STRATAGEM, (2, 2)),
+            (Piece::RED_GENERAL, (4, 1)),
+            (Piece::BLACK_GENERAL, (0, 3)),
+        ],
         5,
         5,
     );
@@ -314,7 +318,7 @@ fn valid_moves_diagonal_pushes_an_ally() {
     let g = game_with(
         Player::Red,
         &[
-            (Piece::RED_ARMY, (2, 2)),
+            (Piece::RED_STRATAGEM, (2, 2)),
             (Piece::RED_PAWN, (1, 1)),
             (Piece::RED_GENERAL, (4, 1)),
             (Piece::BLACK_GENERAL, (0, 3)),
@@ -332,7 +336,7 @@ fn valid_moves_diagonal_pushes_an_opponent_target() {
     let g = game_with(
         Player::Red,
         &[
-            (Piece::RED_ARMY, (2, 2)),
+            (Piece::RED_STRATAGEM, (2, 2)),
             (Piece::BLACK_PAWN, (1, 1)),
             (Piece::RED_GENERAL, (4, 1)),
             (Piece::BLACK_GENERAL, (0, 3)),
@@ -350,7 +354,7 @@ fn valid_moves_diagonal_path_blocking_stops_scan() {
     let g = game_with(
         Player::Red,
         &[
-            (Piece::RED_ARMY, (2, 2)),
+            (Piece::RED_STRATAGEM, (2, 2)),
             (Piece::RED_PAWN, (1, 1)),
             (Piece::RED_GENERAL, (0, 4)),
             (Piece::BLACK_GENERAL, (4, 0)),
@@ -373,7 +377,7 @@ fn valid_moves_foreign_control_grant_allows_red() {
         Player::Red,
         &[
             (Piece::BLACK_ROOK, (1, 1)),
-            (Piece::RED_ARMY, (0, 0)),
+            (Piece::RED_STRATAGEM, (0, 0)),
             (Piece::RED_GENERAL, (0, 2)),
             (Piece::BLACK_GENERAL, (2, 0)),
         ],
@@ -391,7 +395,7 @@ fn valid_moves_foreign_control_grant_allows_black() {
         Player::Black,
         &[
             (Piece::RED_ROOK, (1, 1)),
-            (Piece::BLACK_ARMY, (2, 2)),
+            (Piece::BLACK_STRATAGEM, (2, 2)),
             (Piece::RED_GENERAL, (0, 2)),
             (Piece::BLACK_GENERAL, (2, 0)),
         ],
@@ -431,7 +435,7 @@ fn valid_moves_formation_grant_adds_capture_action() {
         Player::Red,
         &[
             (Piece::RED_SPEAR, (2, 3)),
-            (Piece::RED_WIND, (2, 2)),
+            (Piece::RED_FIRE, (2, 2)),
             (Piece::BLACK_SCHOLAR, (2, 1)),
             (Piece::RED_GENERAL, (0, 4)),
             (Piece::BLACK_GENERAL, (4, 0)),
@@ -439,8 +443,8 @@ fn valid_moves_formation_grant_adds_capture_action() {
         5,
         5,
     );
-    // The spear directly below the wind covers its top-middle point.
-    // The wind therefore gains CAPTURE while retaining its cross movement.
+    // The spear directly below the fire covers its top-middle point.
+    // The fire therefore gains CAPTURE while retaining its cross movement.
     let actions = g.valid_moves(2, 2);
     assert_captures(&actions, &[(2, 1), (2, 3)]);
     assert_pushes(&actions, &[(2, 1), (2, 3)]);
@@ -453,7 +457,7 @@ fn valid_moves_same_player_targets_offer_capture_and_push() {
         Player::Red,
         &[
             (Piece::RED_SPEAR, (2, 3)),
-            (Piece::RED_WIND, (2, 2)),
+            (Piece::RED_FIRE, (2, 2)),
             (Piece::RED_PAWN, (2, 1)),
             (Piece::RED_GENERAL, (0, 4)),
             (Piece::BLACK_GENERAL, (4, 0)),
@@ -510,7 +514,7 @@ fn valid_moves_active_push_escalation_includes_blocked_landing() {
     let g = game_with(
         Player::Red,
         &[
-            (Piece::RED_AGENT, (1, 1)),
+            (Piece::RED_MOMENTUM, (1, 1)),
             (Piece::BLACK_PAWN, (2, 0)),
             (Piece::RED_GENERAL, (0, 4)),
             (Piece::BLACK_GENERAL, (4, 0)),
@@ -532,7 +536,7 @@ fn valid_moves_passive_push_escalation_includes_blocked_landing() {
     let g = game_with(
         Player::Red,
         &[
-            (Piece::RED_WIND, (1, 1)),
+            (Piece::RED_FIRE, (1, 1)),
             (passive_target, (2, 1)),
             (Piece::RED_PAWN, (3, 1)),
             (Piece::RED_GENERAL, (0, 4)),
@@ -552,7 +556,7 @@ fn valid_moves_mutual_destruction_target_bypasses_capture_ability() {
     let g = game_with(
         Player::Red,
         &[
-            (Piece::RED_ARMY, (2, 2)),
+            (Piece::RED_STRATAGEM, (2, 2)),
             (Piece::BLACK_MINE, (3, 3)),
             (Piece::RED_GENERAL, (0, 4)),
             (Piece::BLACK_GENERAL, (4, 0)),
@@ -560,7 +564,7 @@ fn valid_moves_mutual_destruction_target_bypasses_capture_ability() {
         5,
         5,
     );
-    assert!(!Piece::RED_ARMY.ability.has(Ability::CAPTURE));
+    assert!(!Piece::RED_STRATAGEM.ability.has(Ability::CAPTURE));
     let actions = g.valid_moves(2, 2);
     assert_captures(&actions, &[(3, 3)]);
 }
@@ -572,7 +576,7 @@ fn valid_moves_pull_adds_action_alongside_move() {
     let g = game_with(
         Player::Red,
         &[
-            (Piece::RED_WIND, (2, 2)),
+            (Piece::RED_FIRE, (2, 2)),
             (Piece::RED_PAWN, (2, 3)),
             (Piece::RED_GENERAL, (0, 4)),
             (Piece::BLACK_GENERAL, (4, 0)),
@@ -589,7 +593,7 @@ fn valid_moves_pull_adds_action_alongside_move() {
 fn valid_moves_pull_requires_a_source_behind_the_origin() {
     let g = game_with(
         Player::Red,
-        &[(Piece::RED_WIND, (2, 2)), (Piece::RED_GENERAL, (0, 4)), (Piece::BLACK_GENERAL, (4, 0))],
+        &[(Piece::RED_FIRE, (2, 2)), (Piece::RED_GENERAL, (0, 4)), (Piece::BLACK_GENERAL, (4, 0))],
         5,
         5,
     );
@@ -619,7 +623,7 @@ fn valid_moves_pull_requires_an_empty_destination() {
     let g = game_with(
         Player::Red,
         &[
-            (Piece::RED_WIND, (2, 2)),
+            (Piece::RED_FIRE, (2, 2)),
             (Piece::RED_PAWN, (2, 3)),
             (Piece::BLACK_PAWN, (2, 1)),
             (Piece::RED_GENERAL, (0, 4)),

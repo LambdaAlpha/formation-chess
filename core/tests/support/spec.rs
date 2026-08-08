@@ -220,8 +220,22 @@ fn parse_test_file(data: &str) -> Vec<TestCase> {
 
 fn validate_title(title: &str) {
     const ENGLISH_PIECE_NAMES: &[&str] = &[
-        "general", "army", "agent", "spy", "scholar", "pawn", "rook", "horse", "wind", "mountain",
-        "fire", "forest", "spear", "shield", "shell", "mine",
+        "general",
+        "stratagem",
+        "momentum",
+        "adaptation",
+        "wind",
+        "forest",
+        "fire",
+        "mountain",
+        "spear",
+        "shield",
+        "shell",
+        "mine",
+        "scholar",
+        "pawn",
+        "horse",
+        "rook",
     ];
     assert!(!title.is_empty(), "test title must not be empty");
     assert!(!title.contains('\n'), "test title must be a single line: {title:?}");

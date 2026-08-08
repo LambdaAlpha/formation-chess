@@ -131,11 +131,11 @@ allied CAPTURE grant enables CAPTURE
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
-三[一一 红风 黑士 一一 一一]
+三[一一 红火 黑士 一一 一一]
 四[一一 红矛 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 -----
-红风平三捉
+红火平三捉
 -----
 行棋方：黑
 红方：[]
@@ -145,11 +145,11 @@ allied CAPTURE grant enables CAPTURE
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
-三[一一 一一 红风 一一 一一]
+三[一一 一一 红火 一一 一一]
 四[一一 红矛 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 -----
-变化：[红风平三]
+变化：[红火平三]
 胜负：未分
 =====
 enemy CAPTURE denial removes a base ability
@@ -316,7 +316,7 @@ foreign control grant lets a player command an enemy
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
-三[红军 一一 一一 一一 一一]
+三[红计 一一 一一 一一 一一]
 四[一一 黑车 一一 一一 一一]
 五[一一 一一 一一 一一 红将]
 -----
@@ -330,7 +330,7 @@ foreign control grant lets a player command an enemy
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
-三[红军 一一 一一 一一 一一]
+三[红计 一一 一一 一一 一一]
 四[一一 一一 黑车 一一 一一]
 五[一一 一一 一一 一一 红将]
 -----
@@ -345,13 +345,13 @@ overlapping control grant and denial resolve to denial
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
-一[一一 红军 一一 黑军 黑将]
-二[一一 一一 红谍 一一 一一]
+一[一一 红计 一一 黑计 黑将]
+二[一一 一一 红变 一一 一一]
 三[一一 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 -----
-红谍四三
+红变四三
 -----
 行棋方：黑
 红方：[]
@@ -359,13 +359,13 @@ overlapping control grant and denial resolve to denial
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
-一[一一 红军 一一 黑军 黑将]
-二[一一 一一 红谍 一一 一一]
+一[一一 红计 一一 黑计 黑将]
+二[一一 一一 红变 一一 一一]
 三[一一 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 -----
-错误：player 黑 cannot control piece 红谍 at (2,1)
+错误：player 黑 cannot control piece 红变 at (2,1)
 =====
 opponent control grant lets the other player command an ally
 -----
@@ -375,7 +375,7 @@ opponent control grant lets the other player command an ally
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
-一[一一 黑军 一一 一一 黑将]
+一[一一 黑计 一一 一一 黑将]
 二[一一 一一 红车 一一 一一]
 三[一一 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
@@ -389,7 +389,7 @@ opponent control grant lets the other player command an ally
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
-一[一一 黑军 一一 一一 黑将]
+一[一一 黑计 一一 一一 黑将]
 二[一一 一一 一一 红车 一一]
 三[一一 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
@@ -406,7 +406,7 @@ owner control denial removes converted control from an enemy
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
-一[一一 红军 一一 黑军 黑将]
+一[一一 红计 一一 黑计 黑将]
 二[一一 一一 黑车 一一 一一]
 三[一一 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
@@ -420,7 +420,7 @@ owner control denial removes converted control from an enemy
 胜负：未分
 棋盘：
 零[一路 二路 三路 四路 五路]
-一[一一 红军 一一 黑军 黑将]
+一[一一 红计 一一 黑计 黑将]
 二[一一 一一 黑车 一一 一一]
 三[一一 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
@@ -438,11 +438,11 @@ allied pushability rewrite blocks an enemy PUSH
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
-三[一一 黑风 红矛 一一 一一]
+三[一一 黑火 红矛 一一 一一]
 四[一一 一一 红山 一一 一一]
 五[一一 一一 一一 一一 红将]
 -----
-黑风平三推
+黑火平三推
 -----
 行棋方：黑
 红方：[]
@@ -452,7 +452,7 @@ allied pushability rewrite blocks an enemy PUSH
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 一一 一一 一一]
-三[一一 黑风 红矛 一一 一一]
+三[一一 黑火 红矛 一一 一一]
 四[一一 一一 红山 一一 一一]
 五[一一 一一 一一 一一 红将]
 -----
@@ -499,7 +499,7 @@ enemy pushability rewrite removes PUSHED_BY_ALLY
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 红山 一一 一一]
-三[一一 黑车 黑火 一一 一一]
+三[一一 黑车 黑风 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 -----
@@ -513,11 +513,11 @@ enemy pushability rewrite removes PUSHED_BY_ALLY
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
 二[一一 一一 红山 一一 一一]
-三[一一 黑车 黑火 一一 一一]
+三[一一 黑车 黑风 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 -----
-错误：cannot push 黑火 at (2,2)
+错误：cannot push 黑风 at (2,2)
 =====
 allied DRAW grant enables a DRAW exchange
 -----
@@ -590,12 +590,12 @@ allied CAPTURE_ON_CAPTURED grant bypasses missing CAPTURE
 棋盘：
 零[一路 二路 三路 四路 五路]
 一[一一 一一 一一 一一 黑将]
-二[一一 一一 黑军 一一 一一]
+二[一一 一一 黑计 一一 一一]
 三[一一 红卒 一一 一一 一一]
 四[一一 红雷 一一 一一 一一]
 五[一一 一一 一一 一一 红将]
 -----
-黑军二三捉
+黑计二三捉
 -----
 行棋方：红
 红方：[]
@@ -609,5 +609,5 @@ allied CAPTURE_ON_CAPTURED grant bypasses missing CAPTURE
 四[一一 红雷 一一 一一 一一]
 五[一一 一一 一一 一一 红将]
 -----
-变化：[红卒失 黑军失]
+变化：[红卒失 黑计失]
 胜负：未分

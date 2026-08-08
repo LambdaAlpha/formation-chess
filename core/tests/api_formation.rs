@@ -25,11 +25,45 @@ fn formation_middle_constants_match_covered_offsets() {
 }
 
 #[test]
+fn piece_constants_match_current_names_and_group_order() {
+    let strategy_group =
+        [Piece::RED_GENERAL, Piece::RED_STRATAGEM, Piece::RED_MOMENTUM, Piece::RED_ADAPTATION];
+    assert_eq!(strategy_group.map(|piece| piece.name), ['将', '计', '势', '变']);
+
+    let restraint_group =
+        [Piece::RED_WIND, Piece::RED_FOREST, Piece::RED_FIRE, Piece::RED_MOUNTAIN];
+    assert_eq!(restraint_group.map(|piece| piece.name), ['风', '林', '火', '山']);
+
+    assert_eq!(&Piece::RED_PLAYER_PIECES[.. 8], &[
+        Piece::RED_GENERAL,
+        Piece::RED_STRATAGEM,
+        Piece::RED_MOMENTUM,
+        Piece::RED_ADAPTATION,
+        Piece::RED_WIND,
+        Piece::RED_FOREST,
+        Piece::RED_FIRE,
+        Piece::RED_MOUNTAIN,
+    ]);
+    assert_eq!(&Piece::BLACK_PLAYER_PIECES[.. 8], &[
+        Piece::BLACK_GENERAL,
+        Piece::BLACK_STRATAGEM,
+        Piece::BLACK_MOMENTUM,
+        Piece::BLACK_ADAPTATION,
+        Piece::BLACK_WIND,
+        Piece::BLACK_FOREST,
+        Piece::BLACK_FIRE,
+        Piece::BLACK_MOUNTAIN,
+    ]);
+}
+
+#[test]
 fn formation_shapes_match_the_four_piece_groups() {
-    for formation in [Formation::GENERAL, Formation::ARMY, Formation::AGENT, Formation::SPY] {
+    for formation in
+        [Formation::GENERAL, Formation::STRATAGEM, Formation::MOMENTUM, Formation::ADAPTATION]
+    {
         assert_eq!(formation.points, Formation::CORNER);
     }
-    for formation in [Formation::WIND, Formation::MOUNTAIN, Formation::FIRE, Formation::FOREST] {
+    for formation in [Formation::WIND, Formation::FOREST, Formation::FIRE, Formation::MOUNTAIN] {
         assert_eq!(formation.points, Formation::MIDDLE);
     }
     for formation in [Formation::SPEAR, Formation::SHIELD, Formation::SHELL, Formation::MINE] {
@@ -64,8 +98,8 @@ fn formation_effects_use_player_relationships() {
         (Formation::pawn, Ability::DIRECTION_CROSS),
         (Formation::horse, Ability::DIRECTION_SHAPE_L),
         (Formation::rook, Ability::ANY_DISTANCE),
-        (Formation::wind, Ability::PUSH_ALLY | Ability::PUSH_ENEMY),
-        (Formation::fire, Ability::PULL_ALLY | Ability::PULL_ENEMY),
+        (Formation::fire, Ability::PUSH_ALLY | Ability::PUSH_ENEMY),
+        (Formation::wind, Ability::PULL_ALLY | Ability::PULL_ENEMY),
         (Formation::spear, Ability::CAPTURE),
         (Formation::shell, Ability::CAPTURED_ON_CAPTURE),
         (Formation::mine, Ability::CAPTURE_ON_CAPTURED),
@@ -98,38 +132,38 @@ fn formation_effects_use_player_relationships() {
         (Ability::PULLED_BY_ALLY | Ability::PULLED_BY_ENEMY, Ability::PULLED_BY_ENEMY)
     );
     assert_eq!(
-        Formation::army(Player::Red, Player::Black),
+        Formation::stratagem(Player::Red, Player::Black),
         (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED)
     );
 }
 
 #[test]
-fn formation_control_effects_use_player_relationships() {
+fn stratagem_formation_control_effects_use_player_relationships() {
     assert_eq!(
-        Formation::army(Player::Red, Player::Red),
+        Formation::stratagem(Player::Red, Player::Red),
         (Ability::CONTROLLED_BY_BLACK, Ability::NONE)
     );
     assert_eq!(
-        Formation::army(Player::Black, Player::Black),
+        Formation::stratagem(Player::Black, Player::Black),
         (Ability::CONTROLLED_BY_RED, Ability::NONE)
     );
     assert_eq!(
-        Formation::army(Player::Black, Player::Red),
+        Formation::stratagem(Player::Black, Player::Red),
         (Ability::CONTROLLED_BY_BLACK, Ability::CONTROLLED_BY_BLACK)
     );
 }
 
 #[test]
-fn control_and_push_pull_groups_have_active_push_pull_capabilities() {
+fn strategy_and_restraint_groups_have_active_push_pull_capabilities() {
     let pieces = [
         Piece::RED_GENERAL,
-        Piece::RED_ARMY,
-        Piece::RED_AGENT,
-        Piece::RED_SPY,
+        Piece::RED_STRATAGEM,
+        Piece::RED_MOMENTUM,
+        Piece::RED_ADAPTATION,
         Piece::RED_WIND,
-        Piece::RED_MOUNTAIN,
-        Piece::RED_FIRE,
         Piece::RED_FOREST,
+        Piece::RED_FIRE,
+        Piece::RED_MOUNTAIN,
     ];
     let required =
         [Ability::PUSH_ALLY, Ability::PUSH_ENEMY, Ability::PULL_ALLY, Ability::PULL_ENEMY];
@@ -142,16 +176,16 @@ fn control_and_push_pull_groups_have_active_push_pull_capabilities() {
 }
 
 #[test]
-fn control_and_push_pull_groups_have_expected_passive_capabilities() {
+fn strategy_and_restraint_groups_have_expected_passive_capabilities() {
     let pieces = [
         (Piece::RED_GENERAL, false, true, false, true),
-        (Piece::RED_ARMY, false, true, false, true),
-        (Piece::RED_AGENT, false, true, false, true),
-        (Piece::RED_SPY, false, true, false, true),
+        (Piece::RED_STRATAGEM, false, true, false, true),
+        (Piece::RED_MOMENTUM, false, true, false, true),
+        (Piece::RED_ADAPTATION, false, true, false, true),
         (Piece::RED_WIND, false, true, false, true),
-        (Piece::RED_MOUNTAIN, true, false, false, true),
-        (Piece::RED_FIRE, false, true, false, true),
         (Piece::RED_FOREST, false, true, true, false),
+        (Piece::RED_FIRE, false, true, false, true),
+        (Piece::RED_MOUNTAIN, true, false, false, true),
     ];
 
     for (piece, pushed_by_ally, pushed_by_enemy, pulled_by_ally, pulled_by_enemy) in pieces {
@@ -163,7 +197,7 @@ fn control_and_push_pull_groups_have_expected_passive_capabilities() {
 }
 
 #[test]
-fn capture_and_movement_groups_have_capture_ability() {
+fn offense_defense_and_mobility_groups_have_capture_ability() {
     let pieces = [
         Piece::RED_SPEAR,
         Piece::RED_SHIELD,
@@ -184,13 +218,13 @@ fn effective_formation_updates_are_order_independent_and_denial_wins() {
     let granting_neighbor = Neighbor { dx: 0, dy: -1, piece: Some(Piece::RED_PAWN) };
     let denying_neighbor = Neighbor { dx: 0, dy: 1, piece: Some(Piece::BLACK_PAWN) };
 
-    let mut granted = Piece::RED_WIND;
+    let mut granted = Piece::RED_FIRE;
     granted.take_effect(&[granting_neighbor]);
     assert!(granted.ability.has(Ability::DIRECTION_CROSS));
 
-    let mut forward = Piece::RED_WIND;
+    let mut forward = Piece::RED_FIRE;
     forward.take_effect(&[granting_neighbor, denying_neighbor]);
-    let mut reverse = Piece::RED_WIND;
+    let mut reverse = Piece::RED_FIRE;
     reverse.take_effect(&[denying_neighbor, granting_neighbor]);
 
     assert_eq!(forward.ability, reverse.ability);
