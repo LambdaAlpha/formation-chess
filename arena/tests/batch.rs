@@ -141,8 +141,6 @@ fn movement_game() -> Game {
         board,
         red_pool: Vec::new(),
         black_pool: Vec::new(),
-        white: Piece::WHITE,
-        white_pool: 0,
         result: GameResult::Unfinished,
     })
     .expect("valid movement game")

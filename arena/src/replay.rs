@@ -10,7 +10,6 @@ use formation_chess_core::action::Reaction;
 use formation_chess_core::game::Game;
 use formation_chess_core::game::Phase;
 use formation_chess_core::notation::NotationResolver;
-use formation_chess_core::piece::Color;
 use formation_chess_core::piece::Piece;
 use formation_chess_core::piece::PieceId;
 use formation_chess_core::piece::Player;
@@ -18,7 +17,6 @@ use formation_chess_core::piece::Player;
 use crate::record::ActionCountsBySide;
 use crate::record::ActionData;
 use crate::record::ActionRecord;
-use crate::record::ColorRecord;
 use crate::record::GameRecord;
 use crate::record::GameResultRecord;
 use crate::record::PhaseRecord;
@@ -285,24 +283,26 @@ fn action_from_data(data: &ActionData) -> Result<Action, String> {
         ActionData::Push { from, to } => {
             Action::Push(Move { from: position_from_record(*from), to: position_from_record(*to) })
         },
+        ActionData::Pull { from, to } => {
+            Action::Pull(Move { from: position_from_record(*from), to: position_from_record(*to) })
+        },
         ActionData::Draw { from, to } => {
             Action::Draw(Move { from: position_from_record(*from), to: position_from_record(*to) })
         },
-        ActionData::Divide { from, to } => Action::Divide(Move {
-            from: position_from_record(*from),
-            to: position_from_record(*to),
-        }),
         ActionData::Pass { player } => Action::Pass(player_from_record(*player)),
-        ActionData::Resign { player } => Action::Resign(player_from_record(*player)),
+        ActionData::Resign { at } => {
+            let at = position_from_record(*at);
+            Action::Resign(at.0, at.1)
+        },
     })
 }
 
 fn piece_from_record(record: &PieceRecord) -> Result<PieceId, String> {
-    let color = color_from_record(record.color);
-    let Some(piece) = Piece::lookup(record.name, color) else {
+    let player = player_from_record(record.player);
+    let Some(piece) = Piece::lookup(record.name, player) else {
         return Err(format!(
-            "action references unknown piece {:?} with color {:?}",
-            record.name, record.color
+            "action references unknown piece {:?} for player {:?}",
+            record.name, record.player
         ));
     };
     Ok(piece.id())
@@ -316,14 +316,6 @@ const fn player_from_record(record: PlayerRecord) -> Player {
     match record {
         PlayerRecord::Red => Player::Red,
         PlayerRecord::Black => Player::Black,
-    }
-}
-
-const fn color_from_record(record: ColorRecord) -> Color {
-    match record {
-        ColorRecord::Red => Color::Red,
-        ColorRecord::Black => Color::Black,
-        ColorRecord::White => Color::White,
     }
 }
 

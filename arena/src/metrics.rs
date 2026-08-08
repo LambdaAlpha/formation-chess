@@ -4,7 +4,7 @@ use std::fmt::Display;
 
 use formation_chess_core::action::Reaction;
 use formation_chess_core::game::Game;
-use formation_chess_core::piece::Color;
+use formation_chess_core::piece::Player;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -105,8 +105,8 @@ pub enum ActionKind {
     Move,
     Capture,
     Push,
+    Pull,
     Draw,
-    Divide,
     Pass,
     Resign,
 }
@@ -118,8 +118,8 @@ impl From<&ActionData> for ActionKind {
             ActionData::Move { .. } => Self::Move,
             ActionData::Capture { .. } => Self::Capture,
             ActionData::Push { .. } => Self::Push,
+            ActionData::Pull { .. } => Self::Pull,
             ActionData::Draw { .. } => Self::Draw,
-            ActionData::Divide { .. } => Self::Divide,
             ActionData::Pass { .. } => Self::Pass,
             ActionData::Resign { .. } => Self::Resign,
         }
@@ -205,8 +205,8 @@ pub struct ActionTypeMetrics {
     pub moves: CountRatio,
     pub captures: CountRatio,
     pub pushes: CountRatio,
+    pub pulls: CountRatio,
     pub draws: CountRatio,
-    pub divides: CountRatio,
     pub passes: CountRatio,
     pub resignations: CountRatio,
 }
@@ -222,8 +222,8 @@ impl ActionTypeMetrics {
             moves: CountRatio::new(red.moves + black.moves, total_actions),
             captures: CountRatio::new(red.captures + black.captures, total_actions),
             pushes: CountRatio::new(red.pushes + black.pushes, total_actions),
+            pulls: CountRatio::new(red.pulls + black.pulls, total_actions),
             draws: CountRatio::new(red.draws + black.draws, total_actions),
-            divides: CountRatio::new(red.divides + black.divides, total_actions),
             passes: CountRatio::new(red.passes + black.passes, total_actions),
             resignations: CountRatio::new(red.resignations + black.resignations, total_actions),
         }
@@ -295,43 +295,39 @@ impl ReactionChangeMetrics {
 /// Final board and pool material counts.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FinalMaterialMetrics {
-    pub board_pieces: PieceColorCounts,
+    pub board_pieces: PiecePlayerCounts,
     pub red_pool_pieces: u64,
     pub black_pool_pieces: u64,
-    pub white_pool_pieces: u64,
 }
 
 impl FinalMaterialMetrics {
     fn from_game(game: &Game) -> Self {
-        let mut board_pieces = PieceColorCounts::default();
+        let mut board_pieces = PiecePlayerCounts::default();
         for (_, piece) in game.board().iter() {
-            board_pieces.record(piece.color);
+            board_pieces.record(piece.player);
         }
         Self {
             board_pieces,
             red_pool_pieces: game.red_pool().len() as u64,
             black_pool_pieces: game.black_pool().len() as u64,
-            white_pool_pieces: u64::from(game.white_pool()),
         }
     }
 }
 
-/// Piece counts on the final board, split by color.
+/// Piece counts on the final board, split by owning player.
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PieceColorCounts {
+pub struct PiecePlayerCounts {
     pub total: u64,
     pub red: u64,
     pub black: u64,
-    pub white: u64,
 }
 
-impl PieceColorCounts {
-    fn record(&mut self, color: Color) {
+impl PiecePlayerCounts {
+    fn record(&mut self, player: Player) {
         self.total += 1;
-        match color {
-            Color::Red => self.red += 1,
-            Color::Black => self.black += 1,
-            Color::White => self.white += 1,
+        match player {
+            Player::Red => self.red += 1,
+            Player::Black => self.black += 1,
         }
     }
 }

@@ -192,10 +192,8 @@ pub struct FinalMaterialSummary {
     pub board_total: DistributionMetrics,
     pub board_red: DistributionMetrics,
     pub board_black: DistributionMetrics,
-    pub board_white: DistributionMetrics,
     pub red_pool: DistributionMetrics,
     pub black_pool: DistributionMetrics,
-    pub white_pool: DistributionMetrics,
 }
 
 /// Aggregate and per-game state visit statistics.
@@ -551,8 +549,8 @@ struct ActionTypeAccumulator {
     moves: u64,
     captures: u64,
     pushes: u64,
+    pulls: u64,
     draws: u64,
-    divides: u64,
     passes: u64,
     resignations: u64,
 }
@@ -564,8 +562,8 @@ impl ActionTypeAccumulator {
         self.moves += metrics.moves.count;
         self.captures += metrics.captures.count;
         self.pushes += metrics.pushes.count;
+        self.pulls += metrics.pulls.count;
         self.draws += metrics.draws.count;
-        self.divides += metrics.divides.count;
         self.passes += metrics.passes.count;
         self.resignations += metrics.resignations.count;
     }
@@ -577,8 +575,8 @@ impl ActionTypeAccumulator {
             moves: count_ratio(self.moves, self.total_actions),
             captures: count_ratio(self.captures, self.total_actions),
             pushes: count_ratio(self.pushes, self.total_actions),
+            pulls: count_ratio(self.pulls, self.total_actions),
             draws: count_ratio(self.draws, self.total_actions),
-            divides: count_ratio(self.divides, self.total_actions),
             passes: count_ratio(self.passes, self.total_actions),
             resignations: count_ratio(self.resignations, self.total_actions),
         }
@@ -661,10 +659,8 @@ struct FinalMaterialAccumulator {
     board_total: IntegerDistributionAccumulator,
     board_red: IntegerDistributionAccumulator,
     board_black: IntegerDistributionAccumulator,
-    board_white: IntegerDistributionAccumulator,
     red_pool: IntegerDistributionAccumulator,
     black_pool: IntegerDistributionAccumulator,
-    white_pool: IntegerDistributionAccumulator,
 }
 
 impl FinalMaterialAccumulator {
@@ -672,10 +668,8 @@ impl FinalMaterialAccumulator {
         self.board_total.record(metrics.board_pieces.total);
         self.board_red.record(metrics.board_pieces.red);
         self.board_black.record(metrics.board_pieces.black);
-        self.board_white.record(metrics.board_pieces.white);
         self.red_pool.record(metrics.red_pool_pieces);
         self.black_pool.record(metrics.black_pool_pieces);
-        self.white_pool.record(metrics.white_pool_pieces);
     }
 
     fn finish(self) -> FinalMaterialSummary {
@@ -683,10 +677,8 @@ impl FinalMaterialAccumulator {
             board_total: self.board_total.finish(),
             board_red: self.board_red.finish(),
             board_black: self.board_black.finish(),
-            board_white: self.board_white.finish(),
             red_pool: self.red_pool.finish(),
             black_pool: self.black_pool.finish(),
-            white_pool: self.white_pool.finish(),
         }
     }
 }
@@ -879,10 +871,10 @@ const CSV_COLUMNS: &[&str] = &[
     "captures_ratio",
     "pushes_count",
     "pushes_ratio",
+    "pulls_count",
+    "pulls_ratio",
     "draws_count",
     "draws_ratio",
-    "divides_count",
-    "divides_ratio",
     "passes_count",
     "passes_ratio",
     "resignations_count",
@@ -902,10 +894,8 @@ const CSV_COLUMNS: &[&str] = &[
     "final_board_total",
     "final_board_red",
     "final_board_black",
-    "final_board_white",
     "final_red_pool",
     "final_black_pool",
-    "final_white_pool",
     "state_total_visits",
     "state_unique_states",
     "state_repeated_visits",
@@ -938,8 +928,8 @@ fn write_game_metrics_row(writer: &mut impl Write, metrics: &GameMetrics) -> io:
     push_count_ratio_fields(&mut fields, metrics.action_types.moves);
     push_count_ratio_fields(&mut fields, metrics.action_types.captures);
     push_count_ratio_fields(&mut fields, metrics.action_types.pushes);
+    push_count_ratio_fields(&mut fields, metrics.action_types.pulls);
     push_count_ratio_fields(&mut fields, metrics.action_types.draws);
-    push_count_ratio_fields(&mut fields, metrics.action_types.divides);
     push_count_ratio_fields(&mut fields, metrics.action_types.passes);
     push_count_ratio_fields(&mut fields, metrics.action_types.resignations);
     push_distribution_fields(&mut fields, metrics.legal_movement_actions);
@@ -949,10 +939,8 @@ fn write_game_metrics_row(writer: &mut impl Write, metrics: &GameMetrics) -> io:
     fields.push(raw(metrics.final_material.board_pieces.total));
     fields.push(raw(metrics.final_material.board_pieces.red));
     fields.push(raw(metrics.final_material.board_pieces.black));
-    fields.push(raw(metrics.final_material.board_pieces.white));
     fields.push(raw(metrics.final_material.red_pool_pieces));
     fields.push(raw(metrics.final_material.black_pool_pieces));
-    fields.push(raw(metrics.final_material.white_pool_pieces));
     fields.push(raw(metrics.state_visits.total_visits));
     fields.push(raw(metrics.state_visits.unique_states));
     fields.push(raw(metrics.state_visits.repeated_visits));
@@ -1145,8 +1133,8 @@ const fn action_kind_name(action: ActionKind) -> &'static str {
         ActionKind::Move => "move",
         ActionKind::Capture => "capture",
         ActionKind::Push => "push",
+        ActionKind::Pull => "pull",
         ActionKind::Draw => "draw",
-        ActionKind::Divide => "divide",
         ActionKind::Pass => "pass",
         ActionKind::Resign => "resign",
     }

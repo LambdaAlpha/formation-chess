@@ -58,14 +58,11 @@ fn placement_game() -> Game {
     let mut board = Board::new(5, 5);
     board[(0, 4)] = Some(Piece::RED_GENERAL);
     board[(4, 0)] = Some(Piece::BLACK_GENERAL);
-    board[(4, 2)] = Some(Piece::WHITE);
     Game::new(GameConfig {
         player: Player::Red,
         board,
         red_pool: vec![Piece::RED_ROOK],
         black_pool: vec![Piece::BLACK_ROOK],
-        white: Piece::WHITE,
-        white_pool: 2,
         result: GameResult::Unfinished,
     })
     .expect("valid placement game")
@@ -80,11 +77,25 @@ fn movement_game() -> Game {
         board,
         red_pool: Vec::new(),
         black_pool: Vec::new(),
-        white: Piece::WHITE,
-        white_pool: 0,
         result: GameResult::Unfinished,
     })
     .expect("valid movement game")
+}
+
+fn pull_game() -> Game {
+    let mut board = Board::new(5, 5);
+    board[(0, 4)] = Some(Piece::RED_GENERAL);
+    board[(4, 0)] = Some(Piece::BLACK_GENERAL);
+    board[(2, 2)] = Some(Piece::RED_WIND);
+    board[(2, 3)] = Some(Piece::RED_PAWN);
+    Game::new(GameConfig {
+        player: Player::Red,
+        board,
+        red_pool: Vec::new(),
+        black_pool: Vec::new(),
+        result: GameResult::Unfinished,
+    })
+    .expect("valid pull game")
 }
 
 fn game_record(
@@ -176,17 +187,33 @@ fn zero_action_failure_has_empty_action_metrics_and_preserves_final_material() {
     assert_eq!(metrics.reaction_changes.additions, 0);
     assert_eq!(metrics.reaction_changes.removals, 0);
     assert_eq!(metrics.reaction_changes.replacements, 0);
-    assert_eq!(metrics.final_material.board_pieces.total, 3);
+    assert_eq!(metrics.final_material.board_pieces.total, 2);
     assert_eq!(metrics.final_material.board_pieces.red, 1);
     assert_eq!(metrics.final_material.board_pieces.black, 1);
-    assert_eq!(metrics.final_material.board_pieces.white, 1);
     assert_eq!(metrics.final_material.red_pool_pieces, 1);
     assert_eq!(metrics.final_material.black_pool_pieces, 1);
-    assert_eq!(metrics.final_material.white_pool_pieces, 2);
     assert_eq!(metrics.state_visits.total_visits, 1);
     assert_eq!(metrics.state_visits.unique_states, 1);
     assert_eq!(metrics.state_visits.repeated_visits, 0);
     assert_eq!(metrics.state_visits.unique_state_ratio, 1.0);
+}
+
+#[test]
+fn metrics_classify_and_count_pull_actions() {
+    let record = game_record(
+        pull_game(),
+        vec![Action::Pull(Move { from: (2, 2), to: (2, 1) })],
+        GameTermination::ActionLimit { limit: nonzero(1) },
+        ScheduleMode::Fixed { games: nonzero(1) },
+    );
+    let metrics = GameMetrics::from_record(&record).expect("valid pull metrics");
+
+    let last_action = metrics.last_action.as_ref().expect("last action");
+    assert_eq!(last_action.action_kind, ActionKind::Pull);
+    assert_eq!(metrics.action_types.pulls, CountRatio { count: 1, ratio: Some(1.0) });
+    assert_eq!(metrics.reaction_changes.additions, 1);
+    assert_eq!(metrics.reaction_changes.removals, 1);
+    assert_eq!(metrics.reaction_changes.replacements, 1);
 }
 
 fn mixed_action_record() -> GameRecord {
@@ -195,7 +222,7 @@ fn mixed_action_record() -> GameRecord {
         Action::Place(Place { piece: Piece::BLACK_ROOK.id(), to: (1, 1) }),
         Action::Move(Move { from: (1, 3), to: (1, 2) }),
         Action::Capture(Move { from: (1, 1), to: (1, 2) }),
-        Action::Resign(Player::Red),
+        Action::Resign(0, 4),
     ];
     game_record(
         placement_game(),
@@ -246,8 +273,8 @@ fn metrics_split_side_phases_and_all_action_type_ratios() {
     assert_eq!(metrics.action_types.moves, CountRatio { count: 1, ratio: Some(0.2) });
     assert_eq!(metrics.action_types.captures, CountRatio { count: 1, ratio: Some(0.2) });
     assert_eq!(metrics.action_types.pushes, CountRatio { count: 0, ratio: Some(0.0) });
+    assert_eq!(metrics.action_types.pulls, CountRatio { count: 0, ratio: Some(0.0) });
     assert_eq!(metrics.action_types.draws, CountRatio { count: 0, ratio: Some(0.0) });
-    assert_eq!(metrics.action_types.divides, CountRatio { count: 0, ratio: Some(0.0) });
     assert_eq!(metrics.action_types.passes, CountRatio { count: 0, ratio: Some(0.0) });
     assert_eq!(metrics.action_types.resignations, CountRatio { count: 1, ratio: Some(0.2) });
 
@@ -267,13 +294,11 @@ fn metrics_count_reactions_final_material_and_state_visits() {
     assert_eq!(metrics.reaction_changes.removals, 2);
     assert_eq!(metrics.reaction_changes.replacements, 1);
 
-    assert_eq!(metrics.final_material.board_pieces.total, 4);
+    assert_eq!(metrics.final_material.board_pieces.total, 3);
     assert_eq!(metrics.final_material.board_pieces.red, 1);
     assert_eq!(metrics.final_material.board_pieces.black, 2);
-    assert_eq!(metrics.final_material.board_pieces.white, 1);
     assert_eq!(metrics.final_material.red_pool_pieces, 0);
     assert_eq!(metrics.final_material.black_pool_pieces, 0);
-    assert_eq!(metrics.final_material.white_pool_pieces, 3);
     assert_eq!(metrics.state_visits.total_visits, 6);
     assert_eq!(metrics.state_visits.unique_states, 6);
     assert_eq!(metrics.state_visits.repeated_visits, 0);

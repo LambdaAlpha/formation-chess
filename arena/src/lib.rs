@@ -67,7 +67,7 @@ pub use metrics::FinalMaterialMetrics;
 pub use metrics::GameMetrics;
 pub use metrics::LastActionMetrics;
 pub use metrics::MetricsError;
-pub use metrics::PieceColorCounts;
+pub use metrics::PiecePlayerCounts;
 pub use metrics::ReactionChangeMetrics;
 pub use metrics::SideActionMetrics;
 pub use metrics::StateVisitMetrics;

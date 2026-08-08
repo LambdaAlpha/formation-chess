@@ -11,7 +11,6 @@ use formation_chess_core::action::PositionChange;
 use formation_chess_core::action::Reaction;
 use formation_chess_core::game::Phase;
 use formation_chess_core::notation::NotationResolver;
-use formation_chess_core::piece::Color;
 use formation_chess_core::piece::Piece;
 use formation_chess_core::piece::PieceId;
 use formation_chess_core::piece::Player;
@@ -346,10 +345,10 @@ pub enum ActionData {
     Move { from: PositionRecord, to: PositionRecord },
     Capture { from: PositionRecord, to: PositionRecord },
     Push { from: PositionRecord, to: PositionRecord },
+    Pull { from: PositionRecord, to: PositionRecord },
     Draw { from: PositionRecord, to: PositionRecord },
-    Divide { from: PositionRecord, to: PositionRecord },
     Pass { player: PlayerRecord },
-    Resign { player: PlayerRecord },
+    Resign { at: PositionRecord },
 }
 
 impl From<Action> for ActionData {
@@ -371,16 +370,16 @@ impl From<Action> for ActionData {
                 from: PositionRecord::from(move_.from),
                 to: PositionRecord::from(move_.to),
             },
+            Action::Pull(move_) => Self::Pull {
+                from: PositionRecord::from(move_.from),
+                to: PositionRecord::from(move_.to),
+            },
             Action::Draw(move_) => Self::Draw {
                 from: PositionRecord::from(move_.from),
                 to: PositionRecord::from(move_.to),
             },
-            Action::Divide(move_) => Self::Divide {
-                from: PositionRecord::from(move_.from),
-                to: PositionRecord::from(move_.to),
-            },
             Action::Pass(player) => Self::Pass { player: PlayerRecord::from(player) },
-            Action::Resign(player) => Self::Resign { player: PlayerRecord::from(player) },
+            Action::Resign(x, y) => Self::Resign { at: PositionRecord { x, y } },
         }
     }
 }
@@ -428,18 +427,18 @@ impl From<(u8, u8)> for PositionRecord {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PieceRecord {
     pub name: char,
-    pub color: ColorRecord,
+    pub player: PlayerRecord,
 }
 
 impl From<Piece> for PieceRecord {
     fn from(piece: Piece) -> Self {
-        Self { name: piece.name, color: ColorRecord::from(piece.color) }
+        Self { name: piece.name, player: PlayerRecord::from(piece.player) }
     }
 }
 
 impl From<PieceId> for PieceRecord {
     fn from(piece: PieceId) -> Self {
-        Self { name: piece.name, color: ColorRecord::from(piece.color) }
+        Self { name: piece.name, player: PlayerRecord::from(piece.player) }
     }
 }
 
@@ -455,24 +454,6 @@ impl From<Player> for PlayerRecord {
         match player {
             Player::Red => Self::Red,
             Player::Black => Self::Black,
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ColorRecord {
-    Red,
-    Black,
-    White,
-}
-
-impl From<Color> for ColorRecord {
-    fn from(color: Color) -> Self {
-        match color {
-            Color::Red => Self::Red,
-            Color::Black => Self::Black,
-            Color::White => Self::White,
         }
     }
 }
@@ -567,8 +548,8 @@ pub struct ActionCounts {
     pub moves: u64,
     pub captures: u64,
     pub pushes: u64,
+    pub pulls: u64,
     pub draws: u64,
-    pub divides: u64,
     pub passes: u64,
     pub resignations: u64,
 }
@@ -585,10 +566,10 @@ impl ActionCounts {
             Action::Move(_) => self.moves += 1,
             Action::Capture(_) => self.captures += 1,
             Action::Push(_) => self.pushes += 1,
+            Action::Pull(_) => self.pulls += 1,
             Action::Draw(_) => self.draws += 1,
-            Action::Divide(_) => self.divides += 1,
             Action::Pass(_) => self.passes += 1,
-            Action::Resign(_) => self.resignations += 1,
+            Action::Resign(..) => self.resignations += 1,
         }
     }
 }

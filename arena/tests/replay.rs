@@ -17,16 +17,17 @@ use formation_chess_arena::Schedule;
 use formation_chess_arena::ScheduleMode;
 use formation_chess_arena::record::ActionData;
 use formation_chess_arena::record::AgentErrorRecord;
-use formation_chess_arena::record::ColorRecord;
 use formation_chess_arena::record::GameResultRecord;
 use formation_chess_arena::record::PhaseRecord;
 use formation_chess_arena::record::PieceRecord;
 use formation_chess_arena::record::PlayerRecord;
+use formation_chess_arena::record::PositionChangeRecord;
 use formation_chess_arena::record::PositionRecord;
 use formation_chess_arena::record::TerminationRecord;
 use formation_chess_arena::record::state_sha256;
 use formation_chess_core::action::Action;
 use formation_chess_core::action::GameResult;
+use formation_chess_core::action::Move;
 use formation_chess_core::board::Board;
 use formation_chess_core::game::Game;
 use formation_chess_core::game::GameConfig;
@@ -65,15 +66,30 @@ fn movement_game() -> Game {
         board,
         red_pool: Vec::new(),
         black_pool: Vec::new(),
-        white: Piece::WHITE,
-        white_pool: 0,
         result: GameResult::Unfinished,
     })
     .expect("valid movement game")
 }
 
-fn one_action_record(action: Action, termination: GameTermination) -> GameRecord {
-    let initial_game = movement_game();
+fn pull_game() -> Game {
+    let mut board = Board::new(5, 5);
+    board[(0, 4)] = Some(Piece::RED_GENERAL);
+    board[(4, 0)] = Some(Piece::BLACK_GENERAL);
+    board[(2, 2)] = Some(Piece::RED_WIND);
+    board[(2, 3)] = Some(Piece::RED_PAWN);
+    Game::new(GameConfig {
+        player: Player::Red,
+        board,
+        red_pool: Vec::new(),
+        black_pool: Vec::new(),
+        result: GameResult::Unfinished,
+    })
+    .expect("valid pull game")
+}
+
+fn one_action_record_from(
+    initial_game: Game, action: Action, termination: GameTermination,
+) -> GameRecord {
     let player = initial_game.player();
     let phase = initial_game.phase();
     let legal_action_count = Some(collected_movement_actions(&initial_game).len());
@@ -101,12 +117,16 @@ fn one_action_record(action: Action, termination: GameTermination) -> GameRecord
     GameRecord::from_game_run(&run).expect("valid game record")
 }
 
+fn one_action_record(action: Action, termination: GameTermination) -> GameRecord {
+    one_action_record_from(movement_game(), action, termination)
+}
+
 fn action_limit_record() -> GameRecord {
     one_action_record(Action::Pass(Player::Red), GameTermination::ActionLimit { limit: nonzero(1) })
 }
 
 fn completed_record() -> GameRecord {
-    one_action_record(Action::Resign(Player::Red), GameTermination::Completed {
+    one_action_record(Action::Resign(0, 4), GameTermination::Completed {
         result: GameResult::BlackWin,
     })
 }
@@ -155,6 +175,68 @@ fn verifier_accepts_generated_termination_variants() {
 }
 
 #[test]
+fn pull_is_recorded_with_three_changes_and_replays() {
+    let record = one_action_record_from(
+        pull_game(),
+        Action::Pull(Move { from: (2, 2), to: (2, 1) }),
+        GameTermination::ActionLimit { limit: nonzero(1) },
+    );
+
+    assert_eq!(record.actions[0].action, ActionData::Pull {
+        from: PositionRecord { x: 2, y: 2 },
+        to: PositionRecord { x: 2, y: 1 },
+    });
+    assert_eq!(record.actions[0].reaction.changes, vec![
+        PositionChangeRecord {
+            at: PositionRecord { x: 2, y: 2 },
+            piece: Some(PieceRecord::from(Piece::RED_PAWN)),
+        },
+        PositionChangeRecord {
+            at: PositionRecord { x: 2, y: 1 },
+            piece: Some(PieceRecord::from(Piece::RED_WIND)),
+        },
+        PositionChangeRecord { at: PositionRecord { x: 2, y: 3 }, piece: None },
+    ]);
+    assert_eq!(record.action_counts.red.pulls, 1);
+    ReplayVerifier::verify(&record).expect("pull record must replay");
+}
+
+#[test]
+fn draw_records_two_replacements_and_replays() {
+    let record = one_action_record(
+        Action::Draw(Move { from: (0, 4), to: (4, 0) }),
+        GameTermination::Completed { result: GameResult::Draw },
+    );
+
+    assert_eq!(record.actions[0].action, ActionData::Draw {
+        from: PositionRecord { x: 0, y: 4 },
+        to: PositionRecord { x: 4, y: 0 },
+    });
+    assert_eq!(record.actions[0].reaction.changes, vec![
+        PositionChangeRecord {
+            at: PositionRecord { x: 0, y: 4 },
+            piece: Some(PieceRecord::from(Piece::BLACK_GENERAL)),
+        },
+        PositionChangeRecord {
+            at: PositionRecord { x: 4, y: 0 },
+            piece: Some(PieceRecord::from(Piece::RED_GENERAL)),
+        },
+    ]);
+    assert_eq!(record.actions[0].reaction.game_result, GameResultRecord::Draw);
+    ReplayVerifier::verify(&record).expect("draw record must replay");
+}
+
+#[test]
+fn resign_records_target_position_and_replays() {
+    let record = completed_record();
+
+    assert_eq!(record.actions[0].action, ActionData::Resign { at: PositionRecord { x: 0, y: 4 } });
+    assert!(record.actions[0].reaction.changes.is_empty());
+    assert_eq!(record.actions[0].reaction.game_result, GameResultRecord::BlackWin);
+    ReplayVerifier::verify(&record).expect("resign record must replay");
+}
+
+#[test]
 fn verifier_rejects_action_context_and_invalid_action_data() {
     let valid = action_limit_record();
 
@@ -181,7 +263,7 @@ fn verifier_rejects_action_context_and_invalid_action_data() {
 
     let mut record = valid.clone();
     record.actions[0].action = ActionData::Place {
-        piece: PieceRecord { name: '?', color: ColorRecord::Red },
+        piece: PieceRecord { name: '?', player: PlayerRecord::Red },
         to: PositionRecord { x: 0, y: 0 },
     };
     assert_action_error(&record, "unknown piece");

@@ -96,14 +96,11 @@ fn placement_game() -> Game {
     let mut board = Board::new(5, 5);
     board[(0, 4)] = Some(Piece::RED_GENERAL);
     board[(4, 0)] = Some(Piece::BLACK_GENERAL);
-    board[(4, 2)] = Some(Piece::WHITE);
     Game::new(GameConfig {
         player: Player::Red,
         board,
         red_pool: vec![Piece::RED_ROOK],
         black_pool: vec![Piece::BLACK_ROOK],
-        white: Piece::WHITE,
-        white_pool: 2,
         result: GameResult::Unfinished,
     })
     .expect("valid placement game")
@@ -118,8 +115,6 @@ fn movement_game() -> Game {
         board,
         red_pool: Vec::new(),
         black_pool: Vec::new(),
-        white: Piece::WHITE,
-        white_pool: 0,
         result: GameResult::Unfinished,
     })
     .expect("valid movement game")
@@ -182,7 +177,7 @@ fn create_dataset(label: &str) -> TestDirectory {
                     Action::Place(Place { piece: Piece::BLACK_ROOK.id(), to: (1, 1) }),
                     Action::Move(Move { from: (1, 3), to: (1, 2) }),
                     Action::Capture(Move { from: (1, 1), to: (1, 2) }),
-                    Action::Resign(Player::Red),
+                    Action::Resign(0, 4),
                 ],
                 GameTermination::Completed { result: GameResult::BlackWin },
                 &descriptor,
@@ -190,7 +185,7 @@ fn create_dataset(label: &str) -> TestDirectory {
             1 => game_run(
                 plan,
                 movement_game(),
-                vec![Action::Pass(Player::Red), Action::Resign(Player::Black)],
+                vec![Action::Pass(Player::Red), Action::Resign(4, 0)],
                 GameTermination::Completed { result: GameResult::RedWin },
                 &descriptor,
             ),
@@ -274,13 +269,17 @@ fn analyzer_writes_deterministic_flat_csv_and_refuses_overwrite() {
     let (directory, _, csv) = analyze_dataset("csv-one");
     let rows = parse_csv(&csv);
     assert_eq!(rows.len(), 5);
-    assert_eq!(rows[0].len(), 61);
+    assert_eq!(rows[0].len(), 59);
     assert!(
         rows.iter().all(|row| row.len() == rows[0].len()),
         "every CSV record must match the header width"
     );
     assert_eq!(rows[0][0], "game_id");
-    assert_eq!(rows[0][60], "state_unique_ratio");
+    assert_eq!(rows[0][58], "state_unique_ratio");
+    assert!(rows[0].iter().any(|column| column == "pulls_count"));
+    assert!(rows[0].iter().any(|column| column == "pulls_ratio"));
+    assert!(rows[0].iter().all(|column| !column.contains("divide")));
+    assert!(rows[0].iter().all(|column| !column.contains("white")));
     assert_eq!(rows[1][3], PARTICIPANT_A);
     assert_eq!(rows[1][6], "completed");
     assert_eq!(rows[3][6], "agent_failure");
@@ -361,6 +360,7 @@ fn summary_aggregates_action_distributions_and_type_ratios() {
     assert_eq!(actions.action_types.placements.count, 2);
     assert_eq!(actions.action_types.moves.count, 1);
     assert_eq!(actions.action_types.captures.count, 1);
+    assert_eq!(actions.action_types.pulls.count, 0);
     assert_eq!(actions.action_types.passes.count, 4);
     assert_eq!(actions.action_types.resignations.count, 2);
     assert_close(actions.action_types.placements.ratio, 0.2);
@@ -377,14 +377,12 @@ fn summary_aggregates_reactions_material_and_repeated_states() {
     assert_eq!(summary.reactions.totals.replacements, 1);
     assert_close(summary.reactions.additions_per_game.mean, 0.75);
     assert_eq!(summary.final_material.board_total.min, Some(2));
-    assert_eq!(summary.final_material.board_total.max, Some(4));
-    assert_close(summary.final_material.board_total.mean, 2.75);
+    assert_eq!(summary.final_material.board_total.max, Some(3));
+    assert_close(summary.final_material.board_total.mean, 2.25);
     assert_close(summary.final_material.board_red.mean, 1.0);
     assert_close(summary.final_material.board_black.mean, 1.25);
-    assert_close(summary.final_material.board_white.mean, 0.5);
     assert_close(summary.final_material.red_pool.mean, 0.25);
     assert_close(summary.final_material.black_pool.mean, 0.25);
-    assert_close(summary.final_material.white_pool.mean, 1.25);
 
     assert_eq!(summary.states.totals.total_visits, 14);
     assert_eq!(summary.states.totals.unique_states, 12);
