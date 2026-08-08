@@ -111,8 +111,6 @@ fn create_random_game() -> Result<Game, String> {
         board,
         red_pool: Vec::new(),
         black_pool: Vec::new(),
-        white: Piece::WHITE,
-        white_pool: 0,
         result: GameResult::Unfinished,
     })
 }

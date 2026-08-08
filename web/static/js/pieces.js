@@ -6,6 +6,8 @@ export function getShapeClass(formation) {
         case 90: return 'shape-diamond';
         case 162: return 'shape-triangle-up';
         case 69: return 'shape-triangle-down';
+        case 93: return 'shape-pentagon-down';
+        case 186: return 'shape-pentagon-up';
         default: return 'shape-circle';
     }
 }
@@ -36,6 +38,8 @@ function createShapeElement(shapeClass) {
             'shape-diamond': '50,6 94,50 50,94 6,50',
             'shape-triangle-up': '50,6 94,94 6,94',
             'shape-triangle-down': '6,6 94,6 50,94',
+            'shape-pentagon-up': '50,5 95,38 78,95 22,95 5,38',
+            'shape-pentagon-down': '22,5 78,5 95,62 50,95 5,62',
         };
         shape.setAttribute('points', points[shapeClass]);
     }
@@ -47,7 +51,7 @@ function createShapeElement(shapeClass) {
 export function createPieceElement(piece, pool = false) {
     const element = document.createElement('div');
     const shapeClass = getShapeClass(piece.formation);
-    element.className = `piece piece-${piece.color.toLowerCase()} ${shapeClass}`;
+    element.className = `piece piece-${piece.player.toLowerCase()} ${shapeClass}`;
     element.appendChild(createShapeElement(shapeClass));
 
     const text = document.createElement('span');
@@ -58,7 +62,7 @@ export function createPieceElement(piece, pool = false) {
     if (!pool) return element;
 
     element.dataset.pieceName = piece.name;
-    element.dataset.pieceColor = piece.color;
+    element.dataset.piecePlayer = piece.player;
 
     const wrap = document.createElement('div');
     wrap.className = 'piece-wrap';

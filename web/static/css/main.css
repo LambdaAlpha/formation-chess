@@ -150,15 +150,25 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 /* board: shift centroid to intersection */
 #board .shape-triangle-up   { transform: translateY(-16.67%); }
 #board .shape-triangle-down { transform: translateY(16.67%); }
+#board .shape-pentagon-up   { transform: translateY(-4.5%); }
+#board .shape-pentagon-down { transform: translateY(4.5%); }
 /* pool: no centroid shift */
 .pool .shape-triangle-up,
-.pool .shape-triangle-down  { transform: none; }
+.pool .shape-triangle-down,
+.pool .shape-pentagon-up,
+.pool .shape-pentagon-down  { transform: none; }
 
 .shape-triangle-up .piece-text {
   position: absolute; top: 66.67%; left: 50%; transform: translate(-50%, -50%);
 }
 .shape-triangle-down .piece-text {
   position: absolute; top: 33.33%; left: 50%; transform: translate(-50%, -50%);
+}
+.shape-pentagon-up .piece-text {
+  position: absolute; top: 54.5%; left: 50%; transform: translate(-50%, -50%);
+}
+.shape-pentagon-down .piece-text {
+  position: absolute; top: 45.5%; left: 50%; transform: translate(-50%, -50%);
 }
 
 .pool-piece-selected::after {

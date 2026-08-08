@@ -6,9 +6,9 @@ const ACTION_LABELS = {
     draw: '和棋',
     capture: '捉子',
     push: '推子',
-    divide: '分兵',
+    pull: '拉子',
     pass: '按兵',
-    resign: '认输',
+    resign: '认负',
 };
 
 function uniqueTypes(types) {
@@ -117,11 +117,15 @@ export function setSelected(x, y) {
 
 export function previewAction(action) {
     clearCandidatePreview();
-    if (action.from) {
-        const from = getIntersection(action.from[0], action.from[1]);
+    const origin = action.from || action.at;
+    if (origin) {
+        const from = getIntersection(origin[0], origin[1]);
         if (from) {
             from.classList.add('candidate-from');
             addOriginMarker(from, 'candidate');
+            if (!action.to) {
+                addTooltip(from, `AI 推荐：${actionLabel(action.type)}`, 'candidate');
+            }
         }
     }
     if (action.to) {
@@ -143,11 +147,15 @@ export function clearCandidatePreview() {
 
 export function showPlayedAction(action) {
     clearPlayedAction();
-    if (action.from) {
-        const from = getIntersection(action.from[0], action.from[1]);
+    const origin = action.from || action.at;
+    if (origin) {
+        const from = getIntersection(origin[0], origin[1]);
         if (from) {
             from.classList.add('played-from');
             addOriginMarker(from, 'played');
+            if (!action.to) {
+                addTooltip(from, `上一步：${actionLabel(action.type)}`, 'played');
+            }
         }
     }
     if (action.to) {

@@ -437,7 +437,9 @@ fn api_error(status: StatusCode, error: String) -> (StatusCode, Json<ApiError>) 
 
 #[cfg(test)]
 mod tests {
+    use formation_chess_core::action::GameResult;
     use formation_chess_core::action::PoolChange;
+    use formation_chess_core::board::Board;
     use formation_chess_core::piece::Piece;
 
     use super::*;
@@ -461,6 +463,70 @@ mod tests {
         assert_eq!(state.current_controller.agent, expected_agent);
         assert_eq!(session.red.selector.top_k(), NonZeroU8::MIN, "step must request top one");
         assert_eq!(session.black.selector.top_k(), NonZeroU8::MIN, "step must request top one");
+    }
+
+    #[test]
+    fn legal_actions_expose_pull_and_targeted_resign() {
+        let mut board = Board::new(5, 5);
+        board[(0, 4)] = Some(Piece::RED_GENERAL);
+        board[(4, 0)] = Some(Piece::BLACK_GENERAL);
+        board[(2, 2)] = Some(Piece::RED_WIND);
+        board[(2, 3)] = Some(Piece::RED_PAWN);
+        let game = Game::new(GameConfig {
+            player: Player::Red,
+            board,
+            red_pool: Vec::new(),
+            black_pool: Vec::new(),
+            result: GameResult::Unfinished,
+        })
+        .expect("valid movement game");
+        let controllers =
+            ApiControllerSettings { red: ApiControl::Human, black: ApiControl::Human };
+        let session = GameSession::new(game, controllers, 3);
+
+        let pull_actions = session
+            .legal_actions(&ApiLegalActionsRequest {
+                revision: 3,
+                side: "Red".to_owned(),
+                from: [2, 2],
+            })
+            .expect("wind legal actions");
+        assert!(
+            pull_actions
+                .actions
+                .iter()
+                .any(|action| matches!(action, ApiAction::Pull { from: [2, 2], to: [2, 1] }))
+        );
+
+        let general_actions = session
+            .legal_actions(&ApiLegalActionsRequest {
+                revision: 3,
+                side: "Red".to_owned(),
+                from: [0, 4],
+            })
+            .expect("general legal actions");
+        assert!(
+            general_actions
+                .actions
+                .iter()
+                .any(|action| matches!(action, ApiAction::Resign { at: [0, 4] }))
+        );
+    }
+
+    #[test]
+    fn targeted_resign_remains_available_during_placement() {
+        let game = Game::new(GameConfig::default()).expect("default game must be valid");
+        let controllers =
+            ApiControllerSettings { red: ApiControl::Human, black: ApiControl::Human };
+        let mut session = GameSession::new(game, controllers, 0);
+        let request = ApiActionRequest {
+            revision: 0,
+            side: "Red".to_owned(),
+            action: ApiAction::Resign { at: [0, 0] },
+        };
+
+        session.apply_human_action(&request).expect("placement resignation should succeed");
+        assert_eq!(session.game.result(), GameResult::BlackWin);
     }
 
     #[test]

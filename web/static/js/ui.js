@@ -53,7 +53,7 @@ function bindToolbar() {
         submitAction({ type: 'pass' });
     });
     document.getElementById('btn-resign').addEventListener('click', () => {
-        submitAction({ type: 'resign' });
+        submitAction({ type: 'resign', at: [0, 0] });
     });
 }
 
@@ -71,12 +71,12 @@ function bindPool() {
     document.getElementById('red-pool').addEventListener('click', (event) => {
         const piece = event.target.closest('.piece');
         if (!piece) return;
-        handlePoolClick(piece.dataset.pieceName, piece.dataset.pieceColor);
+        handlePoolClick(piece.dataset.pieceName, piece.dataset.piecePlayer);
     });
     document.getElementById('black-pool').addEventListener('click', (event) => {
         const piece = event.target.closest('.piece');
         if (!piece) return;
-        handlePoolClick(piece.dataset.pieceName, piece.dataset.pieceColor);
+        handlePoolClick(piece.dataset.pieceName, piece.dataset.piecePlayer);
     });
 }
 
@@ -217,13 +217,13 @@ function renderToolbar(state) {
         : '人类';
     document.getElementById('player-indicator').textContent =
         '行棋方：' + playerLabel(state.player) + ' · ' + controller;
-    document.getElementById('white-indicator').textContent = '白子×' + state.white_pool;
     refreshInteractivity();
 }
 
 function refreshInteractivity() {
     if (!gameState) return;
     const unfinished = gameState.result === 'Unfinished';
+    const placement = phase() === 'placement';
     const movement = phase() === 'movement';
     const human = canHumanAct();
     const canStep = unfinished && gameState.can_agent_step;
@@ -235,7 +235,7 @@ function refreshInteractivity() {
     document.getElementById('btn-agent-step').disabled = busy || !canStep;
     document.getElementById('btn-pass').classList.toggle('hidden', !movement || !unfinished);
     document.getElementById('btn-pass').disabled = !human;
-    document.getElementById('btn-resign').classList.toggle('hidden', !unfinished);
+    document.getElementById('btn-resign').classList.toggle('hidden', !placement || !unfinished);
     document.getElementById('btn-resign').disabled = !human;
     document.getElementById('btn-undo').disabled = busy || !gameState.can_undo;
     document.getElementById('board-wrap').classList.toggle('interaction-locked', !human);
@@ -317,10 +317,10 @@ async function handleBoardClick(x, y) {
     }
 
     if (currentPhase === 'placement' && selection.type === 'pool_piece' && !hasPiece) {
-        if (isOwnHalf(y, selection.piece.color)) {
+        if (isOwnHalf(y, selection.piece.player)) {
             submitAction({
                 type: 'place',
-                piece: { name: selection.piece.name, color: selection.piece.color },
+                piece: { name: selection.piece.name, player: selection.piece.player },
                 to: [x, y],
             });
             return;
@@ -340,6 +340,10 @@ async function handleBoardClick(x, y) {
             });
             if (!gameState || response.revision !== gameState.revision) return;
             showMoveHints(response.actions);
+            const menuActions = response.actions.filter((action) => !action.to);
+            if (menuActions.length > 0) {
+                showPopup(x, y, menuActions.map((action) => action.type));
+            }
             if (response.actions.length === 0) {
                 setStatus('该棋子无可行动作', true);
             }
@@ -352,14 +356,18 @@ async function handleBoardClick(x, y) {
     clearInteraction();
 }
 
-function isOwnHalf(y, color) {
+function isOwnHalf(y, player) {
     if (!gameState) return false;
     const height = gameState.board.height;
-    if (color === 'Red') return y >= Math.ceil(height / 2);
+    if (player === 'Red') return y >= Math.ceil(height / 2);
     return y < Math.floor(height / 2);
 }
 
 function executeHintAction(actionType, x, y) {
+    if (actionType === 'resign') {
+        submitAction({ type: 'resign', at: [x, y] });
+        return;
+    }
     submitAction({ type: actionType, from: selectedBoardPosition(), to: [x, y] });
 }
 
@@ -369,16 +377,16 @@ function selectedBoardPosition() {
     return [Number(selected.dataset.x), Number(selected.dataset.y)];
 }
 
-function handlePoolClick(name, color) {
+function handlePoolClick(name, player) {
     if (!canHumanAct() || phase() !== 'placement') return;
     clearStatus();
-    if (color !== gameState.player) return;
+    if (player !== gameState.player) return;
 
     clearAnalysisSelection();
     clearInteraction();
-    selection = { type: 'pool_piece', piece: { name, color } };
+    selection = { type: 'pool_piece', piece: { name, player } };
 
-    const selector = '.pool .piece[data-piece-name="' + name + '"][data-piece-color="' + color + '"]';
+    const selector = '.pool .piece[data-piece-name="' + name + '"][data-piece-player="' + player + '"]';
     const element = document.querySelector(selector);
     if (element && element.parentElement) {
         element.parentElement.classList.add('pool-piece-selected');
@@ -414,7 +422,8 @@ function actionOption(type) {
         case 'draw': return { label: '和棋', className: 'draw-opt' };
         case 'capture': return { label: '捉子', className: 'capture-opt' };
         case 'push': return { label: '推子', className: 'push-opt' };
-        case 'divide': return { label: '分兵', className: 'divide-opt' };
+        case 'pull': return { label: '拉子', className: 'pull-opt' };
+        case 'resign': return { label: '认负', className: 'resign-opt' };
         default: return { label: type, className: '' };
     }
 }
@@ -533,7 +542,7 @@ function selectCandidate(index) {
 
 function highlightCandidatePoolPiece(action) {
     if (!action || action.type !== 'place' || !action.piece) return;
-    const selector = '.pool .piece[data-piece-name="' + action.piece.name + '"][data-piece-color="' + action.piece.color + '"]';
+    const selector = '.pool .piece[data-piece-name="' + action.piece.name + '"][data-piece-player="' + action.piece.player + '"]';
     const element = document.querySelector(selector);
     if (element && element.parentElement) {
         element.parentElement.classList.add('pool-piece-selected');

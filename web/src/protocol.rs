@@ -6,7 +6,6 @@ use formation_chess_core::board::Board;
 use formation_chess_core::game::Game;
 use formation_chess_core::game::GameConfig;
 use formation_chess_core::game::Phase;
-use formation_chess_core::piece::Color;
 use formation_chess_core::piece::Piece;
 use formation_chess_core::piece::PieceId;
 use formation_chess_core::piece::Player;
@@ -16,26 +15,26 @@ use serde::Serialize;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApiPieceRef {
     pub name: char,
-    pub color: String,
+    pub player: String,
 }
 
 impl ApiPieceRef {
     pub fn from_id(piece: PieceId) -> Self {
-        Self { name: piece.name, color: color_to_str(piece.color) }
+        Self { name: piece.name, player: player_to_str(piece.player) }
     }
 
     pub fn to_id(&self) -> Result<PieceId, String> {
-        let color = parse_color(&self.color)?;
-        let Some(piece) = Piece::lookup(self.name, color) else {
-            return Err(format!("unknown piece: {} {:?}", self.name, self.color));
+        let player = parse_player(&self.player)?;
+        let Some(piece) = Piece::lookup(self.name, player) else {
+            return Err(format!("unknown piece: {} {:?}", self.name, self.player));
         };
         Ok(piece.id())
     }
 
     pub fn to_piece(&self) -> Result<Piece, String> {
-        let color = parse_color(&self.color)?;
-        let Some(piece) = Piece::lookup(self.name, color) else {
-            return Err(format!("unknown piece: {} {:?}", self.name, self.color));
+        let player = parse_player(&self.player)?;
+        let Some(piece) = Piece::lookup(self.name, player) else {
+            return Err(format!("unknown piece: {} {:?}", self.name, self.player));
         };
         Ok(piece)
     }
@@ -44,7 +43,7 @@ impl ApiPieceRef {
 #[derive(Debug, Clone, Serialize)]
 pub struct ApiPiece {
     pub name: char,
-    pub color: String,
+    pub player: String,
     pub formation: u8,
 }
 
@@ -52,7 +51,7 @@ impl ApiPiece {
     pub fn from_piece(piece: Piece) -> Self {
         Self {
             name: piece.name,
-            color: color_to_str(piece.color),
+            player: player_to_str(piece.player),
             formation: piece.formation.points,
         }
     }
@@ -124,7 +123,6 @@ pub struct ApiState {
     pub board: ApiBoard,
     pub red_pool: Vec<ApiPiece>,
     pub black_pool: Vec<ApiPiece>,
-    pub white_pool: u8,
     pub can_human_act: bool,
     pub can_agent_step: bool,
     pub can_undo: bool,
@@ -162,7 +160,6 @@ impl ApiState {
             board: ApiBoard { width: board.width(), height: board.height(), cells },
             red_pool: game.red_pool().iter().copied().map(ApiPiece::from_piece).collect(),
             black_pool: game.black_pool().iter().copied().map(ApiPiece::from_piece).collect(),
-            white_pool: game.white_pool(),
             can_human_act: unfinished && current_control == ApiControl::Human,
             can_agent_step: unfinished && current_control == ApiControl::Agent,
             can_undo,
@@ -177,10 +174,10 @@ pub enum ApiAction {
     Move { from: [u8; 2], to: [u8; 2] },
     Capture { from: [u8; 2], to: [u8; 2] },
     Push { from: [u8; 2], to: [u8; 2] },
+    Pull { from: [u8; 2], to: [u8; 2] },
     Draw { from: [u8; 2], to: [u8; 2] },
-    Divide { from: [u8; 2], to: [u8; 2] },
     Pass,
-    Resign,
+    Resign { at: [u8; 2] },
 }
 
 impl ApiAction {
@@ -192,10 +189,10 @@ impl ApiAction {
             Action::Move(move_) => Self::Move { from: pair(move_.from), to: pair(move_.to) },
             Action::Capture(move_) => Self::Capture { from: pair(move_.from), to: pair(move_.to) },
             Action::Push(move_) => Self::Push { from: pair(move_.from), to: pair(move_.to) },
+            Action::Pull(move_) => Self::Pull { from: pair(move_.from), to: pair(move_.to) },
             Action::Draw(move_) => Self::Draw { from: pair(move_.from), to: pair(move_.to) },
-            Action::Divide(move_) => Self::Divide { from: pair(move_.from), to: pair(move_.to) },
             Action::Pass(_) => Self::Pass,
-            Action::Resign(_) => Self::Resign,
+            Action::Resign(x, y) => Self::Resign { at: [x, y] },
         }
     }
 
@@ -213,14 +210,14 @@ impl ApiAction {
             Self::Push { from, to } => {
                 Ok(Action::Push(Move { from: tuple(*from), to: tuple(*to) }))
             },
+            Self::Pull { from, to } => {
+                Ok(Action::Pull(Move { from: tuple(*from), to: tuple(*to) }))
+            },
             Self::Draw { from, to } => {
                 Ok(Action::Draw(Move { from: tuple(*from), to: tuple(*to) }))
             },
-            Self::Divide { from, to } => {
-                Ok(Action::Divide(Move { from: tuple(*from), to: tuple(*to) }))
-            },
             Self::Pass => Ok(Action::Pass(current_player)),
-            Self::Resign => Ok(Action::Resign(current_player)),
+            Self::Resign { at } => Ok(Action::Resign(at[0], at[1])),
         }
     }
 }
@@ -328,8 +325,6 @@ pub struct ApiNewRequest {
     #[serde(default)]
     pub black_pool: Vec<String>,
     #[serde(default)]
-    pub white_pool: u8,
-    #[serde(default)]
     pub player: Option<String>,
 }
 
@@ -378,12 +373,12 @@ impl ApiNewRequest {
         let red_pool = if use_standard_pools {
             Piece::RED_PLAYER_PIECES.to_vec()
         } else {
-            parse_pool(&self.red_pool, Color::Red)?
+            parse_pool(&self.red_pool, Player::Red)?
         };
         let black_pool = if use_standard_pools {
             Piece::BLACK_PLAYER_PIECES.to_vec()
         } else {
-            parse_pool(&self.black_pool, Color::Black)?
+            parse_pool(&self.black_pool, Player::Black)?
         };
         let player = match self.player.as_deref() {
             None | Some("Red") => Player::Red,
@@ -391,26 +386,18 @@ impl ApiNewRequest {
             Some(value) => return Err(format!("invalid player: {value}")),
         };
 
-        Ok(GameConfig {
-            player,
-            board,
-            red_pool,
-            black_pool,
-            white: Piece::WHITE,
-            white_pool: self.white_pool,
-            result: GameResult::Unfinished,
-        })
+        Ok(GameConfig { player, board, red_pool, black_pool, result: GameResult::Unfinished })
     }
 }
 
-fn parse_pool(names: &[String], color: Color) -> Result<Vec<Piece>, String> {
+fn parse_pool(names: &[String], player: Player) -> Result<Vec<Piece>, String> {
     names
         .iter()
         .map(|name| {
             let piece_name =
                 name.chars().next().ok_or_else(|| format!("empty piece name: {name}"))?;
-            Piece::lookup(piece_name, color)
-                .ok_or_else(|| format!("unknown {} piece: {name}", color_to_str(color)))
+            Piece::lookup(piece_name, player)
+                .ok_or_else(|| format!("unknown {} piece: {name}", player_to_str(player)))
         })
         .collect()
 }
@@ -423,23 +410,6 @@ pub struct ApiRulesResponse {
 #[derive(Debug, Serialize)]
 pub struct ApiError {
     pub error: String,
-}
-
-pub fn color_to_str(color: Color) -> String {
-    match color {
-        Color::Red => "Red".to_owned(),
-        Color::Black => "Black".to_owned(),
-        Color::White => "White".to_owned(),
-    }
-}
-
-pub fn parse_color(value: &str) -> Result<Color, String> {
-    match value {
-        "Red" => Ok(Color::Red),
-        "Black" => Ok(Color::Black),
-        "White" => Ok(Color::White),
-        _ => Err(format!("unknown color: {value}")),
-    }
 }
 
 pub fn player_to_str(player: Player) -> String {
@@ -470,5 +440,56 @@ pub fn result_to_str(result: GameResult) -> String {
         GameResult::RedWin => "RedWin".to_owned(),
         GameResult::BlackWin => "BlackWin".to_owned(),
         GameResult::Draw => "Draw".to_owned(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    #[test]
+    fn action_protocol_round_trips_pull_and_targeted_resign() {
+        let pull = Action::Pull(Move { from: (2, 2), to: (2, 1) });
+        let api_pull = ApiAction::from_action(pull);
+        assert_eq!(
+            serde_json::to_value(&api_pull).expect("serialize pull"),
+            json!({
+                "type": "pull",
+                "from": [2, 2],
+                "to": [2, 1],
+            })
+        );
+        assert_eq!(api_pull.to_action(Player::Red).expect("decode pull"), pull);
+
+        let resign = Action::Resign(0, 4);
+        let api_resign = ApiAction::from_action(resign);
+        assert_eq!(
+            serde_json::to_value(&api_resign).expect("serialize resign"),
+            json!({
+                "type": "resign",
+                "at": [0, 4],
+            })
+        );
+        assert_eq!(api_resign.to_action(Player::Red).expect("decode resign"), resign);
+    }
+
+    #[test]
+    fn piece_protocol_uses_player_identity_and_rejects_white() {
+        let piece = ApiPieceRef::from_id(Piece::RED_WIND.id());
+        assert_eq!(piece.name, '风');
+        assert_eq!(piece.player, "Red");
+        assert_eq!(piece.to_id().expect("decode red wind"), Piece::RED_WIND.id());
+
+        let value = serde_json::to_value(&piece).expect("serialize piece reference");
+        assert_eq!(value, json!({ "name": "风", "player": "Red" }));
+        assert!(value.get("color").is_none(), "legacy color field must be absent");
+
+        let white = ApiPieceRef { name: '风', player: "White".to_owned() };
+        assert_eq!(
+            white.to_piece().expect_err("white pieces must be rejected"),
+            "unknown side: White"
+        );
     }
 }
