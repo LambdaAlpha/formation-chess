@@ -7,7 +7,6 @@
   --color-piece-surface: #fff9ed;
   --color-accent: #0072b2;
   --color-accent-hover: #005f91;
-  --color-action-target: #d55e00;
   --color-board-bg: #e8d5b0;
   --color-board-line: #444;
   --color-border: #ccc;
@@ -89,8 +88,8 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
   --marker-width: 3px; --corner-size: 34%;
   position: absolute; inset: 5%; z-index: 6;
 }
-.action-origin { color: var(--color-accent); }
-.action-target { color: var(--color-action-target); }
+.action-origin { color: #00b3ff; }
+.action-target { color: #e6007e; }
 .action-marker-corner {
   position: absolute; width: var(--corner-size); height: var(--corner-size);
   border-color: currentColor; border-style: solid;
@@ -321,8 +320,6 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 
   .piece-text { font-size: 14px; }
   .piece-shape-surface { stroke-width: 1.5px; }
-
-  .intersection.selected::before { border-width: 2px; }
 
   .game-over-content { padding: 32px 40px; }
   .game-over-title { font-size: 36px; letter-spacing: 4px; }
