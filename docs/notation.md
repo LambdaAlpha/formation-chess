@@ -226,17 +226,25 @@ During placement, the unsuffixed form is also accepted for a pool arrival:
 胜负：未分
 ```
 
-A generic two-piece swap is expressed relative to the pre-action coordinates:
+A Draw action swaps the acting piece with an opposing Vital piece and ends the
+game as a draw. For example, in the position below 红势 at 二二 has gained the
+draw ability from 红将's formation and swaps with 黑将 at 四四:
 
 ```text
-变化：[一二三四 三四一二]
-胜负：未分
+棋盘：
+零[一路 二路 三路 四路 五路]
+一[红将 一一 一一 一一 一一]
+二[一一 红势 一一 一一 一一]
+三[一一 一一 一一 一一 一一]
+四[一一 一一 一一 黑将 一一]
+五[一一 一一 一一 一一 一一]
 ```
 
-A successful Draw action uses the same two replacements and declares a draw:
+After `红势四四和`, the two pieces exchange positions; every entry is
+interpreted against the pre-action position:
 
 ```text
-变化：[一二三四 三四一二]
+变化：[黑将二二 红势四四]
 胜负：和棋
 ```
 

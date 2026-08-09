@@ -7,7 +7,6 @@ use std::str::FromStr;
 use formation_chess_core::action::GameResult;
 use formation_chess_core::board::Board;
 use formation_chess_core::game::Game;
-use formation_chess_core::game::GameConfig;
 use formation_chess_core::game::Phase;
 use formation_chess_core::notation::NotationResolver;
 
@@ -32,6 +31,7 @@ const DOCUMENTED_PROTOCOL_SNIPPETS: &[&str] = &[
     "黑车进二",
     "一二三二",
     "红风平四拉",
+    "红势四四和",
     "变化：[红卒平三 红风平四]\n胜负：未分",
     "黑将认负",
     "变化：[红车平五]\n胜负：未分",
@@ -44,7 +44,7 @@ const DOCUMENTED_PROTOCOL_SNIPPETS: &[&str] = &[
     "错误：path blocked, cannot reach destination",
 ];
 
-const DOCUMENTED_SWAP_REACTION: &str = "变化：[一二三四 三四一二]\n胜负：未分";
+const DOCUMENTED_DRAW_SWAP_REACTION: &str = "变化：[黑将二二 红势四四]\n胜负：和棋";
 const QUICK_START_POOL_LINES: &str = "红方：[计 势 变 风 林 火 山 矛 盾 弹 雷 士 卒 马 车]\n黑方：[计 势 变 风 林 火 山 矛 盾 弹 雷 士 卒 马 车]";
 
 #[test]
@@ -68,13 +68,13 @@ fn documented_protocol_examples_match_the_fixtures() {
     }
 }
 
-/// The cyclic-swap example is implemented by the direct reaction API test.
+/// The draw-exchange example is implemented by the direct reaction API test.
 #[test]
-fn documented_swap_example_matches_both_notation_documents() {
+fn documented_draw_swap_example_matches_both_notation_documents() {
     for source in
         [include_str!("../../docs/notation.md"), include_str!("../../docs/notation.zh-Hans.md")]
     {
-        assert!(source.contains(DOCUMENTED_SWAP_REACTION));
+        assert!(source.contains(DOCUMENTED_DRAW_SWAP_REACTION));
     }
 }
 
@@ -131,36 +131,35 @@ fn readme_custom_position_example() {
     assert_eq!(game.phase(), Phase::Place);
 }
 
-/// The cyclic swap example in notation.md: `变化：[一二三四 三四一二]`
-/// applied to a board must swap the two pieces.
+/// The draw-exchange example in notation.md: `红势四四和` must be a legal
+/// draw on the documented board, and the reaction `变化：[黑将二二 红势四四]`
+/// must swap the two pieces and declare a draw.
 #[test]
-fn notation_md_swap_example_applies() {
-    let board: Board = "零[一路 二路 三路 四路 五路]
-一[一一 一一 一一 一一 一一]
-二[红卒 一一 一一 一一 一一]
+fn notation_md_draw_swap_example_applies() {
+    let game: Game = "行棋方：红
+红方：[]
+黑方：[]
+胜负：未分
+棋盘：
+零[一路 二路 三路 四路 五路]
+一[红将 一一 一一 一一 一一]
+二[一一 红势 一一 一一 一一]
 三[一一 一一 一一 一一 一一]
-四[一一 一一 红马 一一 一一]
+四[一一 一一 一一 黑将 一一]
 五[一一 一一 一一 一一 一一]
 "
     .parse()
-    .expect("parse board");
+    .expect("parse game");
 
-    let game = Game::new(GameConfig {
-        board: board.clone(),
-        red_pool: Vec::new(),
-        black_pool: Vec::new(),
-        result: GameResult::Draw,
-        ..GameConfig::default()
-    })
-    .expect("construct resolver game");
-    let reaction = NotationResolver::new(&game)
-        .parse_reaction(DOCUMENTED_SWAP_REACTION)
-        .expect("parse reaction")
-        .expect("reaction is a success");
+    let resolver = NotationResolver::new(&game);
+    let action = resolver.parse_action("红势四四和").expect("parse action");
+    let reaction = game.try_action(action).expect("draw action must be legal");
+    assert_eq!(reaction.game_result, GameResult::Draw);
+    assert_eq!(resolver.fmt_reaction(Ok(reaction.clone())), DOCUMENTED_DRAW_SWAP_REACTION);
 
     let changes = Board::normalize_changes(reaction.changes.as_slice());
-    let mut applied = board;
+    let mut applied = game.board().clone();
     applied.apply(&changes);
-    assert_eq!(applied[(0, 1)].map(|p| p.name), Some('马'));
-    assert_eq!(applied[(2, 3)].map(|p| p.name), Some('卒'));
+    assert_eq!(applied[(1, 1)].map(|p| p.name), Some('将'));
+    assert_eq!(applied[(3, 3)].map(|p| p.name), Some('势'));
 }
