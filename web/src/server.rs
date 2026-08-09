@@ -150,7 +150,7 @@ impl GameSession {
         if self.control(player) != ApiControl::Human {
             return Err(format!("{} 方当前由 AI 控制", request.side));
         }
-        let action = request.action.to_action(player)?;
+        let action = request.action.to_action()?;
         let reaction = self.game.action(action)?;
         self.history.push(HistoryEntry { reaction, control: ApiControl::Human });
         self.revision += 1;

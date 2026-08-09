@@ -347,7 +347,6 @@ pub enum ActionData {
     Push { from: PositionRecord, to: PositionRecord },
     Pull { from: PositionRecord, to: PositionRecord },
     Draw { from: PositionRecord, to: PositionRecord },
-    Pass { player: PlayerRecord },
     Resign { at: PositionRecord },
 }
 
@@ -378,7 +377,6 @@ impl From<Action> for ActionData {
                 from: PositionRecord::from(move_.from),
                 to: PositionRecord::from(move_.to),
             },
-            Action::Pass(player) => Self::Pass { player: PlayerRecord::from(player) },
             Action::Resign(x, y) => Self::Resign { at: PositionRecord { x, y } },
         }
     }
@@ -550,7 +548,6 @@ pub struct ActionCounts {
     pub pushes: u64,
     pub pulls: u64,
     pub draws: u64,
-    pub passes: u64,
     pub resignations: u64,
 }
 
@@ -568,7 +565,6 @@ impl ActionCounts {
             Action::Push(_) => self.pushes += 1,
             Action::Pull(_) => self.pulls += 1,
             Action::Draw(_) => self.draws += 1,
-            Action::Pass(_) => self.passes += 1,
             Action::Resign(..) => self.resignations += 1,
         }
     }

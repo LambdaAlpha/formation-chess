@@ -17,11 +17,11 @@ The framework prepares phase-specific AgentInput values:
   Game, so the framework does not materialize every piece-position action.
 - Movement receives the current Game and an explicit slice containing every
   legal core movement action, including targeted Resign actions for controlled
-  Vital pieces, followed by Pass as the final candidate.
+  Vital pieces.
 
 prepare_turn creates a PreparedTurn that borrows the exact immutable Game and
-owns any enumerated movement actions. Core enumeration order is preserved, and
-Pass is appended after those actions. Orchestrators can inspect and reuse this
+owns any enumerated movement actions. Core enumeration order is preserved.
+Orchestrators can inspect and reuse this
 prepared input without enumerating legal actions a second time.
 analyze_prepared validates an agent against that prepared input. analyze_agent
 is the convenience wrapper that prepares and analyzes in one call.
@@ -55,8 +55,8 @@ positions or attempt to play well.
 
 MctsAgent implements seeded UCT without static evaluation, action priors, or
 hand-authored move ordering. Each node expands legal actions in a seeded random
-order. Rollouts choose uniformly from every legal action, including Pull, targeted
-Resign, and Pass during movement. Only terminal game results are scored: win is
+order. Rollouts choose uniformly from every legal action, including Pull and
+targeted Resign during movement. Only terminal game results are scored: win is
 1, loss is -1, and draw is 0 from the root player's perspective.
 
 MctsConfig::baseline() uses 128 iterations, exploration 0.7, and a hard

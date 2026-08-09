@@ -275,7 +275,6 @@ fn metrics_split_side_phases_and_all_action_type_ratios() {
     assert_eq!(metrics.action_types.pushes, CountRatio { count: 0, ratio: Some(0.0) });
     assert_eq!(metrics.action_types.pulls, CountRatio { count: 0, ratio: Some(0.0) });
     assert_eq!(metrics.action_types.draws, CountRatio { count: 0, ratio: Some(0.0) });
-    assert_eq!(metrics.action_types.passes, CountRatio { count: 0, ratio: Some(0.0) });
     assert_eq!(metrics.action_types.resignations, CountRatio { count: 1, ratio: Some(0.2) });
 
     let expected_legal = DistributionMetrics::from_counts(
@@ -308,25 +307,30 @@ fn metrics_count_reactions_final_material_and_state_visits() {
 fn repeated_state_visits_count_returns_to_an_earlier_state() {
     let record = game_record(
         movement_game(),
-        vec![Action::Pass(Player::Red), Action::Pass(Player::Black)],
-        GameTermination::ActionLimit { limit: nonzero(2) },
+        vec![
+            Action::Move(Move { from: (0, 4), to: (1, 3) }),
+            Action::Move(Move { from: (4, 0), to: (3, 1) }),
+            Action::Move(Move { from: (1, 3), to: (0, 4) }),
+            Action::Move(Move { from: (3, 1), to: (4, 0) }),
+        ],
+        GameTermination::ActionLimit { limit: nonzero(4) },
         ScheduleMode::Fixed { games: nonzero(1) },
     );
     let metrics = GameMetrics::from_record(&record).expect("valid metrics");
 
-    assert_eq!(metrics.termination, TerminationKind::ActionLimit { limit: 2 });
-    assert_eq!(metrics.action_types.passes, CountRatio { count: 2, ratio: Some(1.0) });
-    assert_eq!(metrics.state_visits.total_visits, 3);
-    assert_eq!(metrics.state_visits.unique_states, 2);
+    assert_eq!(metrics.termination, TerminationKind::ActionLimit { limit: 4 });
+    assert_eq!(metrics.action_types.moves, CountRatio { count: 4, ratio: Some(1.0) });
+    assert_eq!(metrics.state_visits.total_visits, 5);
+    assert_eq!(metrics.state_visits.unique_states, 4);
     assert_eq!(metrics.state_visits.repeated_visits, 1);
-    assert!((metrics.state_visits.unique_state_ratio - 2.0 / 3.0).abs() < 1e-12);
+    assert!((metrics.state_visits.unique_state_ratio - 4.0 / 5.0).abs() < 1e-12);
 }
 
 #[test]
 fn metrics_reject_tampered_records_before_returning_values() {
     let mut record = game_record(
         movement_game(),
-        vec![Action::Pass(Player::Red)],
+        vec![Action::Move(Move { from: (0, 4), to: (1, 3) })],
         GameTermination::ActionLimit { limit: nonzero(1) },
         ScheduleMode::Fixed { games: nonzero(1) },
     );

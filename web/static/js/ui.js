@@ -50,9 +50,6 @@ function bindToolbar() {
     document.getElementById('btn-agent-step').addEventListener('click', () => {
         sendCommand({ type: 'agent_step' });
     });
-    document.getElementById('btn-pass').addEventListener('click', () => {
-        submitAction({ type: 'pass' });
-    });
     document.getElementById('btn-resign').addEventListener('click', () => {
         submitAction({ type: 'resign', at: resignableAt || [0, 0] });
     });
@@ -225,7 +222,6 @@ function refreshInteractivity() {
     if (!gameState) return;
     const unfinished = gameState.result === 'Unfinished';
     const placement = phase() === 'placement';
-    const movement = phase() === 'movement';
     const human = canHumanAct();
     const canStep = unfinished && gameState.can_agent_step;
     const canResign = placement || Boolean(resignableAt);
@@ -235,8 +231,6 @@ function refreshInteractivity() {
     document.getElementById('btn-agent-hint').disabled = busy || analysisBusy || !unfinished;
     document.getElementById('btn-agent-step').classList.toggle('hidden', !canStep);
     document.getElementById('btn-agent-step').disabled = busy || !canStep;
-    document.getElementById('btn-pass').classList.toggle('hidden', !movement || !unfinished);
-    document.getElementById('btn-pass').disabled = !human;
     document.getElementById('btn-resign').classList.toggle('hidden', !unfinished);
     document.getElementById('btn-resign').disabled = !human || !canResign;
     document.getElementById('btn-undo').disabled = busy || !gameState.can_undo;

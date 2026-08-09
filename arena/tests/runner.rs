@@ -8,6 +8,7 @@ use formation_chess_agent::Agent;
 use formation_chess_agent::AgentError;
 use formation_chess_agent::AgentInput;
 use formation_chess_agent::ScoredAction;
+use formation_chess_agent::legal_movement_actions;
 use formation_chess_arena::AgentDescriptor;
 use formation_chess_arena::AgentFactory;
 use formation_chess_arena::GameRunConfig;
@@ -30,7 +31,7 @@ use formation_chess_core::piece::Player;
 
 #[derive(Debug, Copy, Clone)]
 enum Behavior {
-    Pass,
+    First,
     Draw,
     Fail,
 }
@@ -58,7 +59,7 @@ impl Agent for TestAgent {
             .iter()
             .copied()
             .find(|action| match self.behavior {
-                Behavior::Pass => matches!(action, Action::Pass(_)),
+                Behavior::First => true,
                 Behavior::Draw => matches!(action, Action::Draw(_)),
                 Behavior::Fail => false,
             })
@@ -123,6 +124,12 @@ fn movement_game() -> Game {
         result: GameResult::Unfinished,
     })
     .expect("valid movement game")
+}
+
+fn first_movement_action(game: &Game) -> Action {
+    let mut actions = Vec::new();
+    legal_movement_actions(game, &mut actions);
+    actions[0]
 }
 
 fn draw_game() -> Game {
@@ -198,8 +205,8 @@ fn runner_maps_swapped_participants_to_factories_and_seeds() {
     let plan = Schedule::new(matchup.clone(), ScheduleMode::Paired { pairs: nonzero(1) }, 11)
         .nth(1)
         .expect("second paired game");
-    let participant_a = TestFactory::new("a", Behavior::Pass);
-    let participant_b = TestFactory::new("b", Behavior::Pass);
+    let participant_a = TestFactory::new("a", Behavior::First);
+    let participant_b = TestFactory::new("b", Behavior::First);
     let runner =
         MatchRunner::new(matchup, &participant_a, &participant_b, GameRunConfig::new(nonzero(1)));
 
@@ -212,7 +219,7 @@ fn runner_maps_swapped_participants_to_factories_and_seeds() {
     assert_eq!(run.actions.len(), 1);
     assert_eq!(run.actions[0].player, Player::Red);
     assert_eq!(run.actions[0].phase, Phase::Move);
-    assert_eq!(run.actions[0].action, Action::Pass(Player::Red));
+    assert_eq!(run.actions[0].action, first_movement_action(&movement_game()));
     assert_eq!(run.actions[0].candidate_rank, NonZeroU8::MIN);
     assert!(run.actions[0].legal_action_count.is_some_and(|count| count > 0));
     assert_eq!(run.final_game.player(), Player::Black);
@@ -226,7 +233,7 @@ fn runner_retains_natural_result_and_executed_action() {
         .next()
         .expect("first fixed game");
     let participant_a = TestFactory::new("draw", Behavior::Draw);
-    let participant_b = TestFactory::new("pass", Behavior::Pass);
+    let participant_b = TestFactory::new("first", Behavior::First);
     let runner =
         MatchRunner::new(matchup, &participant_a, &participant_b, GameRunConfig::new(nonzero(5)));
 
@@ -246,7 +253,7 @@ fn runner_retains_agent_failure_without_executing_an_action() {
         .next()
         .expect("first fixed game");
     let participant_a = TestFactory::new("fail", Behavior::Fail);
-    let participant_b = TestFactory::new("pass", Behavior::Pass);
+    let participant_b = TestFactory::new("first", Behavior::First);
     let runner =
         MatchRunner::new(matchup, &participant_a, &participant_b, GameRunConfig::new(nonzero(5)));
     let initial_game = movement_game();
@@ -270,8 +277,8 @@ fn runner_rejects_a_plan_from_another_matchup_before_creating_agents() {
         .next()
         .expect("first fixed game");
     plan.red = participant("outsider");
-    let participant_a = TestFactory::new("a", Behavior::Pass);
-    let participant_b = TestFactory::new("b", Behavior::Pass);
+    let participant_a = TestFactory::new("a", Behavior::First);
+    let participant_b = TestFactory::new("b", Behavior::First);
     let runner =
         MatchRunner::new(matchup, &participant_a, &participant_b, GameRunConfig::new(nonzero(1)));
 

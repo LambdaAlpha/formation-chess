@@ -5,7 +5,6 @@ use formation_chess_core::action::Move;
 use formation_chess_core::action::PositionChange;
 use formation_chess_core::game::Game;
 use formation_chess_core::notation::NotationResolver;
-use formation_chess_core::piece::Player;
 
 mod support;
 use support::api::SIMPLE;
@@ -432,9 +431,8 @@ fn notation_formats_and_parses_pull_action() {
 }
 
 #[test]
-fn notation_resolves_pass_and_target_resign() {
+fn notation_resolves_target_resign() {
     let game = Game::from_str(SIMPLE).expect("parse");
     let resolver = NotationResolver::new(&game);
-    assert_eq!(resolver.parse_action("红将按兵"), Ok(Action::Pass(Player::Red)));
     assert_eq!(resolver.parse_action("红将认负"), Ok(Action::Resign(0, 4)));
 }

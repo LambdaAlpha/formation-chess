@@ -16,8 +16,8 @@ focuses on crate boundaries and integration APIs.
   definitions, and position-dependent effective abilities.
 - **Phases:** alternating placement while either pool is non-empty, followed by
   movement when both pools are empty.
-- **Actions:** place, move, capture, push, pull, draw exchange, pass, and
-  targeted resign.
+- **Actions:** place, move, capture, push, pull, draw exchange, and targeted
+  resign.
 - **Results:** `Unfinished`, `RedWin`, `BlackWin`, and `Draw`; decided games
   reject further actions.
 - **Reactions:** reversible board changes plus the exact placement-pool change
@@ -86,7 +86,6 @@ on-board piece during movement.
 | `红火五四推` | Declare push intent at the destination |
 | `红风平四拉` | Move the Wind and pull the piece behind its origin |
 | `红将五一和` | Exchange with an opposing Vital piece and draw |
-| `红将按兵` | Pass during movement |
 | `黑将认负` | Resign the controlled Black General |
 
 A formatted outcome is either a successful reaction:
@@ -114,8 +113,8 @@ passed to `Game::undo` in strict last-in-first-out order.
   controlled board piece.
 - The board enumeration includes `Move`, `Capture`, `Push`, `Pull`, `Draw`, and
   `Resign` for controlled Vital pieces.
-- Placement and `Pass` are caller-level concerns; the Agent crate appends Pass
-  to the core movement action list.
+- Placement is a caller-level concern; the Agent crate serves the core
+  movement enumeration directly.
 
 Every returned action is still executed through `Game::action`, which performs
 the authoritative validation and produces the reversible reaction.

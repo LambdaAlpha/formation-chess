@@ -551,7 +551,6 @@ struct ActionTypeAccumulator {
     pushes: u64,
     pulls: u64,
     draws: u64,
-    passes: u64,
     resignations: u64,
 }
 
@@ -564,7 +563,6 @@ impl ActionTypeAccumulator {
         self.pushes += metrics.pushes.count;
         self.pulls += metrics.pulls.count;
         self.draws += metrics.draws.count;
-        self.passes += metrics.passes.count;
         self.resignations += metrics.resignations.count;
     }
 
@@ -577,7 +575,6 @@ impl ActionTypeAccumulator {
             pushes: count_ratio(self.pushes, self.total_actions),
             pulls: count_ratio(self.pulls, self.total_actions),
             draws: count_ratio(self.draws, self.total_actions),
-            passes: count_ratio(self.passes, self.total_actions),
             resignations: count_ratio(self.resignations, self.total_actions),
         }
     }
@@ -875,8 +872,6 @@ const CSV_COLUMNS: &[&str] = &[
     "pulls_ratio",
     "draws_count",
     "draws_ratio",
-    "passes_count",
-    "passes_ratio",
     "resignations_count",
     "resignations_ratio",
     "legal_movement_count",
@@ -930,7 +925,6 @@ fn write_game_metrics_row(writer: &mut impl Write, metrics: &GameMetrics) -> io:
     push_count_ratio_fields(&mut fields, metrics.action_types.pushes);
     push_count_ratio_fields(&mut fields, metrics.action_types.pulls);
     push_count_ratio_fields(&mut fields, metrics.action_types.draws);
-    push_count_ratio_fields(&mut fields, metrics.action_types.passes);
     push_count_ratio_fields(&mut fields, metrics.action_types.resignations);
     push_distribution_fields(&mut fields, metrics.legal_movement_actions);
     fields.push(raw(metrics.reaction_changes.additions));
@@ -1135,7 +1129,6 @@ const fn action_kind_name(action: ActionKind) -> &'static str {
         ActionKind::Push => "push",
         ActionKind::Pull => "pull",
         ActionKind::Draw => "draw",
-        ActionKind::Pass => "pass",
         ActionKind::Resign => "resign",
     }
 }

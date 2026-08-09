@@ -132,7 +132,7 @@ Each GameMetrics value contains:
 - game, pair, seat, participant, result, termination, and last-action dimensions;
 - separate Red and Black placement/movement action counts;
 - counts and all-action ratios for placement, move, capture, push, pull, draw,
-  pass, and resignation actions;
+  and resignation actions;
 - count, minimum, maximum, mean, median, P25, P75, P90, and P95 of movement
   legal-action counts;
 - occupancy additions, removals, and replacements across reactions;

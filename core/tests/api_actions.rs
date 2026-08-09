@@ -335,13 +335,9 @@ fn try_action_resign_returns_result_without_setting_it() {
 }
 
 #[test]
-fn undo_restores_move_pass_and_resign() {
+fn undo_restores_move_and_resign() {
     let initial = game_one(Player::Red, Piece::RED_ROOK, (2, 2));
-    for action in [
-        Action::Move(Move { from: (2, 2), to: (2, 1) }),
-        Action::Pass(Player::Red),
-        Action::Resign(0, 4),
-    ] {
+    for action in [Action::Move(Move { from: (2, 2), to: (2, 1) }), Action::Resign(0, 4)] {
         let mut game = initial.clone();
         let reaction = game.action(action).expect("action");
         game.undo(reaction);

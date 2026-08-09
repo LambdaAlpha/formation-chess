@@ -173,13 +173,12 @@ fn board_iterator_yields_positions_for_duplicate_pieces() {
 }
 
 #[test]
-fn movement_actions_include_controlled_vital_resign_and_pass() {
+fn movement_actions_include_controlled_vital_resign() {
     let game = movement_game();
     let actions = collected_movement_actions(&game);
 
     assert!(actions.contains(&Action::Resign(0, 4)));
     assert!(!actions.contains(&Action::Resign(4, 0)));
-    assert_eq!(actions.last(), Some(&Action::Pass(Player::Red)));
     assert!(!actions.iter().any(|action| matches!(action, Action::Place(_))));
 }
 
@@ -241,7 +240,7 @@ fn movement_actions_append_to_existing_buffer() {
     legal_movement_actions(&game, &mut actions);
 
     assert_eq!(actions[0], prefix);
-    assert_eq!(actions.last(), Some(&Action::Pass(Player::Red)));
+    assert!(actions.len() > 1);
 }
 
 #[test]
@@ -277,8 +276,7 @@ fn analysis_dispatches_placement_without_action_enumeration() {
     let before = game.to_string();
     let expected_pool = game.red_pool().to_vec();
     let placement = Action::Place(Place { piece: Piece::RED_GENERAL.id(), to: (0, 5) });
-    let mut agent =
-        TestAgent::new(vec![scored(placement, 3.0)], vec![scored(Action::Pass(Player::Red), 1.0)]);
+    let mut agent = TestAgent::new(vec![scored(placement, 3.0)], Vec::new());
 
     let analysis = analyze_agent(&game, &mut agent, top_k(3)).expect("placement analysis");
 
@@ -305,10 +303,10 @@ fn analysis_dispatches_prepared_movement_candidates() {
     assert_eq!(legal_actions, &expected_actions);
     assert_eq!(prepared.legal_action_count(), Some(expected_count));
 
-    let pass = Action::Pass(Player::Red);
+    let first = expected_actions[0];
     let mut agent = TestAgent::new(
         vec![scored(Action::Place(Place { piece: Piece::RED_GENERAL.id(), to: (0, 4) }), 1.0)],
-        vec![scored(pass, 2.0)],
+        vec![scored(first, 2.0)],
     );
 
     let analysis = analyze_prepared(&prepared, &mut agent, top_k(2)).expect("movement analysis");
@@ -317,22 +315,22 @@ fn analysis_dispatches_prepared_movement_candidates() {
     assert_eq!(agent.movement_calls, 1);
     assert_eq!(agent.observed_legal_action_count, expected_count);
     assert_eq!(agent.observed_top_k, Some(top_k(2)));
-    assert_eq!(analysis.candidates, vec![scored(pass, 2.0)]);
+    assert_eq!(analysis.candidates, vec![scored(first, 2.0)]);
     assert_eq!(analysis.legal_action_count, Some(expected_count));
 }
 
 #[test]
 fn turn_requests_top_one_and_executes_the_first_candidate() {
     let mut game = movement_game();
-    let pass = Action::Pass(Player::Red);
-    let mut agent = TestAgent::new(Vec::new(), vec![scored(pass, 7.0)]);
+    let action = Action::Move(Move { from: (0, 4), to: (1, 3) });
+    let mut agent = TestAgent::new(Vec::new(), vec![scored(action, 7.0)]);
     let mut selector = ActionSelector::default();
 
     let turn = play_agent_turn(&mut game, &mut agent, &mut selector).expect("agent movement");
 
     assert_eq!(agent.observed_top_k, Some(NonZeroU8::MIN));
     assert_eq!(turn.player, Player::Red);
-    assert_eq!(turn.action, pass);
+    assert_eq!(turn.action, action);
     assert_eq!(turn.score, 7.0);
     assert_eq!(turn.candidate_rank, NonZeroU8::MIN);
     assert_eq!(game.player(), Player::Black);
@@ -365,7 +363,10 @@ fn analysis_rejects_more_candidates_than_top_k() {
 #[test]
 fn analysis_rejects_non_finite_scores() {
     let game = movement_game();
-    let mut agent = TestAgent::new(Vec::new(), vec![scored(Action::Pass(Player::Red), f32::NAN)]);
+    let mut agent = TestAgent::new(Vec::new(), vec![scored(
+        Action::Move(Move { from: (0, 4), to: (1, 3) }),
+        f32::NAN,
+    )]);
 
     let error = analyze_agent(&game, &mut agent, NonZeroU8::MIN).expect_err("non-finite score");
 
@@ -389,8 +390,8 @@ fn analysis_rejects_increasing_scores() {
 #[test]
 fn analysis_rejects_duplicate_actions() {
     let game = movement_game();
-    let pass = Action::Pass(Player::Red);
-    let mut agent = TestAgent::new(Vec::new(), vec![scored(pass, 2.0), scored(pass, 1.0)]);
+    let action = Action::Move(Move { from: (0, 4), to: (1, 3) });
+    let mut agent = TestAgent::new(Vec::new(), vec![scored(action, 2.0), scored(action, 1.0)]);
 
     let error = analyze_agent(&game, &mut agent, top_k(2)).expect_err("duplicate action");
 
@@ -429,7 +430,7 @@ fn analysis_rejects_finished_game_without_calling_agent() {
     game.action(Action::Resign(0, 4)).expect("finish game");
     let mut agent = TestAgent::new(
         vec![scored(Action::Place(Place { piece: Piece::BLACK_GENERAL.id(), to: (0, 0) }), 1.0)],
-        vec![scored(Action::Pass(Player::Black), 1.0)],
+        Vec::new(),
     );
 
     let prepare_error = prepare_turn(&game).expect_err("finished game cannot be prepared");

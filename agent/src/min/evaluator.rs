@@ -390,7 +390,7 @@ fn record_action_kind(action: Action, analysis: &mut ActionAnalysis) {
         Action::Push(_) => analysis.push_actions += 1,
         Action::Pull(_) => analysis.pull_actions += 1,
         Action::Move(_) | Action::Draw(_) => {},
-        Action::Place(_) | Action::Pass(_) | Action::Resign(..) => {
+        Action::Place(_) | Action::Resign(..) => {
             unreachable!("Board::valid_moves returned a non-movement action")
         },
     }
@@ -447,7 +447,7 @@ fn analyze_action_outcome(board: &Board, player: Player, action: Action) -> Acti
             };
             ActionOutcome { game_result, exchange_units: 0 }
         },
-        Action::Place(_) | Action::Pass(_) => {
+        Action::Place(_) => {
             unreachable!("Board::valid_moves returned a non-board action")
         },
     }
@@ -748,7 +748,7 @@ fn action_move(action: Action) -> Option<formation_chess_core::action::Move> {
         | Action::Push(move_)
         | Action::Pull(move_)
         | Action::Draw(move_) => Some(move_),
-        Action::Place(_) | Action::Pass(_) | Action::Resign(..) => None,
+        Action::Place(_) | Action::Resign(..) => None,
     }
 }
 
@@ -866,9 +866,6 @@ mod tests {
             actions.clear();
             legal_movement_actions(&game, &mut actions);
             for &action in &actions {
-                if matches!(action, Action::Pass(_)) {
-                    continue;
-                }
                 let expected = game.try_action(action).expect("enumerated action must be legal");
                 let predicted = analyze_action_outcome(game.board(), game.player(), action);
                 assert_eq!(

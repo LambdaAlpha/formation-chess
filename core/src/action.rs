@@ -2,7 +2,6 @@ use std::str::FromStr;
 
 use crate::piece::Piece;
 use crate::piece::PieceId;
-use crate::piece::Player;
 
 /// A player action, expressed in 0-based board coordinates.
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -21,8 +20,6 @@ pub enum Action {
     Pull(Move),
     /// Exchange positions with an opponent's vital piece to draw the game.
     Draw(Move),
-    /// Skip the turn without moving.
-    Pass(Player),
     /// Concede the side owning the vital piece at the coordinate. The
     /// coordinate is ignored during the placement phase.
     Resign(u8, u8),

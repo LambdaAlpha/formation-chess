@@ -317,14 +317,6 @@ impl Game {
                     game_result: GameResult::Draw,
                 })
             },
-            Action::Pass(player) => {
-                self.try_pass(player)?;
-                Ok(Reaction {
-                    changes: PositionChanges::empty(),
-                    pool_change: PoolChange::Unchanged,
-                    game_result: self.result,
-                })
-            },
             Action::Resign(x, y) => {
                 let game_result = self.try_resign((x, y))?;
                 Ok(Reaction {
@@ -487,13 +479,6 @@ impl Game {
         added || !removed
     }
 
-    fn try_pass(&self, player: Player) -> Result<(), String> {
-        if self.phase() == Phase::Place {
-            return Err("cannot pass during the placement phase".into());
-        }
-        self.check_player(player)
-    }
-
     fn try_resign(&self, at: (u8, u8)) -> Result<GameResult, String> {
         if self.phase() == Phase::Place {
             return Ok(match self.player {
@@ -520,13 +505,6 @@ impl Game {
             Player::Red => GameResult::BlackWin,
             Player::Black => GameResult::RedWin,
         })
-    }
-
-    fn check_player(&self, player: Player) -> Result<(), String> {
-        if player == self.player {
-            return Ok(());
-        }
-        Err(format!("action declares player {player}, but player {} is to move", self.player))
     }
 
     fn switch_player(&mut self) {

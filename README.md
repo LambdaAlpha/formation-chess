@@ -24,7 +24,7 @@ Mobility:        士 卒 马 车
 ```
 
 Movement play supports ordinary moves, allied or opposing captures, pushes,
-pulls, Vital-piece draw exchanges, pass, and target-based resignation.
+pulls, Vital-piece draw exchanges, and target-based resignation.
 
 ## Learn the game
 
@@ -101,7 +101,7 @@ validates a custom text snapshot.
 ## Minimal engine session
 
 Notation is resolved against the current game because phase, board identity,
-relative movement, pass, and targeted resignation all depend on that snapshot.
+relative movement, and targeted resignation all depend on that snapshot.
 
 ```rust
 use formation_chess_core::game::{Game, GameConfig};

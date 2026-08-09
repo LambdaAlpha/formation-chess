@@ -107,7 +107,6 @@ pub enum ActionKind {
     Push,
     Pull,
     Draw,
-    Pass,
     Resign,
 }
 
@@ -120,7 +119,6 @@ impl From<&ActionData> for ActionKind {
             ActionData::Push { .. } => Self::Push,
             ActionData::Pull { .. } => Self::Pull,
             ActionData::Draw { .. } => Self::Draw,
-            ActionData::Pass { .. } => Self::Pass,
             ActionData::Resign { .. } => Self::Resign,
         }
     }
@@ -207,7 +205,6 @@ pub struct ActionTypeMetrics {
     pub pushes: CountRatio,
     pub pulls: CountRatio,
     pub draws: CountRatio,
-    pub passes: CountRatio,
     pub resignations: CountRatio,
 }
 
@@ -224,7 +221,6 @@ impl ActionTypeMetrics {
             pushes: CountRatio::new(red.pushes + black.pushes, total_actions),
             pulls: CountRatio::new(red.pulls + black.pulls, total_actions),
             draws: CountRatio::new(red.draws + black.draws, total_actions),
-            passes: CountRatio::new(red.passes + black.passes, total_actions),
             resignations: CountRatio::new(red.resignations + black.resignations, total_actions),
         }
     }

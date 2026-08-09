@@ -639,7 +639,7 @@ impl Board {
     /// Append all legal actions for the piece at `from` to `actions`. The piece
     /// must be present on the board. Actions are [`Action::Move`], [`Action::Pull`],
     /// [`Action::Capture`], [`Action::Push`], [`Action::Draw`], and
-    /// [`Action::Resign`]; placement and pass are the caller's concern.
+    /// [`Action::Resign`]; placement is the caller's concern.
     ///
     /// `player` filters draw and resign actions by ownership and control.
     pub fn valid_moves(&self, player: Player, from: (u8, u8), actions: &mut Vec<Action>) {

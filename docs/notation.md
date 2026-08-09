@@ -94,7 +94,7 @@ Most actions use:
 piece reference + destination + optional suffix
 ```
 
-Pass and resign use dedicated phrases.
+Resign uses a dedicated phrase.
 
 ### Piece references
 
@@ -150,16 +150,12 @@ The same unsuffixed `红将五十` form means placement when the named piece is 
 the current pool, and an ordinary move when the game is already in the movement
 phase and the piece is uniquely present on the board.
 
-### Pass and resign
+### Resign
 
 ```text
-红将按兵
 黑将认负
 ```
 
-- `按兵` is legal only in the movement phase. The phrase must name the current
-  player's unique on-board General. The General is the required notation marker
-  for Pass and does not move.
 - `认负` must name a General. During movement, it must uniquely identify an
   on-board Vital piece controlled by the current player; the named piece's owner
   loses. During placement, the phrase must name the current player's General,
@@ -251,13 +247,6 @@ Mutual destruction removes both pieces:
 胜负：未分
 ```
 
-Pass produces no changes:
-
-```text
-变化：[]
-胜负：未分
-```
-
 A winning action or resignation declares the resulting win:
 
 ```text
@@ -333,8 +322,7 @@ column-label = numeral , "路" ;
 board-row    = numeral , "[" , cell , { " " , cell } , "]" , newline ;
 cell         = "一一" | named-piece ;
 
-action       = pass | resign | piece-action ;
-pass         = named-piece , "按兵" ;
+action       = resign | piece-action ;
 resign       = named-piece , "认负" ;
 piece-action = piece , position , [ suffix ] ;
 piece        = named-piece | coordinate ;

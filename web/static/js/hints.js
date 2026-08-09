@@ -7,7 +7,6 @@ const ACTION_LABELS = {
     capture: '捉子',
     push: '推子',
     pull: '拉子',
-    pass: '按兵',
     resign: '认负',
 };
 

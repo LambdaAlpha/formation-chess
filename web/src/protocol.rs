@@ -176,7 +176,6 @@ pub enum ApiAction {
     Push { from: [u8; 2], to: [u8; 2] },
     Pull { from: [u8; 2], to: [u8; 2] },
     Draw { from: [u8; 2], to: [u8; 2] },
-    Pass,
     Resign { at: [u8; 2] },
 }
 
@@ -191,12 +190,11 @@ impl ApiAction {
             Action::Push(move_) => Self::Push { from: pair(move_.from), to: pair(move_.to) },
             Action::Pull(move_) => Self::Pull { from: pair(move_.from), to: pair(move_.to) },
             Action::Draw(move_) => Self::Draw { from: pair(move_.from), to: pair(move_.to) },
-            Action::Pass(_) => Self::Pass,
             Action::Resign(x, y) => Self::Resign { at: [x, y] },
         }
     }
 
-    pub fn to_action(&self, current_player: Player) -> Result<Action, String> {
+    pub fn to_action(&self) -> Result<Action, String> {
         match self {
             Self::Place { piece, to } => {
                 Ok(Action::Place(Place { piece: piece.to_id()?, to: tuple(*to) }))
@@ -216,7 +214,6 @@ impl ApiAction {
             Self::Draw { from, to } => {
                 Ok(Action::Draw(Move { from: tuple(*from), to: tuple(*to) }))
             },
-            Self::Pass => Ok(Action::Pass(current_player)),
             Self::Resign { at } => Ok(Action::Resign(at[0], at[1])),
         }
     }
@@ -461,7 +458,7 @@ mod tests {
                 "to": [2, 1],
             })
         );
-        assert_eq!(api_pull.to_action(Player::Red).expect("decode pull"), pull);
+        assert_eq!(api_pull.to_action().expect("decode pull"), pull);
 
         let resign = Action::Resign(0, 4);
         let api_resign = ApiAction::from_action(resign);
@@ -472,7 +469,7 @@ mod tests {
                 "at": [0, 4],
             })
         );
-        assert_eq!(api_resign.to_action(Player::Red).expect("decode resign"), resign);
+        assert_eq!(api_resign.to_action().expect("decode resign"), resign);
     }
 
     #[test]

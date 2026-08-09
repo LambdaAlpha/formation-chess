@@ -41,7 +41,6 @@ no authentication, remote matchmaking, or durable game storage.
 - The board renders both Red's down-pointing Mobility pentagon and Black's
   vertically mirrored up-pointing pentagon.
 - A successful Draw refreshes both exchanged Vital-piece positions.
-- Pass is shown in the movement toolbar.
 - The standalone resign button is shown only during placement. During movement,
   resignation is the `认负` candidate on a controlled General's action menu.
 - Undo restores one action in Human/Human or Agent/Agent games. In mixed games,
@@ -121,11 +120,10 @@ Movement interactions use the same `from`/`to` shape:
 { "type": "draw", "from": [4, 8], "to": [4, 1] }
 ```
 
-Placement, pass, and targeted resignation are:
+Placement and targeted resignation are:
 
 ```json
 { "type": "place", "piece": { "name": "风", "player": "Red" }, "to": [4, 9] }
-{ "type": "pass" }
 { "type": "resign", "at": [4, 9] }
 ```
 
@@ -142,7 +140,6 @@ is resigning.
 `/api/legal-actions` returns the complete `ApiAction` values for that origin.
 For a controlled General, the list may include
 `{ "type": "resign", "at": [4, 9] }` in addition to movement interactions.
-Pass is a toolbar action and is not tied to a board origin.
 
 Agent analysis uses:
 

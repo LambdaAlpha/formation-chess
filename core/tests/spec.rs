@@ -34,8 +34,8 @@ fn game_end_spec() {
 }
 
 #[test]
-fn pass_and_resign_spec() {
-    support::spec::run_tests(include_str!("pass_resign.txt"));
+fn resign_spec() {
+    support::spec::run_tests(include_str!("resign.txt"));
 }
 
 #[test]

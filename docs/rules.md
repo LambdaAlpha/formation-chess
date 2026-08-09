@@ -57,7 +57,6 @@ player's half.
 
 - A piece cannot be placed twice.
 - Red cannot place a Black piece, and Black cannot place a Red piece.
-- Pass is illegal during placement.
 - The current player may resign during placement.
 
 Black places the final standard piece. Both pools are then empty, so the game
@@ -256,11 +255,7 @@ On success, the two pieces exchange positions and the result becomes Draw
 immediately. Neither piece leaves the board, and no capture, material, or
 Vital-loss calculation replaces this result.
 
-### Pass and resign
-
-**Pass** is always legal during an unfinished movement phase when declared for
-the current player. It changes no board point. Because pass is always available, these rules have no automatic loss when a
-player has no other legal action.
+### Resign
 
 **Resign** is target-based during movement. The target must be a Vital piece
 controlled by the current player. The target piece's owner loses, and the other
@@ -269,8 +264,8 @@ also make the opposing General a legal resignation target. During placement,
 the current player may resign directly and loses without selecting an on-board
 piece.
 
-These rules do not end a game because of repetition, consecutive passes, or
-time. Tournament regulations may add such ending conditions.
+These rules do not end a game because of repetition or time. Tournament
+regulations may add such ending conditions.
 
 ## Standard pieces
 

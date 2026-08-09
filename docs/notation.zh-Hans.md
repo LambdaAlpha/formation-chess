@@ -78,7 +78,7 @@
 棋子引用 + 目标位置 + 可选后缀
 ```
 
-按兵与认负使用独立短语。
+认负使用独立短语。
 
 ### 棋子引用
 
@@ -126,14 +126,12 @@
 
 同一个无后缀形式`红将五十`，在棋子仍位于当前棋池的布阵阶段表示放置；在行棋阶段且盘上该棋子唯一时表示普通移动。
 
-### 按兵与认负
+### 认负
 
 ```text
-红将按兵
 黑将认负
 ```
 
-- `按兵`只在行棋阶段合法。短语必须写当前玩家盘上唯一的将；这里的将只是按兵记谱的固定标记，不会移动。
 - `认负`必须写一枚将。行棋阶段，该名称必须唯一指向盘上一枚受当前玩家控制的要害棋子；该棋子的所属方失败。布阵阶段必须写当前玩家的将，并由当前玩家直接失败。
 
 ## 行动结果
@@ -215,13 +213,6 @@
 胜负：未分
 ```
 
-按兵没有棋盘变化：
-
-```text
-变化：[]
-胜负：未分
-```
-
 获胜行动或认负会声明相应的胜负结果：
 
 ```text
@@ -290,8 +281,7 @@ column-label = numeral , "路" ;
 board-row    = numeral , "[" , cell , { " " , cell } , "]" , newline ;
 cell         = "一一" | named-piece ;
 
-action       = pass | resign | piece-action ;
-pass         = named-piece , "按兵" ;
+action       = resign | piece-action ;
 resign       = named-piece , "认负" ;
 piece-action = piece , position , [ suffix ] ;
 piece        = named-piece | coordinate ;

@@ -160,7 +160,7 @@ fn create_dataset(label: &str) -> TestDirectory {
     let factory = RandomAgentFactory;
     let matchup = matchup();
     let runner =
-        MatchRunner::new(matchup.clone(), &factory, &factory, GameRunConfig::new(nonzero(3)));
+        MatchRunner::new(matchup.clone(), &factory, &factory, GameRunConfig::new(nonzero(4)));
     let schedule = Schedule::new(matchup, ScheduleMode::Paired { pairs: nonzero(2) }, 97);
     let manifest = ArenaManifest::new(&schedule, &runner).expect("valid analysis manifest");
     let descriptor = factory.descriptor();
@@ -185,7 +185,12 @@ fn create_dataset(label: &str) -> TestDirectory {
             1 => game_run(
                 plan,
                 movement_game(),
-                vec![Action::Pass(Player::Red), Action::Resign(4, 0)],
+                vec![
+                    Action::Move(Move { from: (0, 4), to: (1, 3) }),
+                    Action::Move(Move { from: (4, 0), to: (3, 1) }),
+                    Action::Move(Move { from: (1, 3), to: (0, 4) }),
+                    Action::Resign(3, 1),
+                ],
                 GameTermination::Completed { result: GameResult::RedWin },
                 &descriptor,
             ),
@@ -204,11 +209,12 @@ fn create_dataset(label: &str) -> TestDirectory {
                 plan,
                 movement_game(),
                 vec![
-                    Action::Pass(Player::Red),
-                    Action::Pass(Player::Black),
-                    Action::Pass(Player::Red),
+                    Action::Move(Move { from: (0, 4), to: (1, 3) }),
+                    Action::Move(Move { from: (4, 0), to: (3, 1) }),
+                    Action::Move(Move { from: (1, 3), to: (0, 4) }),
+                    Action::Move(Move { from: (3, 1), to: (4, 0) }),
                 ],
-                GameTermination::ActionLimit { limit: nonzero(3) },
+                GameTermination::ActionLimit { limit: nonzero(4) },
                 &descriptor,
             ),
             game_id => panic!("unexpected game id {game_id}"),
@@ -269,13 +275,13 @@ fn analyzer_writes_deterministic_flat_csv_and_refuses_overwrite() {
     let (directory, _, csv) = analyze_dataset("csv-one");
     let rows = parse_csv(&csv);
     assert_eq!(rows.len(), 5);
-    assert_eq!(rows[0].len(), 59);
+    assert_eq!(rows[0].len(), 57);
     assert!(
         rows.iter().all(|row| row.len() == rows[0].len()),
         "every CSV record must match the header width"
     );
     assert_eq!(rows[0][0], "game_id");
-    assert_eq!(rows[0][58], "state_unique_ratio");
+    assert_eq!(rows[0][56], "state_unique_ratio");
     assert!(rows[0].iter().any(|column| column == "pulls_count"));
     assert!(rows[0].iter().any(|column| column == "pulls_ratio"));
     assert!(rows[0].iter().all(|column| !column.contains("divide")));
@@ -344,38 +350,37 @@ fn summary_aggregates_action_distributions_and_type_ratios() {
     let (_, summary, _) = analyze_dataset("actions");
     let actions = summary.actions;
 
-    assert_eq!(actions.total_actions, 10);
+    assert_eq!(actions.total_actions, 13);
     assert_eq!(actions.all_per_game.total_actions.count, 4);
     assert_eq!(actions.all_per_game.total_actions.min, Some(0));
     assert_eq!(actions.all_per_game.total_actions.max, Some(5));
-    assert_close(actions.all_per_game.total_actions.mean, 2.5);
-    assert_close(actions.all_per_game.total_actions.median, 2.5);
-    assert_close(actions.all_per_game.total_actions.p25, 1.5);
-    assert_close(actions.all_per_game.total_actions.p75, 3.5);
+    assert_close(actions.all_per_game.total_actions.mean, 3.25);
+    assert_close(actions.all_per_game.total_actions.median, 4.0);
+    assert_close(actions.all_per_game.total_actions.p25, 3.0);
+    assert_close(actions.all_per_game.total_actions.p75, 4.25);
     assert_close(actions.all_per_game.placement_actions.mean, 0.5);
-    assert_close(actions.all_per_game.movement_actions.mean, 2.0);
-    assert_close(actions.red_per_game.total_actions.mean, 1.5);
-    assert_close(actions.black_per_game.total_actions.mean, 1.0);
+    assert_close(actions.all_per_game.movement_actions.mean, 2.75);
+    assert_close(actions.red_per_game.total_actions.mean, 1.75);
+    assert_close(actions.black_per_game.total_actions.mean, 1.5);
 
     assert_eq!(actions.action_types.placements.count, 2);
-    assert_eq!(actions.action_types.moves.count, 1);
+    assert_eq!(actions.action_types.moves.count, 8);
     assert_eq!(actions.action_types.captures.count, 1);
     assert_eq!(actions.action_types.pulls.count, 0);
-    assert_eq!(actions.action_types.passes.count, 4);
     assert_eq!(actions.action_types.resignations.count, 2);
-    assert_close(actions.action_types.placements.ratio, 0.2);
-    assert_close(actions.action_types.passes.ratio, 0.4);
-    assert_eq!(actions.legal_movement_actions.count, 8);
+    assert_close(actions.action_types.placements.ratio, 2.0 / 13.0);
+    assert_close(actions.action_types.moves.ratio, 8.0 / 13.0);
+    assert_eq!(actions.legal_movement_actions.count, 11);
 }
 
 #[test]
 fn summary_aggregates_reactions_material_and_repeated_states() {
     let (_, summary, _) = analyze_dataset("positions");
 
-    assert_eq!(summary.reactions.totals.additions, 3);
-    assert_eq!(summary.reactions.totals.removals, 2);
+    assert_eq!(summary.reactions.totals.additions, 10);
+    assert_eq!(summary.reactions.totals.removals, 9);
     assert_eq!(summary.reactions.totals.replacements, 1);
-    assert_close(summary.reactions.additions_per_game.mean, 0.75);
+    assert_close(summary.reactions.additions_per_game.mean, 2.5);
     assert_eq!(summary.final_material.board_total.min, Some(2));
     assert_eq!(summary.final_material.board_total.max, Some(3));
     assert_close(summary.final_material.board_total.mean, 2.25);
@@ -384,16 +389,16 @@ fn summary_aggregates_reactions_material_and_repeated_states() {
     assert_close(summary.final_material.red_pool.mean, 0.25);
     assert_close(summary.final_material.black_pool.mean, 0.25);
 
-    assert_eq!(summary.states.totals.total_visits, 14);
-    assert_eq!(summary.states.totals.unique_states, 12);
-    assert_eq!(summary.states.totals.repeated_visits, 2);
-    assert_close(summary.states.totals.unique_state_ratio, 6.0 / 7.0);
-    assert_close(summary.states.total_visits_per_game.mean, 3.5);
-    assert_close(summary.states.unique_states_per_game.mean, 3.0);
-    assert_close(summary.states.repeated_visits_per_game.mean, 0.5);
-    assert_eq!(summary.states.unique_state_ratio_per_game.min, Some(0.5));
+    assert_eq!(summary.states.totals.total_visits, 17);
+    assert_eq!(summary.states.totals.unique_states, 16);
+    assert_eq!(summary.states.totals.repeated_visits, 1);
+    assert_close(summary.states.totals.unique_state_ratio, 16.0 / 17.0);
+    assert_close(summary.states.total_visits_per_game.mean, 4.25);
+    assert_close(summary.states.unique_states_per_game.mean, 4.0);
+    assert_close(summary.states.repeated_visits_per_game.mean, 0.25);
+    assert_eq!(summary.states.unique_state_ratio_per_game.min, Some(0.8));
     assert_eq!(summary.states.unique_state_ratio_per_game.max, Some(1.0));
-    assert_close(summary.states.unique_state_ratio_per_game.mean, 0.875);
+    assert_close(summary.states.unique_state_ratio_per_game.mean, 0.95);
 }
 
 #[test]

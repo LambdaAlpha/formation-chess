@@ -289,7 +289,6 @@ fn action_from_data(data: &ActionData) -> Result<Action, String> {
         ActionData::Draw { from, to } => {
             Action::Draw(Move { from: position_from_record(*from), to: position_from_record(*to) })
         },
-        ActionData::Pass { player } => Action::Pass(player_from_record(*player)),
         ActionData::Resign { at } => {
             let at = position_from_record(*at);
             Action::Resign(at.0, at.1)

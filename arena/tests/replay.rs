@@ -122,7 +122,10 @@ fn one_action_record(action: Action, termination: GameTermination) -> GameRecord
 }
 
 fn action_limit_record() -> GameRecord {
-    one_action_record(Action::Pass(Player::Red), GameTermination::ActionLimit { limit: nonzero(1) })
+    one_action_record(
+        Action::Move(Move { from: (0, 4), to: (1, 3) }),
+        GameTermination::ActionLimit { limit: nonzero(1) },
+    )
 }
 
 fn completed_record() -> GameRecord {

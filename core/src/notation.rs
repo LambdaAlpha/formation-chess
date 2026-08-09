@@ -41,8 +41,6 @@ pub enum ActionNotation {
     Pull(PiecePosition),
     /// Piece + position + `和`.
     Draw(PiecePosition),
-    /// Piece ID + `按兵`.
-    Pass(PieceId),
     /// Piece ID + `认负`.
     Resign(PieceId),
 }
@@ -126,7 +124,6 @@ impl Display for Action {
             Action::Push(m) => ActionNotation::Push(piece_position(*m)),
             Action::Pull(m) => ActionNotation::Pull(piece_position(*m)),
             Action::Draw(m) => ActionNotation::Draw(piece_position(*m)),
-            Action::Pass(player) => ActionNotation::Pass(vital_id(*player)),
             Action::Resign(_, _) => {
                 ActionNotation::Resign(PieceId { name: '黑', player: Player::Red })
             },
@@ -204,7 +201,6 @@ impl Display for ActionNotation {
             ActionNotation::Push(pp) => write!(f, "{pp}推"),
             ActionNotation::Pull(pp) => write!(f, "{pp}拉"),
             ActionNotation::Draw(pp) => write!(f, "{pp}和"),
-            ActionNotation::Pass(piece) => write!(f, "{piece}按兵"),
             ActionNotation::Resign(piece) => write!(f, "{piece}认负"),
         }
     }
@@ -216,9 +212,6 @@ impl FromStr for ActionNotation {
     fn from_str(s: &str) -> Result<Self, String> {
         if s.is_empty() {
             return Err("empty action".into());
-        }
-        if let Some(piece) = s.strip_suffix("按兵") {
-            return Ok(Self::Pass(piece.parse()?));
         }
         if let Some(piece) = s.strip_suffix("认负") {
             return Ok(Self::Resign(piece.parse()?));
@@ -512,7 +505,6 @@ impl<'a> NotationResolver<'a> {
             ActionNotation::Push(pp) => Action::Push(self.move_(pp)?),
             ActionNotation::Pull(pp) => Action::Pull(self.move_(pp)?),
             ActionNotation::Draw(pp) => Action::Draw(self.move_(pp)?),
-            ActionNotation::Pass(piece) => self.resolve_pass(piece)?,
             ActionNotation::Resign(piece) => self.resolve_resign(piece)?,
         };
         Ok(action)
@@ -528,17 +520,6 @@ impl<'a> NotationResolver<'a> {
             Action::Move(self.move_(pp)?)
         };
         Ok(action)
-    }
-
-    fn resolve_pass(&self, piece: PieceId) -> Result<Action, String> {
-        if piece.name != Piece::GENERAL_NAME || piece.player != self.game.player() {
-            return Err(format!("按兵 requires {}'s vital piece", self.game.player()));
-        }
-        if self.game.phase() == Phase::Place {
-            return Err("cannot pass during the placement phase".into());
-        }
-        self.find_unique(piece)?;
-        Ok(Action::Pass(self.game.player()))
     }
 
     fn resolve_resign(&self, piece: PieceId) -> Result<Action, String> {
@@ -596,7 +577,6 @@ impl<'a> NotationResolver<'a> {
             Action::Push(m) => ActionNotation::Push(self.piece_position(m.from, m.to)),
             Action::Pull(m) => ActionNotation::Pull(self.piece_position(m.from, m.to)),
             Action::Draw(m) => ActionNotation::Draw(self.piece_position(m.from, m.to)),
-            Action::Pass(player) => ActionNotation::Pass(vital_id(*player)),
             Action::Resign(x, y) => ActionNotation::Resign(self.resign_id((*x, *y))),
         }
     }
