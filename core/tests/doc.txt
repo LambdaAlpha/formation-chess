@@ -378,9 +378,9 @@ notation reaction example records mutual destruction
 二[一一 一一 一一 一一 一一]
 三[一一 一一 红雷 一一 一一]
 四[一一 一一 一一 一一 一一]
-五[红将 一一 黑车 一一 一一]
+五[红将 一一 一一 一一 黑计]
 -----
-黑车三三捉
+黑计三三捉
 -----
 行棋方：红
 红方：[]
@@ -394,7 +394,7 @@ notation reaction example records mutual destruction
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 -----
-变化：[红雷失 黑车失]
+变化：[红雷失 黑计失]
 胜负：未分
 =====
 notation reaction example records a push

@@ -427,7 +427,7 @@ push escalation may destroy a same-player target
 变化：[红势一三]
 胜负：未分
 =====
-push escalation still applies CAPTURE_ON_CAPTURED mutual destruction
+push escalation ignores CAPTURE_ON_CAPTURED mutual destruction
 -----
 行棋方：红
 红方：[]
@@ -451,11 +451,11 @@ push escalation still applies CAPTURE_ON_CAPTURED mutual destruction
 零[一路 二路 三路 四路 五路]
 一[黑将 一一 一一 一一 一一]
 二[一一 一一 一一 一一 一一]
-三[一一 一一 一一 一一 一一]
+三[红势 一一 一一 一一 一一]
 四[一一 一一 一一 一一 一一]
 五[一一 一一 一一 一一 红将]
 -----
-变化：[红势失 黑雷失]
+变化：[红势一三]
 胜负：未分
 =====
 DIRECTION_SHAPE_L push escalation handles a blocked pushed-piece leg

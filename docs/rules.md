@@ -86,8 +86,8 @@ can command it.
 | **Pushed on Capture Unblocked** | Passive capture demotion: an attempted capture pushes this target when it has a valid landing. |
 | **Capture** | Normal active permission to capture. |
 | **Captured** | Normal passive permission to be captured. |
-| **Capture on Captured** | Retaliation: when this piece is captured, the capturer is removed too; it also bypasses the attacker's normal Capture requirement. |
-| **Captured on Capture** | Sacrifice: when this piece captures, it is removed too; it also bypasses the target's normal Captured requirement. |
+| **Capture on Captured** | Retaliation: when this piece is captured, the capturer is removed too; it also bypasses the attacker's normal Capture requirement. Only a direct capture through this ability removes the capturer — a normal capture (attacker **Capture** + this piece **Captured**) and an escalated push never do. |
+| **Captured on Capture** | Sacrifice: when this piece captures, it is removed too; it also bypasses the target's normal Captured requirement. Only a direct capture through this ability removes the attacker — a normal capture (this piece **Capture** + target **Captured**) and an escalated push never do. |
 | **Cross** | Horizontal or vertical movement. |
 | **Diagonal** | Diagonal movement. |
 | **L-shaped** | Knight-step (`日`) movement. |
@@ -203,8 +203,11 @@ beyond the destination, the capture becomes a push. Push permissions are not
 checked again. If that landing is invalid, the action remains a capture.
 
 For a resolved capture, the attacker occupies the target point and the target
-leaves the board. If Sacrifice or Retaliation applies, both pieces leave the
-board instead.
+leaves the board. Sacrifice and Retaliation remove both pieces only when the
+capture is initiated through one of those abilities — the normal
+**Capture**–**Captured** pairing is missing. A normal capture never removes
+the attacker, and an escalated push always resolves as a plain capture (see
+Push).
 
 ### Push
 
@@ -221,9 +224,10 @@ bounds, empty, and have a clear L-shaped leg when applicable.
 If the target has no valid landing, the push is blocked. It becomes a capture
 when the pusher has **Capture on Push Blocked** or the target has
 **Captured on Push Blocked**. This escalation bypasses normal Capture,
-Captured, and ownership restrictions, but Sacrifice and Retaliation still
-apply to the resulting capture. Without an escalation ability, the action is
-illegal.
+Captured, and ownership restrictions. An escalated capture always resolves as
+a plain capture: the pusher occupies the target point, the target leaves the
+board, and Sacrifice or Retaliation never applies. Without an escalation
+ability, the action is illegal.
 
 ### Pull
 

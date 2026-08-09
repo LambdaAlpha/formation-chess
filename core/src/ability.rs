@@ -103,6 +103,11 @@ impl Ability {
     /// the attacker has CAPTURED_ON_CAPTURE (sacrifice, ignores target's
     /// CAPTURED) or the target has CAPTURE_ON_CAPTURED (retaliation,
     /// ignores attacker's CAPTURE).
+    ///
+    /// Sacrifice and retaliation destroy the capturer only when the
+    /// capture is initiated through one of those abilities — the normal
+    /// CAPTURE + CAPTURED pairing is missing. A normal capture and any
+    /// escalated push capture never trigger them.
     pub const CAPTURE: Ability = Ability(1 << 14);
     /// Required for normal capture. Escalated pushes and retaliation
     /// (CAPTURE_ON_CAPTURED) bypass this bit — a blocked push destroys
@@ -112,11 +117,17 @@ impl Ability {
     /// Retaliation: when this piece is captured, the capturer is
     /// destroyed as well. Also makes this piece capturable even by
     /// pieces without CAPTURE — the capturer's CAPTURE requirement is
-    /// bypassed.
+    /// bypassed. Only a direct capture initiated through this ability
+    /// destroys the capturer: a normal capture (capturer has CAPTURE
+    /// and this piece has CAPTURED) and an escalated push capture
+    /// destroy only this piece.
     pub const CAPTURE_ON_CAPTURED: Ability = Ability(1 << 16);
     /// Sacrifice: when this piece captures another, it dies as well.
     /// Also allows capturing targets even without CAPTURED — the
-    /// target's CAPTURED requirement is bypassed.
+    /// target's CAPTURED requirement is bypassed. Only a direct
+    /// capture initiated through this ability destroys the attacker:
+    /// a normal capture (this piece has CAPTURE and the target has
+    /// CAPTURED) and an escalated push capture destroy only the target.
     pub const CAPTURED_ON_CAPTURE: Ability = Ability(1 << 17);
     /// Slide any number of steps along one allowed direction instead of a
     /// single step. For L-shaped moves this chains knight moves along the

@@ -256,7 +256,7 @@ impl Board {
         {
             return Ok(self.push_result(from, to, pt));
         }
-        Ok(self.capture_result(piece, from, to, target))
+        Ok(self.capture_result(piece, target, from, to))
     }
 
     /// Execute a push (escalates to capture when blocked).
@@ -269,7 +269,8 @@ impl Board {
     /// Validate a push without modifying the board. Checks movement,
     /// path blocking, push ability, and the pushed piece's landing.
     /// A blocked push may escalate to capture if either piece has the
-    /// escalation ability.
+    /// escalation ability. An escalated capture is always plain:
+    /// mutual-destruction abilities never apply to it.
     pub fn try_push(&self, from: (u8, u8), to: (u8, u8)) -> Result<PositionChanges, String> {
         let piece = self.try_move_to(from, to)?;
         let Some(target) = self.effective(to) else {
@@ -285,11 +286,12 @@ impl Board {
             return Ok(self.push_result(from, to, pt));
         }
         // Push is blocked. Escalate to capture if either piece has
-        // escalation ability; otherwise fail.
+        // escalation ability; otherwise fail. The escalated capture is
+        // a plain capture, never a mutual destruction.
         if piece.ability.has(Ability::CAPTURE_ON_PUSH_BLOCKED)
             || target.ability.has(Ability::CAPTURED_ON_PUSH_BLOCKED)
         {
-            Ok(self.capture_result(piece, from, to, target))
+            Ok(self.capture_landing(from, to))
         } else {
             Err(format!("push blocked at ({},{}) and no escalation ability", to.0, to.1))
         }
@@ -618,17 +620,29 @@ impl Board {
     }
 
     /// Compute the changes of a successful capture, including
-    /// mutual‑destruction effects.
+    /// mutual‑destruction effects. Sacrifice (CAPTURED_ON_CAPTURE) and
+    /// retaliation (CAPTURE_ON_CAPTURED) destroy both pieces only when
+    /// the capture is initiated through one of those abilities — the
+    /// normal CAPTURE + CAPTURED pairing is missing. A normal capture
+    /// always resolves as a plain landing; push escalation uses the
+    /// plain landing directly and never triggers mutual destruction.
     fn capture_result(
-        &self, piece: Piece, from: (u8, u8), to: (u8, u8), target: Piece,
+        &self, piece: Piece, target: Piece, from: (u8, u8), to: (u8, u8),
     ) -> PositionChanges {
-        let departure = self.change(from, None);
-        if piece.ability.has(Ability::CAPTURED_ON_CAPTURE)
-            || target.ability.has(Ability::CAPTURE_ON_CAPTURED)
+        if (piece.ability.has(Ability::CAPTURED_ON_CAPTURE)
+            || target.ability.has(Ability::CAPTURE_ON_CAPTURED))
+            && !(piece.ability.has(Ability::CAPTURE) && target.ability.has(Ability::CAPTURED))
         {
-            return PositionChanges::two(departure, self.change(to, None));
+            return PositionChanges::two(self.change(from, None), self.change(to, None));
         }
+        self.capture_landing(from, to)
+    }
 
+    /// Compute the plain capture landing: the attacker occupies the
+    /// target point and the target leaves the board. No mutual
+    /// destruction.
+    fn capture_landing(&self, from: (u8, u8), to: (u8, u8)) -> PositionChanges {
+        let departure = self.change(from, None);
         let arrival = self.change(to, self[from]);
         if arrival.old == arrival.new {
             return PositionChanges::one(departure);

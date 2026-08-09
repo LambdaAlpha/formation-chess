@@ -258,7 +258,6 @@ fn unfavorable_position_takes_an_available_draw() {
 #[test]
 fn immediate_loss_receives_exact_negative_score() {
     let mut red_general = Piece::RED_GENERAL;
-    red_general.ability.add(Ability::CAPTURE);
     red_general.ability.add(Ability::CAPTURED_ON_CAPTURE);
     let game = movement_game(Player::Red, &[
         ((0, 4), red_general),

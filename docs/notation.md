@@ -243,7 +243,7 @@ A successful Draw action uses the same two replacements and declares a draw:
 Mutual destruction removes both pieces:
 
 ```text
-变化：[红雷失 黑车失]
+变化：[红雷失 黑计失]
 胜负：未分
 ```
 
