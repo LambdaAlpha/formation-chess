@@ -316,6 +316,8 @@ async function handleBoardClick(x, y) {
     if (currentPhase === 'movement' && (hintType || hintTypes)) {
         if (hintTypes) {
             showPopup(x, y, hintTypes.split(','));
+        } else if (hasOwnPieceAt(x, y)) {
+            showPopup(x, y, [hintType, 'switch']);
         } else {
             executeHintAction(hintType, x, y);
         }
@@ -336,30 +338,41 @@ async function handleBoardClick(x, y) {
     }
 
     if (currentPhase === 'movement' && hasPiece && !hintType && !hintTypes) {
-        clearInteraction();
-        setSelected(x, y);
-        try {
-            const response = await postLegalActions({
-                revision: gameState.revision,
-                side: gameState.player,
-                from: [x, y],
-            });
-            if (!gameState || response.revision !== gameState.revision) return;
-            showMoveHints(response.actions);
-            resignableAt = response.actions.some((action) => action.type === 'resign')
-                ? [x, y]
-                : null;
-            refreshInteractivity();
-            if (response.actions.length === 0) {
-                setStatus('该棋子无可行动作', true);
-            }
-        } catch (error) {
-            setStatus(error.message, true);
-        }
+        selectBoardPiece(x, y);
         return;
     }
 
     clearInteraction();
+}
+
+function hasOwnPieceAt(x, y) {
+    if (!gameState) return false;
+    const piece = getIntersection(x, y)?.querySelector('.piece');
+    if (!piece) return false;
+    return piece.classList.contains('piece-' + gameState.player.toLowerCase());
+}
+
+async function selectBoardPiece(x, y) {
+    clearInteraction();
+    setSelected(x, y);
+    try {
+        const response = await postLegalActions({
+            revision: gameState.revision,
+            side: gameState.player,
+            from: [x, y],
+        });
+        if (!gameState || response.revision !== gameState.revision) return;
+        showMoveHints(response.actions);
+        resignableAt = response.actions.some((action) => action.type === 'resign')
+            ? [x, y]
+            : null;
+        refreshInteractivity();
+        if (response.actions.length === 0) {
+            setStatus('该棋子无可行动作', true);
+        }
+    } catch (error) {
+        setStatus(error.message, true);
+    }
 }
 
 function isOwnHalf(y, player) {
@@ -425,6 +438,7 @@ function actionOption(type) {
         case 'capture': return { label: '捉子', className: 'capture-opt' };
         case 'push': return { label: '推子', className: 'push-opt' };
         case 'pull': return { label: '拉子', className: 'pull-opt' };
+        case 'switch': return { label: '切换', className: '' };
         default: return { label: type, className: '' };
     }
 }
@@ -436,6 +450,10 @@ function handlePopupChoice(actionType) {
     const x = Number(button.dataset.tx);
     const y = Number(button.dataset.ty);
     hidePopup();
+    if (actionType === 'switch') {
+        selectBoardPiece(x, y);
+        return;
+    }
     executeHintAction(actionType, x, y);
 }
 
