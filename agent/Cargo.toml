@@ -1,6 +1,6 @@
 [package]
 name = "formation-chess-agent"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 description = "Agent interfaces and turn execution for Formation Chess"
 repository = "https://github.com/LambdaAlpha/formation-chess"
@@ -12,7 +12,7 @@ categories = ["games"]
 workspace = true
 
 [dependencies]
-formation-chess-core = { path = "../core", version = "0.2.0" }
+formation-chess-core = { path = "../core", version = "0.3.0" }
 rand = "0.10"
 serde = { version = "1", features = ["derive"] }
 sha2 = "0.11"
