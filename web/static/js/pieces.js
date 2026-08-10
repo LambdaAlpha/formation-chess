@@ -38,8 +38,8 @@ function createShapeElement(shapeClass) {
             'shape-diamond': '50,6 94,50 50,94 6,50',
             'shape-triangle-up': '50,6 94,94 6,94',
             'shape-triangle-down': '6,6 94,6 50,94',
-            'shape-pentagon-up': '50,5 95,38 78,95 22,95 5,38',
-            'shape-pentagon-down': '22,5 78,5 95,62 50,95 5,62',
+            'shape-pentagon-up': '5,95 95,95 95,50 50,5 5,50',
+            'shape-pentagon-down': '5,5 95,5 95,50 50,95 5,50',
         };
         shape.setAttribute('points', points[shapeClass]);
     }

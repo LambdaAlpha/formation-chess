@@ -149,8 +149,8 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 /* board: shift centroid to intersection */
 #board .shape-triangle-up   { transform: translateY(-16.67%); }
 #board .shape-triangle-down { transform: translateY(16.67%); }
-#board .shape-pentagon-up   { transform: translateY(-4.5%); }
-#board .shape-pentagon-down { transform: translateY(4.5%); }
+#board .shape-pentagon-up   { transform: translateY(-10%); }
+#board .shape-pentagon-down { transform: translateY(10%); }
 /* pool: no centroid shift */
 .pool .shape-triangle-up,
 .pool .shape-triangle-down,
@@ -164,10 +164,10 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
   position: absolute; top: 33.33%; left: 50%; transform: translate(-50%, -50%);
 }
 .shape-pentagon-up .piece-text {
-  position: absolute; top: 54.5%; left: 50%; transform: translate(-50%, -50%);
+  position: absolute; top: 60%; left: 50%; transform: translate(-50%, -50%);
 }
 .shape-pentagon-down .piece-text {
-  position: absolute; top: 45.5%; left: 50%; transform: translate(-50%, -50%);
+  position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
 }
 
 .pool-piece-selected::after {
@@ -306,10 +306,10 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
     border-right: none; border-top: 1px solid var(--color-border);
     padding: 4px 6px; gap: 0; overflow: hidden; flex-shrink: 0;
   }
-  .pool { flex: none; }
-  .pool-label { font-size: 10px; padding: 1px 0; }
+  .pool { flex: none; flex-direction: row; align-items: center; }
+  .pool-label { font-size: 10px; padding: 0 3px; writing-mode: vertical-rl; }
   .pool-divider { width: auto; height: 1px; margin: 2px 6px; }
-  .pool-items { flex-wrap: wrap; gap: 6px; padding: 4px 3px; overflow-y: auto; max-height: 80px; }
+  .pool-items { flex-direction: column; flex-wrap: wrap; gap: 6px; padding: 4px 3px; overflow-x: auto; overflow-y: hidden; height: 74px; }
   .pool .piece-wrap { width: 30px; height: 30px; }
   .pool .piece .piece-text { font-size: 14px; }
   .pool-piece-selected::after { --corner-size: 9px; --corner-width: 2px; }
