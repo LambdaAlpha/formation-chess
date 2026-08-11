@@ -385,7 +385,6 @@ impl Game {
                         return Ok((self.red_pool[i], i));
                     }
                 }
-                Err(format!("piece {piece} not in pool"))
             },
             Player::Black => {
                 for (i, p) in self.black_pool.iter().enumerate() {
@@ -393,9 +392,9 @@ impl Game {
                         return Ok((self.black_pool[i], i));
                     }
                 }
-                Err(format!("piece {piece} not in pool"))
             },
         }
+        Err(format!("piece {piece} not in pool"))
     }
 
     fn try_move(&self, move_: Move) -> Result<PositionChanges, String> {
