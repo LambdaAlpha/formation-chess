@@ -101,18 +101,22 @@ all aggregation with integer arithmetic. Finished games receive exact utility;
 non-terminal utility remains strictly inside that bound.
 
 The evaluator covers Vital safety, inherent abilities, net formation changes,
-control, empty-destination mobility, actual resolved capture/push/pull outcomes,
-low-weight Red/Black material, side-to-move tempo, and control × ability ×
-mobility interactions. Placement control also measures row/column coverage,
-connected-component concentration, excessive neighbors, and long-range ally
-blocking; formation value pays a cost for every adjacent allied edge. Positive
-capture or blocked-push exchanges use up to two same-point replies as a bounded
-static exchange evaluation, so an undefended tactical gain can be rejected while
-a defended capture recovers value through its recapture chain. Negative
-reply-adjusted exchanges do not create mobility or action-effect bonuses. Draw
-actions exchange the two Vital pieces and are scored only through their exact
-terminal utility of zero. Targeted Resign actions receive the exact result
-implied by the selected Vital piece.
+control, attack-tested empty-destination mobility, actual resolved
+capture/push/pull outcomes, low-weight Red/Black material, side-to-move tempo,
+and control × ability × mobility interactions. Placement control also measures
+row/column coverage, connected-component concentration, excessive neighbors,
+and long-range ally blocking; formation value pays a cost for every adjacent
+allied edge. Positive capture or blocked-push exchanges use up to two same-point
+replies as a bounded static exchange evaluation, so an undefended tactical gain
+can be rejected while a defended capture recovers value through its recapture
+chain. Exchange pressure groups those gains by distinct target instead of
+rewarding duplicate attacks on one hanging piece. Quiet mobility and Vital
+escape counts exclude destinations where a currently reachable opponent capture
+wins the game or produces a favorable exchange. Negative reply-adjusted
+exchanges do not create mobility or action-effect bonuses. Draw actions exchange
+the two Vital pieces and are scored only through their exact terminal utility of
+zero. Targeted Resign actions receive the exact result implied by the selected
+Vital piece.
 
 MinAgent implements deterministic placement analysis. It scans unique
 piece-position combinations lazily rather than materializing the Cartesian
@@ -128,31 +132,40 @@ Placement search stops when the configured depth is reached, the node budget is
 exhausted, or the game enters movement. Exact terminal utility and bounded
 static leaf utility remain shared with MinEvaluator.
 
-MinAgent also implements deterministic movement search up to two plies. It scans
-every unique action in the supplied root legal-action slice, executes each on a
-cloned Game, and records its static ordering utility. Root actions are always
+MinAgent also implements deterministic movement search with selective third-ply
+verification. It scans every unique action in the supplied root legal-action
+slice, executes each on a cloned Game, and records its static ordering utility. Root actions are always
 exhaustive and do not consume the movement node budget. Exact wins, draws, and
 losses score 1, 0, and -1; unfinished leaves use the bounded static evaluator.
 
-At depth two, the search minimizes selected opponent replies. Recursive movement
-actions consume the shared node budget. Roughly two thirds of that budget first
-cover every unfinished root; the remaining third plus unused first-pass nodes
-then re-search the leading four roots with substantially broader refutation
-coverage. When a pass cannot probe every legal reply, deterministic spread
-sampling covers the complete ordered action list instead of only its prefix.
+At depth two, the search minimizes selected opponent replies. At depth three,
+the same two-ply search first covers every unfinished root, then the leading eight
+roots are verified with a real selected response after each opponent reply.
+Recursive movement actions consume the shared node budget. Roughly two thirds of
+that budget cover every unfinished root; the remaining third plus unused
+first-pass nodes fund the deeper verification. The best exact first-pass root
+establishes an alpha bound; later roots stop once an opponent reply proves they
+cannot beat it. Cutoff scores remain
+bounds, while the leading roots are re-searched with a full window. Before full
+evaluation, every legal reply receives a cheap PositionChanges preview. Tactical
+replies and recaptures are retained in a bounded shortlist, and only that
+shortlist runs the full evaluator. The shortlist keeps a half-width reserve beyond
+the retained beam; the saved probes fund verification of more competitive roots
+instead of repeatedly re-evaluating marginal replies.
 Opponent width retains the statically worst branches.
 
 A capture, blocked-push capture, or immediate Vital threat present after an
-opponent reply can enter up to three alternating tactical response plies. The
+opponent reply can enter up to five alternating tactical response plies. The
 shared node budget and response width bound every continuation; remaining nodes
 are divided only among branches that stay tactically noisy. Actions returning to
 the capture point are probed first so recapture chains are not lost to
-enumeration order. Quiet leaves remain two-ply. An immediate terminal result at
+enumeration order. Non-verified quiet leaves remain two-ply. An immediate terminal result at
 the preferred minimax bound stops that branch early. Final
-candidates are ordered by searched utility, then root static utility, then
-original legal-action order before truncation to top_k. Setting max_depth to one
-preserves pure static root analysis; two enables the opponent reply and tactical
-response extension.
+candidates are ordered by searched utility, exact scores before equal cutoff
+bounds, then root static utility and original legal-action order before
+truncation to top_k. Setting max_depth to one preserves pure static root analysis;
+two enables the opponent reply and tactical response extension; three adds the
+selective real response for the leading verified roots.
 
 ## Scope
 

@@ -35,10 +35,15 @@ const PLACEMENT_HORIZONTAL_GAP_WEIGHT: i64 = 8;
 const PLACEMENT_VERTICAL_GAP_WEIGHT: i64 = 4;
 const PLACEMENT_COLUMN_BALANCE_WEIGHT: i64 = 8;
 const PLACEMENT_ROW_BALANCE_WEIGHT: i64 = 4;
-const PLACEMENT_COMPONENT_CONCENTRATION_WEIGHT: i64 = 8;
-const PLACEMENT_CROWDING_WEIGHT: i64 = 4;
+const PLACEMENT_COMPONENT_CONCENTRATION_WEIGHT: i64 = 6;
+const PLACEMENT_CROWDING_WEIGHT: i64 = 3;
 const PLACEMENT_LONG_RANGE_BLOCK_WEIGHT: i64 = 6;
-const PLACEMENT_FORMATION_EDGE_COST: i64 = 2;
+const PLACEMENT_FORMATION_EDGE_COST: i64 = 1;
+const PLACEMENT_POTENTIAL_EFFECT_WEIGHT: i64 = 3;
+const PLACEMENT_POTENTIAL_DEVELOPMENT_WEIGHT: i64 = 2;
+const PLACEMENT_POTENTIAL_INFLUENCE_WEIGHT: i64 = 2;
+const PLACEMENT_POTENTIAL_FRONTIER_WEIGHT: i64 = 2;
+const PLACEMENT_POTENTIAL_CROWDING_COST: i64 = 2;
 
 /// Normalized, perspective-oriented feature groups used by Min evaluation.
 ///
@@ -257,11 +262,12 @@ struct ActionAnalysis {
     capture_actions: u32,
     push_actions: u32,
     pull_actions: u32,
-    positive_exchange_actions: u32,
+
     safe_movable_pieces: u32,
     safe_reachable_destinations: u32,
     vital_safe_actions: u32,
-    best_exchange_units: i64,
+
+    exchange_units_by_target: [i64; BOARD_POINT_CAPACITY],
     safe_movers: [bool; BOARD_POINT_CAPACITY],
     safe_destinations: [bool; BOARD_POINT_CAPACITY],
     quiet_moves_by_origin: [u16; BOARD_POINT_CAPACITY],
@@ -275,16 +281,49 @@ impl Default for ActionAnalysis {
             capture_actions: 0,
             push_actions: 0,
             pull_actions: 0,
-            positive_exchange_actions: 0,
+
             safe_movable_pieces: 0,
             safe_reachable_destinations: 0,
             vital_safe_actions: 0,
-            best_exchange_units: 0,
+
+            exchange_units_by_target: [0; BOARD_POINT_CAPACITY],
             safe_movers: [false; BOARD_POINT_CAPACITY],
             safe_destinations: [false; BOARD_POINT_CAPACITY],
             quiet_moves_by_origin: [0; BOARD_POINT_CAPACITY],
         }
     }
+}
+
+#[derive(Copy, Clone)]
+struct GeneratedAction {
+    action: Action,
+    origin: (u8, u8),
+    piece: Piece,
+}
+
+struct GeneratedPlayerActions {
+    actions: Vec<GeneratedAction>,
+    capture_reach: CaptureReachMap,
+}
+
+struct CaptureReachMap {
+    origins: [[u64; BOARD_POINT_CAPACITY / u64::BITS as usize]; BOARD_POINT_CAPACITY],
+}
+
+impl Default for CaptureReachMap {
+    fn default() -> Self {
+        Self { origins: [[0; BOARD_POINT_CAPACITY / u64::BITS as usize]; BOARD_POINT_CAPACITY] }
+    }
+}
+
+#[derive(Copy, Clone)]
+struct QuietMoveSafety {
+    material_safe: bool,
+    vital_safe: bool,
+}
+
+impl QuietMoveSafety {
+    const SAFE: Self = Self { material_safe: true, vital_safe: true };
 }
 
 #[derive(Debug, Copy, Clone, Default)]
@@ -311,12 +350,26 @@ fn analyze_position(game: &Game) -> PositionAnalysis {
     match game.phase() {
         Phase::Place => {
             analyze_placement_space(game.board(), &mut analysis);
-            analyze_empty_mobility(game.board(), Player::Red, &mut analysis.red.actions);
-            analyze_empty_mobility(game.board(), Player::Black, &mut analysis.black.actions);
+            analyze_placement_mobility(game.board(), Player::Red, &mut analysis.red.actions);
+            analyze_placement_mobility(game.board(), Player::Black, &mut analysis.black.actions);
         },
         Phase::Move => {
-            analyze_player_actions(game, Player::Red, &mut analysis.red.actions);
-            analyze_player_actions(game, Player::Black, &mut analysis.black.actions);
+            let red_actions = generate_player_actions(game.board(), Player::Red);
+            let black_actions = generate_player_actions(game.board(), Player::Black);
+            analyze_player_actions(
+                game.board(),
+                Player::Red,
+                &red_actions,
+                &black_actions.capture_reach,
+                &mut analysis.red.actions,
+            );
+            analyze_player_actions(
+                game.board(),
+                Player::Black,
+                &black_actions,
+                &red_actions.capture_reach,
+                &mut analysis.black.actions,
+            );
         },
     }
     analyze_interactions(game.board(), &mut analysis);
@@ -407,6 +460,173 @@ fn placement_space_units(board: &Board, player: Player) -> (i64, PlacementTopolo
         - topology.crowding_excess * PLACEMENT_CROWDING_WEIGHT
         - topology.long_range_blocks * PLACEMENT_LONG_RANGE_BLOCK_WEIGHT;
     (units, topology)
+}
+
+pub(super) fn placement_candidate_potential_units(
+    board: &Board, player: Player, piece: Piece, position: (u8, u8),
+) -> i64 {
+    let mut projected = piece;
+    projected.take_effect(&board.local(position).neighbors);
+    let effect_units = i64::from(ability_units(projected.ability) - ability_units(piece.ability));
+    let development_units = i64::from(projected_empty_development(board, position, projected));
+    let mut influence_units = 0i64;
+    let mut crowding = 0i64;
+
+    for dy in -1 ..= 1 {
+        for dx in -1 ..= 1 {
+            if dx == 0 && dy == 0 {
+                continue;
+            }
+            let Some(neighbor_position) = offset_position(board, position, dx, dy) else {
+                continue;
+            };
+            let Some(neighbor) = board.get(neighbor_position) else {
+                if piece.formation.contains(dx, dy) {
+                    influence_units +=
+                        empty_formation_point_units(board, player, neighbor_position);
+                }
+                continue;
+            };
+            if neighbor.player == player {
+                crowding += 1;
+            }
+            if !piece.formation.contains(dx, dy) {
+                continue;
+            }
+            influence_units += projected_neighbor_effect_units(
+                board,
+                player,
+                position,
+                piece,
+                neighbor_position,
+                neighbor,
+            );
+        }
+    }
+
+    effect_units * PLACEMENT_POTENTIAL_EFFECT_WEIGHT
+        + development_units * PLACEMENT_POTENTIAL_DEVELOPMENT_WEIGHT
+        + influence_units * PLACEMENT_POTENTIAL_INFLUENCE_WEIGHT
+        - crowding.saturating_sub(2).pow(2) * PLACEMENT_POTENTIAL_CROWDING_COST
+}
+
+fn projected_neighbor_effect_units(
+    board: &Board, player: Player, placed_at: (u8, u8), placed_piece: Piece,
+    neighbor_position: (u8, u8), neighbor: Piece,
+) -> i64 {
+    let before = board
+        .effective(neighbor_position)
+        .expect("occupied placement neighbor must have an effective piece");
+    let mut local = board.local(neighbor_position);
+    for local_neighbor in &mut local.neighbors {
+        let x = i16::from(neighbor_position.0) + i16::from(local_neighbor.dx);
+        let y = i16::from(neighbor_position.1) + i16::from(local_neighbor.dy);
+        if x == i16::from(placed_at.0) && y == i16::from(placed_at.1) {
+            local_neighbor.piece = Some(placed_piece);
+            break;
+        }
+    }
+    let mut after = neighbor;
+    after.take_effect(&local.neighbors);
+    let owner_sign = if neighbor.player == player { 1 } else { -1 };
+    i64::from(ability_units(after.ability) - ability_units(before.ability)) * owner_sign
+}
+
+fn empty_formation_point_units(board: &Board, player: Player, position: (u8, u8)) -> i64 {
+    let (y_start, y_end) = placement_y_range(board, player);
+    let in_placement_area = y_start <= position.1 && position.1 < y_end;
+    if in_placement_area {
+        return 2;
+    }
+    if position.1 == placement_frontier_row(board, player) {
+        return PLACEMENT_POTENTIAL_FRONTIER_WEIGHT;
+    }
+    0
+}
+
+fn projected_empty_development(board: &Board, position: (u8, u8), piece: Piece) -> u16 {
+    let mut destinations = [false; BOARD_POINT_CAPACITY];
+    if piece.ability.has(Ability::DIRECTION_CROSS) {
+        record_projected_lines(
+            board,
+            position,
+            piece.ability.has(Ability::ANY_DISTANCE),
+            &[(0, -1), (0, 1), (-1, 0), (1, 0)],
+            &mut destinations,
+        );
+    }
+    if piece.ability.has(Ability::DIRECTION_DIAGONAL) {
+        record_projected_lines(
+            board,
+            position,
+            piece.ability.has(Ability::ANY_DISTANCE),
+            &[(-1, -1), (1, -1), (-1, 1), (1, 1)],
+            &mut destinations,
+        );
+    }
+    if piece.ability.has(Ability::DIRECTION_SHAPE_L) {
+        record_projected_steps(
+            board,
+            position,
+            &[(1, 2), (2, 1), (-1, 2), (-2, 1), (1, -2), (2, -1), (-1, -2), (-2, -1)],
+            &mut destinations,
+        );
+    }
+    u16::try_from(count_true(&destinations)).expect("development count must fit u16")
+}
+
+fn record_projected_lines(
+    board: &Board, position: (u8, u8), any_distance: bool, directions: &[(i8, i8)],
+    destinations: &mut [bool; BOARD_POINT_CAPACITY],
+) {
+    let max_steps = if any_distance { board.width().max(board.height()) } else { 1 };
+    for &(dx, dy) in directions {
+        for step in 1 ..= max_steps {
+            let step = i8::try_from(step).expect("board dimension must fit i8");
+            let Some(target) = offset_position(board, position, dx * step, dy * step) else {
+                break;
+            };
+            if board.get(target).is_some() {
+                break;
+            }
+            destinations[board_index(board, target)] = true;
+        }
+    }
+}
+
+fn record_projected_steps(
+    board: &Board, position: (u8, u8), directions: &[(i8, i8)],
+    destinations: &mut [bool; BOARD_POINT_CAPACITY],
+) {
+    for &(dx, dy) in directions {
+        let Some(target) = offset_position(board, position, dx, dy) else {
+            continue;
+        };
+        if board.get(target).is_some() {
+            continue;
+        }
+        let leg = if dx.abs() > dy.abs() { (dx.signum(), 0) } else { (0, dy.signum()) };
+        let Some(leg_position) = offset_position(board, position, leg.0, leg.1) else {
+            continue;
+        };
+        if board.get(leg_position).is_none() {
+            destinations[board_index(board, target)] = true;
+        }
+    }
+}
+
+fn placement_y_range(board: &Board, player: Player) -> (u8, u8) {
+    match player {
+        Player::Red => (board.height().div_ceil(2), board.height()),
+        Player::Black => (0, board.height() / 2),
+    }
+}
+
+fn placement_frontier_row(board: &Board, player: Player) -> u8 {
+    match player {
+        Player::Red => board.height().div_ceil(2).saturating_sub(1),
+        Player::Black => board.height() / 2,
+    }
 }
 
 fn placement_topology(board: &Board, player: Player) -> PlacementTopology {
@@ -631,75 +851,240 @@ fn analyze_control(piece: Piece, analysis: &mut PositionAnalysis) {
     }
 }
 
-fn analyze_empty_mobility(board: &Board, player: Player, analysis: &mut ActionAnalysis) {
-    let mut actions = Vec::new();
-    for (position, _) in board.iter() {
+fn generate_player_actions(board: &Board, player: Player) -> GeneratedPlayerActions {
+    let mut generated = GeneratedPlayerActions {
+        actions: Vec::with_capacity(128),
+        capture_reach: CaptureReachMap::default(),
+    };
+    let mut actions = Vec::with_capacity(32);
+    for (origin, piece) in board.iter() {
         let effective =
-            board.effective(position).expect("occupied point must have an effective piece");
+            board.effective(origin).expect("occupied point must have an effective piece");
+        if !effective.can_controlled_by(player) {
+            continue;
+        }
+
+        actions.clear();
+        board.valid_moves(player, origin, &mut actions);
+        for &action in &actions {
+            if let Action::Move(move_) = action {
+                generated.capture_reach.record(board, origin, move_.to);
+            }
+            generated.actions.push(GeneratedAction { action, origin, piece });
+        }
+    }
+    generated
+}
+
+impl CaptureReachMap {
+    fn record(&mut self, board: &Board, origin: (u8, u8), destination: (u8, u8)) {
+        let origin_index = board_index(board, origin);
+        let destination_index = board_index(board, destination);
+        let segment = origin_index / u64::BITS as usize;
+        let bit = origin_index % u64::BITS as usize;
+        self.origins[destination_index][segment] |= 1u64 << bit;
+    }
+}
+
+fn analyze_placement_mobility(board: &Board, player: Player, analysis: &mut ActionAnalysis) {
+    let mut actions = Vec::with_capacity(32);
+    for (origin, _) in board.iter() {
+        let Some(effective) = board.effective(origin) else {
+            continue;
+        };
         if !effective.can_controlled_by(player) {
             continue;
         }
         actions.clear();
-        board.valid_moves(player, position, &mut actions);
-        for action in &actions {
+        board.valid_moves(player, origin, &mut actions);
+        for &action in &actions {
             let Action::Move(move_) = action else {
                 continue;
             };
-            record_quiet_move(board, position, move_.to, analysis);
+            record_quiet_move(board, origin, move_.to, analysis);
         }
     }
-    analysis.safe_movable_pieces = count_true(&analysis.safe_movers);
-    analysis.safe_reachable_destinations = count_true(&analysis.safe_destinations);
+    finish_mobility_counts(analysis);
 }
 
-fn analyze_player_actions(game: &Game, player: Player, analysis: &mut ActionAnalysis) {
-    let board = game.board();
-    let mut actions = Vec::new();
-    for (position, piece) in board.iter() {
-        let effective =
-            board.effective(position).expect("occupied point must have an effective piece");
-        if !effective.can_controlled_by(player) {
-            continue;
-        }
-        actions.clear();
-        board.valid_moves(player, position, &mut actions);
-        analyze_piece_actions(board, player, position, piece, &actions, analysis);
+fn analyze_player_actions(
+    board: &Board, player: Player, generated: &GeneratedPlayerActions,
+    opponent_reach: &CaptureReachMap, analysis: &mut ActionAnalysis,
+) {
+    for candidate in &generated.actions {
+        analyze_generated_action(board, player, *candidate, opponent_reach, analysis);
     }
-    analysis.safe_movable_pieces = count_true(&analysis.safe_movers);
-    analysis.safe_reachable_destinations = count_true(&analysis.safe_destinations);
+    finish_mobility_counts(analysis);
 }
 
+#[cfg(test)]
 fn analyze_piece_actions(
     board: &Board, player: Player, position: (u8, u8), piece: Piece, actions: &[Action],
     analysis: &mut ActionAnalysis,
 ) {
+    let opponent_reach = CaptureReachMap::default();
     for &action in actions {
-        let outcome = analyze_action_outcome(board, player, action);
-        record_action_result(outcome.game_result, player, analysis);
-        let usable =
-            !is_loss(outcome.game_result, player) && outcome.game_result != GameResult::Draw;
-        if !usable {
-            continue;
-        }
+        let candidate = GeneratedAction { action, origin: position, piece };
+        analyze_generated_action(board, player, candidate, &opponent_reach, analysis);
+    }
+    finish_mobility_counts(analysis);
+}
 
-        let exchange_units = reply_adjusted_exchange_units(board, player, action, &outcome);
-        record_exchange(exchange_units, analysis);
-        if exchange_units < 0 && !is_win(outcome.game_result, player) {
-            continue;
-        }
-        if piece.player == player && piece.ability.has(Ability::VITAL) {
-            analysis.vital_safe_actions += 1;
-        }
-        record_action_kind(outcome.kind, analysis);
-        if outcome.kind != ResolvedActionKind::QuietMove {
-            continue;
-        }
+fn analyze_generated_action(
+    board: &Board, player: Player, candidate: GeneratedAction, opponent_reach: &CaptureReachMap,
+    analysis: &mut ActionAnalysis,
+) {
+    let outcome = analyze_action_outcome(board, player, candidate.action);
+    record_action_result(outcome.game_result, player, analysis);
+    let usable = !is_loss(outcome.game_result, player) && outcome.game_result != GameResult::Draw;
+    if !usable {
+        return;
+    }
 
-        let Some(move_) = action_move(action) else {
+    let exchange_units = reply_adjusted_exchange_units(board, player, candidate.action, &outcome);
+    record_exchange(board, candidate.action, outcome.kind, exchange_units, analysis);
+    if exchange_units < 0 && !is_win(outcome.game_result, player) {
+        return;
+    }
+
+    let quiet_safety = if outcome.kind == ResolvedActionKind::QuietMove
+        && outcome.game_result == GameResult::Unfinished
+    {
+        let Some(move_) = action_move(candidate.action) else {
             unreachable!("resolved quiet move must have movement coordinates");
         };
-        record_quiet_move(board, position, move_.to, analysis);
+        quiet_move_safety(
+            board,
+            player,
+            candidate.origin,
+            move_.to,
+            candidate.piece,
+            opponent_reach,
+        )
+    } else {
+        QuietMoveSafety::SAFE
+    };
+    if candidate.piece.player == player
+        && candidate.piece.ability.has(Ability::VITAL)
+        && quiet_safety.material_safe
+        && quiet_safety.vital_safe
+    {
+        analysis.vital_safe_actions += 1;
     }
+    record_action_kind(outcome.kind, analysis);
+    if outcome.kind != ResolvedActionKind::QuietMove || !quiet_safety.material_safe {
+        return;
+    }
+
+    let Some(move_) = action_move(candidate.action) else {
+        unreachable!("resolved quiet move must have movement coordinates");
+    };
+    record_quiet_move(board, candidate.origin, move_.to, analysis);
+}
+
+fn finish_mobility_counts(analysis: &mut ActionAnalysis) {
+    analysis.safe_movable_pieces = count_true(&analysis.safe_movers);
+    analysis.safe_reachable_destinations = count_true(&analysis.safe_destinations);
+}
+
+fn quiet_move_safety(
+    board: &Board, perspective: Player, from: (u8, u8), to: (u8, u8), piece: Piece,
+    opponent_reach: &CaptureReachMap,
+) -> QuietMoveSafety {
+    let target_effective = projected_piece_after_quiet_move(board, to, from, to, piece, piece);
+    let destination_index = board_index(board, to);
+    let mut safety = QuietMoveSafety::SAFE;
+    for (segment, &origins) in opponent_reach.origins[destination_index].iter().enumerate() {
+        let mut origins = origins;
+        while origins != 0 {
+            let bit = origins.trailing_zeros() as usize;
+            origins &= origins - 1;
+            let origin_index = segment * u64::BITS as usize + bit;
+            let origin = (
+                (origin_index % usize::from(board.width())) as u8,
+                (origin_index / usize::from(board.width())) as u8,
+            );
+            if origin == from {
+                continue;
+            }
+            let Some((game_result, exchange_units)) = preview_capture_against_quiet_move(
+                board,
+                perspective,
+                origin,
+                from,
+                to,
+                piece,
+                target_effective,
+            ) else {
+                continue;
+            };
+            if is_loss(game_result, perspective) {
+                return QuietMoveSafety { material_safe: false, vital_safe: false };
+            }
+            if game_result == GameResult::Draw
+                && piece.player == perspective
+                && piece.ability.has(Ability::VITAL)
+            {
+                safety.vital_safe = false;
+            }
+            if game_result == GameResult::Unfinished && exchange_units < 0 {
+                safety.material_safe = false;
+            }
+        }
+    }
+    safety
+}
+
+fn projected_piece_after_quiet_move(
+    board: &Board, position: (u8, u8), moved_from: (u8, u8), moved_to: (u8, u8),
+    moved_piece: Piece, mut piece: Piece,
+) -> Piece {
+    let mut local = board.local(position);
+    for neighbor in &mut local.neighbors {
+        let x = position.0 as i16 + i16::from(neighbor.dx);
+        let y = position.1 as i16 + i16::from(neighbor.dy);
+        if x == i16::from(moved_from.0) && y == i16::from(moved_from.1) {
+            neighbor.piece = None;
+        } else if x == i16::from(moved_to.0) && y == i16::from(moved_to.1) {
+            neighbor.piece = Some(moved_piece);
+        }
+    }
+    piece.take_effect(&local.neighbors);
+    piece
+}
+
+fn preview_capture_against_quiet_move(
+    board: &Board, perspective: Player, attacker_from: (u8, u8), moved_from: (u8, u8),
+    to: (u8, u8), target: Piece, target_effective: Piece,
+) -> Option<(GameResult, i64)> {
+    let attacker = board.get(attacker_from)?;
+    let effective =
+        projected_piece_after_quiet_move(board, attacker_from, moved_from, to, target, attacker);
+    if !effective.can_capture(target_effective) {
+        return None;
+    }
+
+    let mutual = (effective.ability.has(Ability::CAPTURED_ON_CAPTURE)
+        || target_effective.ability.has(Ability::CAPTURE_ON_CAPTURED))
+        && !(effective.ability.has(Ability::CAPTURE)
+            && target_effective.ability.has(Ability::CAPTURED));
+    let departure = PositionChange { at: attacker_from, old: Some(attacker), new: None };
+    let destination = PositionChange { at: to, old: Some(target), new: None };
+    let changes = if mutual {
+        PositionChanges::try_from_slice(&[departure, destination])
+            .expect("predicted mutual capture changes must remain valid")
+    } else if attacker == target {
+        PositionChanges::try_from_slice(&[departure])
+            .expect("predicted identical capture changes must remain valid")
+    } else {
+        let arrival = PositionChange { new: Some(attacker), ..destination };
+        PositionChanges::try_from_slice(&[departure, arrival])
+            .expect("predicted capture changes must remain valid")
+    };
+    Some((
+        result_after_changes(changes.as_slice()),
+        exchange_units(board, changes.as_slice(), perspective),
+    ))
 }
 
 fn record_quiet_move(board: &Board, from: (u8, u8), to: (u8, u8), analysis: &mut ActionAnalysis) {
@@ -726,11 +1111,19 @@ fn record_action_result(game_result: GameResult, player: Player, analysis: &mut 
     }
 }
 
-fn record_exchange(exchange_units: i64, analysis: &mut ActionAnalysis) {
-    if exchange_units > 0 {
-        analysis.positive_exchange_actions += 1;
+fn record_exchange(
+    board: &Board, action: Action, kind: ResolvedActionKind, exchange_units: i64,
+    analysis: &mut ActionAnalysis,
+) {
+    if exchange_units <= 0 || kind != ResolvedActionKind::Capture {
+        return;
     }
-    analysis.best_exchange_units = analysis.best_exchange_units.max(exchange_units);
+    let Some(move_) = action_move(action) else {
+        return;
+    };
+    let target_index = board_index(board, move_.to);
+    analysis.exchange_units_by_target[target_index] =
+        analysis.exchange_units_by_target[target_index].max(exchange_units);
 }
 
 fn analyze_action_outcome(board: &Board, player: Player, action: Action) -> ActionOutcome {
@@ -765,7 +1158,7 @@ fn analyze_action_outcome(board: &Board, player: Player, action: Action) -> Acti
             ActionOutcome {
                 changes,
                 game_result: GameResult::Draw,
-                exchange_units: exchange_units(changes.as_slice(), player),
+                exchange_units: exchange_units(board, changes.as_slice(), player),
                 kind: ResolvedActionKind::Other,
             }
         },
@@ -796,7 +1189,7 @@ fn outcome_from_changes(
     ActionOutcome {
         changes,
         game_result: result_after_changes(changes.as_slice()),
-        exchange_units: exchange_units(changes.as_slice(), player),
+        exchange_units: exchange_units(board, changes.as_slice(), player),
         kind: resolved_action_kind(board, action, changes),
     }
 }
@@ -848,7 +1241,7 @@ fn static_exchange_replies(
                 continue;
             }
 
-            let exchange_units = static_exchange_action_units(&outcome, perspective);
+            let exchange_units = static_exchange_action_units(board, &outcome, perspective);
             if exchange_units == 0 {
                 continue;
             }
@@ -879,6 +1272,11 @@ fn static_exchange_replies(
 fn try_static_exchange_action(
     board: &Board, player: Player, action: Action,
 ) -> Option<ActionOutcome> {
+    let move_ = action_move(action)?;
+    let piece = board.effective(move_.from)?;
+    if !piece.can_controlled_by(player) {
+        return None;
+    }
     let changes = match action {
         Action::Capture(move_) => board.try_capture(move_.from, move_.to).ok()?,
         Action::Push(move_) => board.try_push(move_.from, move_.to).ok()?,
@@ -887,14 +1285,16 @@ fn try_static_exchange_action(
     Some(outcome_from_changes(board, player, action, changes))
 }
 
-fn static_exchange_action_units(outcome: &ActionOutcome, perspective: Player) -> i64 {
+fn static_exchange_action_units(
+    board: &Board, outcome: &ActionOutcome, perspective: Player,
+) -> i64 {
     if is_win(outcome.game_result, perspective) {
         return STATIC_EXCHANGE_TERMINAL_UNITS;
     }
     if is_loss(outcome.game_result, perspective) {
         return -STATIC_EXCHANGE_TERMINAL_UNITS;
     }
-    exchange_units(outcome.changes.as_slice(), perspective)
+    exchange_units(board, outcome.changes.as_slice(), perspective)
 }
 
 fn apply_position_changes(board: &mut Board, changes: &[PositionChange]) {
@@ -903,14 +1303,49 @@ fn apply_position_changes(board: &mut Board, changes: &[PositionChange]) {
     }
 }
 
-fn exchange_units(changes: &[PositionChange], player: Player) -> i64 {
+fn exchange_units(board: &Board, changes: &[PositionChange], player: Player) -> i64 {
+    let mut matched_new = [false; 3];
     let mut units = 0;
     for change in changes {
-        let old =
-            if let Some(piece) = change.old { exchange_piece_units(piece, player) } else { 0 };
-        let new =
-            if let Some(piece) = change.new { exchange_piece_units(piece, player) } else { 0 };
-        units += i64::from(new - old);
+        let Some(old_piece) = change.old else {
+            continue;
+        };
+        let mut matched = false;
+        for (index, new_change) in changes.iter().enumerate() {
+            if matched_new[index] {
+                continue;
+            }
+            let Some(new_piece) = new_change.new else {
+                continue;
+            };
+            if new_piece.id() != old_piece.id() {
+                continue;
+            }
+            matched_new[index] = true;
+            matched = true;
+            break;
+        }
+        if matched {
+            continue;
+        }
+        let value =
+            board.effective(change.at).map_or(0, |piece| exchange_piece_units(piece, player));
+        units -= i64::from(value);
+    }
+
+    if matched_new[.. changes.len()].iter().all(|matched| *matched) {
+        return units;
+    }
+
+    let mut next_board = board.clone();
+    apply_position_changes(&mut next_board, changes);
+    for (index, change) in changes.iter().enumerate() {
+        if matched_new[index] || change.new.is_none() {
+            continue;
+        }
+        let value =
+            next_board.effective(change.at).map_or(0, |piece| exchange_piece_units(piece, player));
+        units += i64::from(value);
     }
     units
 }
@@ -991,8 +1426,8 @@ fn red_feature_vector(game: &Game, analysis: &PositionAnalysis) -> MinFeatureVec
 fn vital_units(side: &SideAnalysis) -> i64 {
     side.vital_control_units
         + side.vital_resilience_units
-        + i64::from(side.actions.winning_actions) * 96
-        + i64::from(side.actions.vital_safe_actions) * 4
+        + i64::from(side.actions.winning_actions) * 80
+        + i64::from(side.actions.vital_safe_actions) * 3
 }
 
 fn mobility_units(side: &SideAnalysis) -> i64 {
@@ -1002,11 +1437,35 @@ fn mobility_units(side: &SideAnalysis) -> i64 {
 }
 
 fn action_effect_units(side: &SideAnalysis) -> i64 {
-    side.actions.best_exchange_units * 4
-        + i64::from(side.actions.positive_exchange_actions) * 6
+    let (exchange_pressure_units, positive_exchange_targets) =
+        target_exchange_pressure(&side.actions.exchange_units_by_target);
+    exchange_pressure_units * 4
+        + i64::from(positive_exchange_targets) * 6
         + i64::from(side.actions.capture_actions) * 2
         + i64::from(side.actions.push_actions)
         + i64::from(side.actions.pull_actions)
+}
+
+fn target_exchange_pressure(exchange_units_by_target: &[i64; BOARD_POINT_CAPACITY]) -> (i64, u32) {
+    let mut top = [0i64; 3];
+    let mut target_count = 0;
+    for &units in exchange_units_by_target {
+        if units <= 0 {
+            continue;
+        }
+        target_count += 1;
+        if units > top[0] {
+            top[2] = top[1];
+            top[1] = top[0];
+            top[0] = units;
+        } else if units > top[1] {
+            top[2] = top[1];
+            top[1] = units;
+        } else if units > top[2] {
+            top[2] = units;
+        }
+    }
+    (top[0] + top[1] / 2 + top[2] / 4, target_count)
 }
 
 fn weighted_contributions(
@@ -1066,6 +1525,27 @@ fn terminal_utility(game_result: GameResult, perspective: Player) -> Option<i32>
             Some(-terminal)
         },
     }
+}
+
+pub(super) fn tactical_piece_units(piece: Piece) -> i32 {
+    let ability = piece.ability;
+    let mut units = if ability.has(Ability::VITAL) {
+        96 + active_power_units(ability) + resilience_units(ability)
+    } else {
+        (32 + ability_units(ability)).max(8)
+    };
+    if piece.can_controlled_by(piece.player) {
+        units += 4;
+    } else {
+        units -= 8;
+    }
+    if piece.can_controlled_by(opponent(piece.player)) {
+        units -= 8;
+    }
+    if ability.has(Ability::DRAW) {
+        units += 4;
+    }
+    units.max(8)
 }
 
 fn ability_units(ability: Ability) -> i32 {
@@ -1175,8 +1655,12 @@ mod tests {
     use super::analyze_action_outcome;
     use super::analyze_piece_actions;
     use super::exchange_units;
+    use super::generate_player_actions;
+    use super::placement_candidate_potential_units;
+    use super::quiet_move_safety;
     use super::record_action_kind;
     use super::reply_adjusted_exchange_units;
+    use super::target_exchange_pressure;
     use super::weighted_contributions;
     use crate::ActionSelector;
     use crate::MinFeatureWeights;
@@ -1184,6 +1668,22 @@ mod tests {
     use crate::legal_movement_actions;
     use crate::min::outcome::ResolvedActionKind;
     use crate::play_agent_turn;
+
+    #[test]
+    fn placement_potential_rewards_a_formation_that_adds_missing_mobility() {
+        let mut board = Board::new(9, 10);
+        board[(3, 7)] = Some(Piece::RED_SCHOLAR);
+
+        let formed =
+            placement_candidate_potential_units(&board, Player::Red, Piece::RED_ROOK, (4, 8));
+        let separate =
+            placement_candidate_potential_units(&board, Player::Red, Piece::RED_ROOK, (8, 9));
+
+        assert!(
+            formed > separate,
+            "a rook should prefer a scholar formation spot that adds diagonal movement: formed={formed}, separate={separate}",
+        );
+    }
 
     #[test]
     fn feature_groups_use_their_matching_weights() {
@@ -1233,6 +1733,103 @@ mod tests {
         assert_eq!(action_effect_units(&side), 1);
     }
 
+    #[test]
+    fn exchange_pressure_rewards_distinct_hanging_targets() {
+        let mut repeated = [0; super::BOARD_POINT_CAPACITY];
+        repeated[0] = 64;
+        let mut distinct = repeated;
+        distinct[1] = 64;
+
+        let (repeated_units, repeated_targets) = target_exchange_pressure(&repeated);
+        let (distinct_units, distinct_targets) = target_exchange_pressure(&distinct);
+
+        assert_eq!(repeated_targets, 1);
+        assert_eq!(distinct_targets, 2);
+        assert!(distinct_units > repeated_units);
+
+        let repeated_side = SideAnalysis {
+            actions: ActionAnalysis {
+                exchange_units_by_target: repeated,
+                ..ActionAnalysis::default()
+            },
+            ..SideAnalysis::default()
+        };
+        let distinct_side = SideAnalysis {
+            actions: ActionAnalysis {
+                exchange_units_by_target: distinct,
+                ..ActionAnalysis::default()
+            },
+            ..SideAnalysis::default()
+        };
+        assert!(action_effect_units(&distinct_side) > action_effect_units(&repeated_side));
+    }
+
+    #[test]
+    fn attacked_quiet_destination_does_not_create_safe_mobility() {
+        let mut board = Board::new(5, 5);
+        board[(0, 2)] = Some(Piece::RED_ROOK);
+        board[(2, 0)] = Some(Piece::BLACK_ROOK);
+        let black_actions = generate_player_actions(&board, Player::Black);
+
+        let exposed = quiet_move_safety(
+            &board,
+            Player::Red,
+            (0, 2),
+            (2, 2),
+            Piece::RED_ROOK,
+            &black_actions.capture_reach,
+        );
+        let safe = quiet_move_safety(
+            &board,
+            Player::Red,
+            (0, 2),
+            (1, 2),
+            Piece::RED_ROOK,
+            &black_actions.capture_reach,
+        );
+
+        assert!(!exposed.material_safe);
+        assert!(safe.material_safe);
+    }
+
+    #[test]
+    fn vacated_dual_controlled_origin_does_not_attack_its_destination() {
+        let mut dual_controlled_rook = Piece::RED_ROOK;
+        dual_controlled_rook.ability |= Ability::CONTROLLED_BY_BLACK;
+        let mut board = Board::new(5, 5);
+        board[(0, 2)] = Some(dual_controlled_rook);
+        let black_actions = generate_player_actions(&board, Player::Black);
+
+        let safety = quiet_move_safety(
+            &board,
+            Player::Red,
+            (0, 2),
+            (2, 2),
+            dual_controlled_rook,
+            &black_actions.capture_reach,
+        );
+
+        assert!(safety.material_safe);
+    }
+    #[test]
+    fn attacked_vital_destination_does_not_create_escape_value() {
+        let mut board = Board::new(5, 5);
+        board[(0, 4)] = Some(Piece::RED_GENERAL);
+        board[(2, 0)] = Some(Piece::BLACK_ROOK);
+        let black_actions = generate_player_actions(&board, Player::Black);
+
+        let safety = quiet_move_safety(
+            &board,
+            Player::Red,
+            (0, 4),
+            (2, 2),
+            Piece::RED_GENERAL,
+            &black_actions.capture_reach,
+        );
+
+        assert!(!safety.material_safe);
+        assert!(!safety.vital_safe);
+    }
     #[test]
     fn harmful_own_capture_does_not_create_soft_action_value() {
         let mut controlled_black_rook = Piece::BLACK_ROOK;
@@ -1310,8 +1907,6 @@ mod tests {
 
         assert_eq!(hanging_analysis.capture_actions, 0);
         assert_eq!(defended_analysis.capture_actions, 1);
-        assert_eq!(hanging_analysis.positive_exchange_actions, 0);
-        assert_eq!(defended_analysis.positive_exchange_actions, 1);
     }
 
     #[test]
@@ -1362,7 +1957,7 @@ mod tests {
                 );
                 assert_eq!(
                     predicted.exchange_units,
-                    exchange_units(expected.changes.as_slice(), game.player()),
+                    exchange_units(game.board(), expected.changes.as_slice(), game.player()),
                     "predicted exchange differs for {action:?}"
                 );
             }

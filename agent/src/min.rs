@@ -33,9 +33,10 @@ pub const MIN_BEST_CONFIG_VERSION: u16 = 1;
 /// Static evaluation model understood by this agent version.
 pub const MIN_EVALUATION_MODEL_VERSION: u16 = 1;
 /// Hard maximum configured principal depth.
-pub const MIN_MAX_SEARCH_DEPTH: u8 = 2;
+pub const MIN_MAX_SEARCH_DEPTH: u8 = 3;
+const MIN_BEST_PLACEMENT_SEARCH_DEPTH: u8 = 2;
 /// Maximum alternating tactical plies searched beyond a noisy movement leaf.
-pub const MIN_TACTICAL_SEARCH_DEPTH: u8 = 3;
+pub const MIN_TACTICAL_SEARCH_DEPTH: u8 = 5;
 /// Hard maximum for any selective-search width.
 pub const MIN_MAX_SEARCH_WIDTH: u8 = 64;
 /// Hard maximum number of simulated nodes per analysis.
@@ -73,9 +74,10 @@ pub struct MinPlacementSearchConfig {
 /// Selective search limits for the movement phase.
 ///
 /// Movement always scans every legal root action outside the node budget.
-/// `max_nodes` bounds opponent probes and selective tactical responses.
-/// `opponent_width` retains replies; `response_width` retains candidates at
-/// each alternating tactical ply after a noisy leaf.
+/// `max_nodes` bounds opponent probes and selective responses. At depth three,
+/// every root receives a two-ply preliminary search and the leading roots receive
+/// a real third-ply response during verification. `opponent_width` retains replies;
+/// `response_width` retains third-ply and tactical-response candidates.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MinMovementSearchConfig {
@@ -141,14 +143,14 @@ impl MinConfig {
             config_id: MIN_BEST_CONFIG_ID.to_owned(),
             config_version: non_zero_u16(MIN_BEST_CONFIG_VERSION),
             placement_search: MinPlacementSearchConfig {
-                max_depth: non_zero_u8(MIN_MAX_SEARCH_DEPTH),
+                max_depth: non_zero_u8(MIN_BEST_PLACEMENT_SEARCH_DEPTH),
                 max_nodes: non_zero_u32(6_000),
                 root_width: non_zero_u8(32),
                 opponent_width: non_zero_u8(8),
                 response_width: non_zero_u8(4),
             },
             movement_search: MinMovementSearchConfig {
-                max_depth: non_zero_u8(MIN_MAX_SEARCH_DEPTH),
+                max_depth: non_zero_u8(2),
                 max_nodes: non_zero_u32(20_000),
                 opponent_width: non_zero_u8(12),
                 response_width: non_zero_u8(8),
@@ -168,12 +170,12 @@ impl MinConfig {
                     interactions: 160,
                 },
                 movement_weights: MinFeatureWeights {
-                    vital_safety: 320,
+                    vital_safety: 340,
                     effective_abilities: 100,
                     formation_effects: 80,
                     control: 100,
                     mobility: 120,
-                    action_effects: 320,
+                    action_effects: 280,
                     material: 40,
                     tempo: 20,
                     interactions: 100,

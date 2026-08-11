@@ -97,34 +97,38 @@ fn exhaustive_value(
 }
 
 fn exhaustive_roots(game: &Game, config: &MinConfig) -> Vec<ScoredAction> {
+    let legal_actions = collected_movement_actions(game);
+    exhaustive_roots_for_actions(game, config, &legal_actions)
+}
+
+fn exhaustive_roots_for_actions(
+    game: &Game, config: &MinConfig, legal_actions: &[Action],
+) -> Vec<ScoredAction> {
     let evaluator = MinEvaluator::new(config).expect("valid evaluator");
     let root_player = game.player();
     let depth = config.movement_search.max_depth.get();
-    let mut roots = collected_movement_actions(game)
-        .into_iter()
-        .enumerate()
-        .map(|(ordinal, action)| {
-            let mut child = game.clone();
-            child.action(action).expect("enumerated root movement must be legal");
-            let static_utility = evaluator.evaluate(&child, root_player).utility;
-            let utility = if depth == 1 {
-                static_utility
-            } else {
-                exhaustive_value(&child, root_player, evaluator, depth - 1)
-            };
-            (ordinal, action, static_utility, utility)
-        })
-        .collect::<Vec<_>>();
+    let mut roots = Vec::with_capacity(legal_actions.len());
+    for (ordinal, &action) in legal_actions.iter().enumerate() {
+        let mut child = game.clone();
+        child.action(action).expect("enumerated root movement must be legal");
+        let static_utility = evaluator.evaluate(&child, root_player).utility;
+        let utility = if depth == 1 {
+            static_utility
+        } else {
+            exhaustive_value(&child, root_player, evaluator, depth - 1)
+        };
+        roots.push((ordinal, action, static_utility, utility));
+    }
     roots.sort_by(|left, right| {
         right.3.cmp(&left.3).then_with(|| right.2.cmp(&left.2)).then_with(|| left.0.cmp(&right.0))
     });
-    roots
-        .into_iter()
-        .map(|(_, action, _, utility)| ScoredAction {
-            action,
-            score: utility as f32 / f32::from(MIN_TERMINAL_UTILITY),
-        })
-        .collect()
+
+    let mut candidates = Vec::with_capacity(roots.len());
+    for (_, action, _, utility) in roots {
+        candidates
+            .push(ScoredAction { action, score: utility as f32 / f32::from(MIN_TERMINAL_UTILITY) });
+    }
+    candidates
 }
 
 fn candidate(candidates: &[ScoredAction], action: Action) -> (usize, ScoredAction) {
@@ -168,6 +172,36 @@ fn two_ply_quiet_movement_matches_exhaustive_minimax_with_full_budget() {
     let candidates = analyze(&game, config, &legal_actions);
 
     assert_eq!(candidates, expected);
+}
+
+#[test]
+fn three_ply_quiet_movement_matches_exhaustive_minimax_for_verified_roots() {
+    let game = movement_game_on(7, 7, Player::Red, &[
+        ((0, 6), quiet_piece(Piece::RED_GENERAL)),
+        ((5, 6), quiet_piece(Piece::RED_ROOK)),
+        ((1, 0), quiet_piece(Piece::BLACK_GENERAL)),
+        ((6, 1), quiet_piece(Piece::BLACK_ROOK)),
+    ]);
+    let all_actions = collected_movement_actions(&game);
+    let mut legal_actions = Vec::new();
+    for action in all_actions {
+        if !matches!(action, Action::Move(_)) {
+            continue;
+        }
+        legal_actions.push(action);
+        if legal_actions.len() == 4 {
+            break;
+        }
+    }
+    assert_eq!(legal_actions.len(), 4);
+
+    let config = search_config(3, 100_000, 64);
+    let expected = exhaustive_roots_for_actions(&game, &config, &legal_actions);
+    let candidates = analyze(&game, config, &legal_actions);
+    let two_ply = analyze(&game, search_config(2, 100_000, 64), &legal_actions);
+
+    assert_eq!(candidates, expected);
+    assert_ne!(candidates, two_ply);
 }
 
 #[test]

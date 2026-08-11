@@ -25,8 +25,8 @@ fn best_config_is_valid_and_versioned() {
     assert_eq!(config.config_id, MIN_BEST_CONFIG_ID);
     assert_eq!(config.config_version.get(), MIN_BEST_CONFIG_VERSION);
     assert_eq!(config.versioned_id(), "best-v1");
-    assert_eq!(config.placement_search.max_depth.get(), MIN_MAX_SEARCH_DEPTH);
-    assert_eq!(config.movement_search.max_depth.get(), MIN_MAX_SEARCH_DEPTH);
+    assert_eq!(config.placement_search.max_depth.get(), 2);
+    assert_eq!(config.movement_search.max_depth.get(), 2);
     assert!(config.evaluation.non_terminal_utility_limit.get() < MIN_TERMINAL_UTILITY);
     assert!(config.evaluation.placement_weights.total() > 0);
     assert!(config.evaluation.movement_weights.total() > 0);
@@ -61,12 +61,12 @@ fn best_config_canonical_text_and_hash_are_stable() {
         "evaluation.placement_weights.material=20\n",
         "evaluation.placement_weights.tempo=20\n",
         "evaluation.placement_weights.interactions=160\n",
-        "evaluation.movement_weights.vital_safety=320\n",
+        "evaluation.movement_weights.vital_safety=340\n",
         "evaluation.movement_weights.effective_abilities=100\n",
         "evaluation.movement_weights.formation_effects=80\n",
         "evaluation.movement_weights.control=100\n",
         "evaluation.movement_weights.mobility=120\n",
-        "evaluation.movement_weights.action_effects=320\n",
+        "evaluation.movement_weights.action_effects=280\n",
         "evaluation.movement_weights.material=40\n",
         "evaluation.movement_weights.tempo=20\n",
         "evaluation.movement_weights.interactions=100\n",
@@ -76,7 +76,7 @@ fn best_config_canonical_text_and_hash_are_stable() {
     assert_eq!(config.canonical_text().expect("valid canonical text"), expected);
     assert_eq!(
         config.sha256().expect("valid hash"),
-        "53bf01e67aef3e1514d640bdbe965e43accf581a344b7ba86ecb89a7dd25962c"
+        "96c3e25ac37a10cbaf9c88a06cb5bbdf6322386eb18f0c50c8e9bc1f649e4aff"
     );
 }
 
