@@ -11,8 +11,14 @@ async fn main() {
     let addr = listener.local_addr().expect("failed to get local address");
     let url = format!("http://{addr}");
 
-    let _ = webbrowser::open(&url);
     println!("Serving at {url}");
+    let server = axum::serve(listener, server::build_app()).into_future();
+    tokio::pin!(server);
+    let waker = std::task::Waker::noop();
+    let poll = server.as_mut().poll(&mut std::task::Context::from_waker(waker));
+    assert!(matches!(poll, std::task::Poll::Pending), "server failed to start: {poll:?}");
 
-    axum::serve(listener, server::build_app()).await.expect("server error");
+    let _ = webbrowser::open(&url);
+
+    server.await.expect("server error");
 }
