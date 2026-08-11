@@ -163,6 +163,44 @@ fn min_agent_exposes_versioned_name_and_config() {
 }
 
 #[test]
+fn root_placement_beam_preserves_piece_and_spatial_diversity() {
+    let game = Game::new(GameConfig::default()).expect("standard game");
+    let mut config = MinConfig::best();
+    config.placement_search.max_depth = NonZeroU8::MIN;
+    config.placement_search.max_nodes = NonZeroU32::new(1_000).expect("test node budget");
+    config.placement_search.root_width = top_k(32);
+    let area = placement_area(&game).expect("standard placement area");
+    let midpoint = (area.x_range().start + area.x_range().end) / 2;
+    let mut agent = MinAgent::new(config).expect("valid Min agent");
+
+    let analysis = analyze_agent(&game, &mut agent, top_k(32)).expect("Min placement analysis");
+
+    assert_eq!(analysis.candidates.len(), 32);
+    let mut piece_ids = Vec::new();
+    let mut has_left_position = false;
+    let mut has_right_position = false;
+    for candidate in analysis.candidates {
+        let Action::Place(place) = candidate.action else {
+            panic!("root placement beam must contain placement actions")
+        };
+        if !piece_ids.contains(&place.piece) {
+            piece_ids.push(place.piece);
+        }
+        if place.to.0 < midpoint {
+            has_left_position = true;
+        } else {
+            has_right_position = true;
+        }
+    }
+
+    assert!(piece_ids.len() >= 2, "root placement beam should retain multiple piece types");
+    assert!(
+        has_left_position && has_right_position,
+        "root placement beam should cover both board sides"
+    );
+}
+
+#[test]
 fn best_agent_analyzes_the_standard_initial_placement() {
     let game = Game::new(GameConfig::default()).expect("standard game");
     let mut agent = MinAgent::best();

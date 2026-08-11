@@ -1,6 +1,7 @@
 mod agent;
 mod evaluator;
 mod movement;
+mod outcome;
 mod placement;
 
 use std::fmt::Display;
@@ -31,8 +32,10 @@ pub const MIN_BEST_CONFIG_ID: &str = "best";
 pub const MIN_BEST_CONFIG_VERSION: u16 = 1;
 /// Static evaluation model understood by this agent version.
 pub const MIN_EVALUATION_MODEL_VERSION: u16 = 1;
-/// Hard maximum number of simulated actions from the root.
+/// Hard maximum configured principal depth.
 pub const MIN_MAX_SEARCH_DEPTH: u8 = 2;
+/// Maximum alternating tactical plies searched beyond a noisy movement leaf.
+pub const MIN_TACTICAL_SEARCH_DEPTH: u8 = 3;
 /// Hard maximum for any selective-search width.
 pub const MIN_MAX_SEARCH_WIDTH: u8 = 64;
 /// Hard maximum number of simulated nodes per analysis.
@@ -70,8 +73,9 @@ pub struct MinPlacementSearchConfig {
 /// Selective search limits for the movement phase.
 ///
 /// Movement always scans every legal root action outside the node budget.
-/// `max_nodes` bounds simulated opponent replies;
-/// width limits retain only the configured number of non-terminal branches.
+/// `max_nodes` bounds opponent probes and selective tactical responses.
+/// `opponent_width` retains replies; `response_width` retains candidates at
+/// each alternating tactical ply after a noisy leaf.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MinMovementSearchConfig {
@@ -164,15 +168,15 @@ impl MinConfig {
                     interactions: 160,
                 },
                 movement_weights: MinFeatureWeights {
-                    vital_safety: 300,
-                    effective_abilities: 120,
-                    formation_effects: 120,
-                    control: 120,
-                    mobility: 80,
-                    action_effects: 260,
+                    vital_safety: 320,
+                    effective_abilities: 100,
+                    formation_effects: 80,
+                    control: 100,
+                    mobility: 120,
+                    action_effects: 320,
                     material: 40,
-                    tempo: 40,
-                    interactions: 180,
+                    tempo: 20,
+                    interactions: 100,
                 },
             },
         }

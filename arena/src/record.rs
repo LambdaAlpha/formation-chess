@@ -168,13 +168,18 @@ pub enum ActionSelectionPolicyRecord {
         top_k: u8,
         temperature: f32,
     },
+    ScoreSoftmax {
+        top_k: u8,
+        temperature: f32,
+        deterministic_gap: f32,
+    },
 }
 
 impl ActionSelectionPolicyRecord {
     pub const fn top_k(self) -> u8 {
         match self {
             Self::Best => 1,
-            Self::RankSoftmax { top_k, .. } => top_k,
+            Self::RankSoftmax { top_k, .. } | Self::ScoreSoftmax { top_k, .. } => top_k,
         }
     }
 }
@@ -185,6 +190,11 @@ impl From<ActionSelectionPolicy> for ActionSelectionPolicyRecord {
             ActionSelectionPolicy::Best => Self::Best,
             ActionSelectionPolicy::RankSoftmax(policy) => {
                 Self::RankSoftmax { top_k: policy.top_k().get(), temperature: policy.temperature() }
+            },
+            ActionSelectionPolicy::ScoreSoftmax(policy) => Self::ScoreSoftmax {
+                top_k: policy.top_k().get(),
+                temperature: policy.temperature(),
+                deterministic_gap: policy.deterministic_gap(),
             },
         }
     }
@@ -683,5 +693,33 @@ fn termination_record(
                 error: AgentErrorRecord::from(error),
             })
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::num::NonZeroU8;
+
+    use formation_chess_agent::ActionSelectionPolicy;
+
+    use super::ActionSelectionPolicyRecord;
+
+    #[test]
+    fn score_softmax_policy_round_trips_to_record() {
+        let policy = ActionSelectionPolicy::score_softmax(
+            NonZeroU8::new(4).expect("nonzero top_k"),
+            0.02,
+            0.05,
+        )
+        .expect("valid score policy");
+        let record = ActionSelectionPolicyRecord::from(policy);
+
+        assert_eq!(record, ActionSelectionPolicyRecord::ScoreSoftmax {
+            top_k: 4,
+            temperature: 0.02,
+            deterministic_gap: 0.05,
+        });
+        let json = serde_json::to_value(record).expect("serialize score policy");
+        assert_eq!(json["mode"], "score_softmax");
     }
 }

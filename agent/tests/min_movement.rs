@@ -56,6 +56,20 @@ fn movement_game_on(width: u8, height: u8, player: Player, pieces: &[((u8, u8), 
     .expect("valid movement game")
 }
 
+fn quiet_piece(mut piece: Piece) -> Piece {
+    let control = match piece.player {
+        Player::Red => Ability::CONTROLLED_BY_RED,
+        Player::Black => Ability::CONTROLLED_BY_BLACK,
+    };
+    let movement = piece.ability
+        & (Ability::DIRECTION_CROSS
+            | Ability::DIRECTION_DIAGONAL
+            | Ability::DIRECTION_SHAPE_L
+            | Ability::VITAL);
+    piece.ability = control | movement;
+    piece
+}
+
 fn analyze(game: &Game, config: MinConfig, legal_actions: &[Action]) -> Vec<ScoredAction> {
     let mut agent = MinAgent::new(config).expect("valid Min agent");
     agent
@@ -141,12 +155,12 @@ fn one_ply_movement_scores_static_leaves_and_scans_every_unique_root() {
 }
 
 #[test]
-fn two_ply_movement_matches_exhaustive_minimax_with_full_budget() {
-    let game = movement_game_on(3, 3, Player::Red, &[
-        ((0, 2), Piece::RED_GENERAL),
-        ((2, 2), Piece::RED_ROOK),
-        ((0, 0), Piece::BLACK_GENERAL),
-        ((2, 0), Piece::BLACK_ROOK),
+fn two_ply_quiet_movement_matches_exhaustive_minimax_with_full_budget() {
+    let game = movement_game_on(7, 7, Player::Red, &[
+        ((0, 6), quiet_piece(Piece::RED_GENERAL)),
+        ((6, 6), quiet_piece(Piece::RED_ROOK)),
+        ((0, 0), quiet_piece(Piece::BLACK_GENERAL)),
+        ((6, 0), quiet_piece(Piece::BLACK_ROOK)),
     ]);
     let legal_actions = collected_movement_actions(&game);
     let config = search_config(2, 100_000, 64);
@@ -247,6 +261,9 @@ fn unfavorable_position_takes_an_available_draw() {
         ((0, 4), Piece::RED_GENERAL),
         ((4, 0), Piece::BLACK_GENERAL),
         ((0, 0), Piece::BLACK_ROOK),
+        ((1, 0), Piece::BLACK_ROOK),
+        ((2, 0), Piece::BLACK_ROOK),
+        ((3, 0), Piece::BLACK_ROOK),
     ]);
     let legal_actions = collected_movement_actions(&game);
     let draw = Action::Draw(Move { from: (0, 4), to: (4, 0) });

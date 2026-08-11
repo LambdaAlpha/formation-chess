@@ -162,7 +162,7 @@ pub fn play_agent_turn(
     game: &mut Game, agent: &mut dyn Agent, selector: &mut ActionSelector,
 ) -> Result<AgentTurn, AgentError> {
     let analysis = analyze_agent(game, agent, selector.top_k())?;
-    let selected_index = selector.select_index(analysis.candidates.len());
+    let selected_index = selector.select_index(&analysis.candidates);
     let selected = analysis.candidates[selected_index];
     let reaction = game.action(selected.action).map_err(|message| {
         AgentError::InvalidAnalysis(format!(

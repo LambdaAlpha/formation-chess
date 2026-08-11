@@ -165,6 +165,7 @@ endpoint has no `top_k` field and executes Min's top-one candidate.
 
 When `random_placement` is true, the backend alternates the two Min agents until
 placement is complete, then atomically replaces the session with the resulting
-movement-phase game. Independent rank-Softmax selectors preserve layout
-variation; normal Agent steps remain deterministic top-one play. Intermediate
+movement-phase game. Independent score-Softmax selectors sample only close
+layout candidates and keep clear best moves deterministic; normal Agent steps
+remain deterministic top-one play. Intermediate
 placements are not returned.

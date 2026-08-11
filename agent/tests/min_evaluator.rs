@@ -25,6 +25,31 @@ fn game(player: Player, pieces: &[((u8, u8), Piece)], result: GameResult) -> Gam
         .expect("valid test game")
 }
 
+fn placement_game(red_positions: &[(u8, u8)]) -> Game {
+    let mut red_pieces = Vec::with_capacity(red_positions.len());
+    for &position in red_positions {
+        red_pieces.push((position, Piece::RED_ROOK));
+    }
+    placement_game_with_pieces(&red_pieces)
+}
+
+fn placement_game_with_pieces(red_pieces: &[((u8, u8), Piece)]) -> Game {
+    let mut board = Board::new(9, 10);
+    board[(8, 9)] = Some(Piece::RED_GENERAL);
+    board[(8, 0)] = Some(Piece::BLACK_GENERAL);
+    for &(position, piece) in red_pieces {
+        board[position] = Some(piece);
+    }
+    Game::new(GameConfig {
+        player: Player::Red,
+        board,
+        red_pool: vec![Piece::RED_SHIELD],
+        black_pool: vec![Piece::BLACK_SHIELD],
+        result: GameResult::Unfinished,
+    })
+    .expect("valid placement game")
+}
+
 fn assert_bounded(evaluation: MinEvaluation) {
     let scale = MIN_FEATURE_SCALE;
     for feature in [
@@ -166,6 +191,133 @@ fn color_swap_and_vertical_mirror_preserve_player_evaluation() {
 }
 
 #[test]
+fn placement_evaluation_rewards_spatial_coverage() {
+    let clustered = placement_game(&[(0, 5), (1, 5), (0, 6), (1, 6)]);
+    let spread = placement_game(&[(0, 5), (1, 5), (7, 5), (8, 5)]);
+    let evaluator = evaluator();
+    let clustered = evaluator.evaluate(&clustered, Player::Red);
+    let spread = evaluator.evaluate(&spread, Player::Red);
+
+    assert!(
+        spread.features.control > clustered.features.control,
+        "spread placement should improve control: clustered={}, spread={}",
+        clustered.features.control,
+        spread.features.control,
+    );
+    assert!(spread.utility > clustered.utility, "spread placement should improve utility");
+}
+
+#[test]
+fn placement_evaluation_anchors_single_piece_away_from_edge() {
+    let edge = placement_game(&[(0, 5)]);
+    let center = placement_game(&[(4, 5)]);
+    let evaluator = evaluator();
+    let edge = evaluator.evaluate(&edge, Player::Red);
+    let center = evaluator.evaluate(&center, Player::Red);
+
+    assert!(
+        center.features.control > edge.features.control,
+        "center anchor should improve control: edge={}, center={}",
+        edge.features.control,
+        center.features.control,
+    );
+}
+
+#[test]
+fn placement_evaluation_rewards_balanced_column_loads() {
+    let clustered = placement_game(&[(0, 5), (0, 6), (0, 7), (1, 5), (1, 6), (1, 7)]);
+    let balanced = placement_game(&[(0, 5), (1, 5), (3, 5), (4, 5), (6, 5), (7, 5)]);
+    let evaluator = evaluator();
+    let clustered = evaluator.evaluate(&clustered, Player::Red);
+    let balanced = evaluator.evaluate(&balanced, Player::Red);
+
+    assert!(
+        balanced.features.control > clustered.features.control,
+        "balanced columns should improve control: clustered={}, balanced={}",
+        clustered.features.control,
+        balanced.features.control,
+    );
+}
+
+#[test]
+fn placement_evaluation_penalizes_dense_connected_components() {
+    let dense = placement_game(&[(0, 5), (1, 5), (2, 5), (0, 6), (1, 6), (2, 6), (0, 7), (1, 7)]);
+    let distributed =
+        placement_game(&[(0, 5), (2, 5), (4, 5), (6, 5), (8, 5), (1, 7), (4, 7), (7, 7)]);
+    let evaluator = evaluator();
+    let dense = evaluator.evaluate(&dense, Player::Red);
+    let distributed = evaluator.evaluate(&distributed, Player::Red);
+
+    assert!(
+        distributed.features.control > dense.features.control,
+        "distributed placement should reduce component concentration: dense={}, distributed={}",
+        dense.features.control,
+        distributed.features.control,
+    );
+    assert!(distributed.utility > dense.utility);
+}
+
+#[test]
+fn placement_mobility_counts_open_destinations() {
+    let blocked = placement_game_with_pieces(&[
+        ((4, 7), Piece::RED_ROOK),
+        ((4, 6), Piece::RED_SHIELD),
+        ((4, 8), Piece::RED_SHIELD),
+        ((3, 7), Piece::RED_SHIELD),
+        ((5, 7), Piece::RED_SHIELD),
+    ]);
+    let open = placement_game_with_pieces(&[
+        ((4, 7), Piece::RED_ROOK),
+        ((3, 6), Piece::RED_SHIELD),
+        ((5, 6), Piece::RED_SHIELD),
+        ((3, 8), Piece::RED_SHIELD),
+        ((5, 8), Piece::RED_SHIELD),
+    ]);
+    let evaluator = evaluator();
+    let blocked = evaluator.evaluate(&blocked, Player::Red);
+    let open = evaluator.evaluate(&open, Player::Red);
+
+    assert!(
+        open.features.mobility > blocked.features.mobility,
+        "open rook lines should improve estimated mobility: blocked={}, open={}",
+        blocked.features.mobility,
+        open.features.mobility,
+    );
+}
+
+#[test]
+fn placement_space_is_disabled_during_movement() {
+    let clustered = game(
+        Player::Red,
+        &[
+            ((8, 9), Piece::RED_GENERAL),
+            ((8, 0), Piece::BLACK_GENERAL),
+            ((0, 5), Piece::RED_ROOK),
+            ((1, 5), Piece::RED_ROOK),
+            ((0, 6), Piece::RED_ROOK),
+            ((1, 6), Piece::RED_ROOK),
+        ],
+        GameResult::Unfinished,
+    );
+    let spread = game(
+        Player::Red,
+        &[
+            ((8, 9), Piece::RED_GENERAL),
+            ((8, 0), Piece::BLACK_GENERAL),
+            ((0, 5), Piece::RED_ROOK),
+            ((1, 5), Piece::RED_ROOK),
+            ((7, 5), Piece::RED_ROOK),
+            ((8, 5), Piece::RED_ROOK),
+        ],
+        GameResult::Unfinished,
+    );
+    let evaluator = evaluator();
+    let clustered = evaluator.evaluate(&clustered, Player::Red);
+    let spread = evaluator.evaluate(&spread, Player::Red);
+
+    assert_eq!(spread.features.control, clustered.features.control);
+}
+#[test]
 fn material_and_open_mobility_raise_red_evaluation() {
     let baseline = game(
         Player::Red,
@@ -222,6 +374,10 @@ fn formation_feature_tracks_actual_ability_changes() {
     let separated = evaluator.evaluate(&separated, Player::Red);
     let formed = evaluator.evaluate(&formed, Player::Red);
 
+    assert_eq!(
+        formed.features.effective_abilities, separated.features.effective_abilities,
+        "formation gains must not be counted again as inherent abilities",
+    );
     assert!(
         formed.features.formation_effects > separated.features.formation_effects,
         "beneficial formation must improve formation feature: separated={}, formed={}",

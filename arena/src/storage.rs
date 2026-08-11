@@ -364,17 +364,28 @@ pub(crate) fn validate_manifest(manifest: &ArenaManifest) -> Result<(), DatasetE
     match manifest.game_run_config.action_selection {
         ActionSelectionPolicyRecord::Best => {},
         ActionSelectionPolicyRecord::RankSoftmax { top_k, temperature } => {
-            if top_k == 0 {
-                return Err(DatasetError::InvalidDataset(
-                    "rank Softmax top_k must be nonzero".to_owned(),
-                ));
-            }
-            if !temperature.is_finite() || temperature <= 0.0 {
+            validate_softmax_record(top_k, temperature, "rank")?;
+        },
+        ActionSelectionPolicyRecord::ScoreSoftmax { top_k, temperature, deterministic_gap } => {
+            validate_softmax_record(top_k, temperature, "score")?;
+            if !deterministic_gap.is_finite() || deterministic_gap <= 0.0 {
                 return Err(DatasetError::InvalidDataset(format!(
-                    "rank Softmax temperature must be finite and positive, got {temperature}"
+                    "score Softmax deterministic gap must be finite and positive, got {deterministic_gap}"
                 )));
             }
         },
+    }
+    Ok(())
+}
+
+fn validate_softmax_record(top_k: u8, temperature: f32, label: &str) -> Result<(), DatasetError> {
+    if top_k == 0 {
+        return Err(DatasetError::InvalidDataset(format!("{label} Softmax top_k must be nonzero")));
+    }
+    if !temperature.is_finite() || temperature <= 0.0 {
+        return Err(DatasetError::InvalidDataset(format!(
+            "{label} Softmax temperature must be finite and positive, got {temperature}"
+        )));
     }
     Ok(())
 }

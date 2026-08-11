@@ -61,22 +61,22 @@ fn best_config_canonical_text_and_hash_are_stable() {
         "evaluation.placement_weights.material=20\n",
         "evaluation.placement_weights.tempo=20\n",
         "evaluation.placement_weights.interactions=160\n",
-        "evaluation.movement_weights.vital_safety=300\n",
-        "evaluation.movement_weights.effective_abilities=120\n",
-        "evaluation.movement_weights.formation_effects=120\n",
-        "evaluation.movement_weights.control=120\n",
-        "evaluation.movement_weights.mobility=80\n",
-        "evaluation.movement_weights.action_effects=260\n",
+        "evaluation.movement_weights.vital_safety=320\n",
+        "evaluation.movement_weights.effective_abilities=100\n",
+        "evaluation.movement_weights.formation_effects=80\n",
+        "evaluation.movement_weights.control=100\n",
+        "evaluation.movement_weights.mobility=120\n",
+        "evaluation.movement_weights.action_effects=320\n",
         "evaluation.movement_weights.material=40\n",
-        "evaluation.movement_weights.tempo=40\n",
-        "evaluation.movement_weights.interactions=180\n",
+        "evaluation.movement_weights.tempo=20\n",
+        "evaluation.movement_weights.interactions=100\n",
     );
 
     assert_eq!(MIN_CONFIG_HASH_FORMAT_VERSION, 1);
     assert_eq!(config.canonical_text().expect("valid canonical text"), expected);
     assert_eq!(
         config.sha256().expect("valid hash"),
-        "2e0efa93dffd1f07232cf9f74fda5b40c584f435e444adc15481c70a6948c05e"
+        "53bf01e67aef3e1514d640bdbe965e43accf581a344b7ba86ecb89a7dd25962c"
     );
 }
 

@@ -27,9 +27,11 @@ analyze_prepared validates an agent against that prepared input. analyze_agent
 is the convenience wrapper that prepares and analyzes in one call.
 play_agent_turn receives an ActionSelector, requests the selector's top_k, and
 executes the selected candidate through the core engine. ActionSelectionPolicy::Best
-preserves deterministic top-one play. RankSoftmax samples by candidate rank,
-leaving Agent analysis, scores, and hint ordering deterministic. Selectors can
-use process entropy for Web play or an explicit seed for reproducible Arena runs.
+preserves deterministic top-one play. RankSoftmax remains available for persisted
+rank-based policies. ScoreSoftmax samples close candidates from their actual score
+gaps and selects a clear best move deterministically. Agent analysis and hint
+ordering remain deterministic. Selectors can use process entropy
+for Web play or an explicit seed for reproducible Arena runs.
 
 ## Placement area
 
@@ -77,8 +79,8 @@ simulated-action counts for performance analysis.
 MinConfig::best() is the only bundled Min profile. It carries a schema version,
 a frozen configuration version, deterministic placement and movement search
 limits, a static-evaluation model version, and relative weights for oriented
-feature groups. Config validation enforces the two-ply limit, bounded search
-widths and node budgets, and keeps every non-terminal heuristic value strictly
+feature groups. Config validation enforces the two-ply principal limit, bounded
+search widths and node budgets, and keeps every non-terminal heuristic value strictly
 inside the exact win/loss utility.
 
 Feature-group weights are not independent game scores. Terminal outcomes and
@@ -98,13 +100,19 @@ group to a fixed signed range, exposes each weighted contribution, and performs
 all aggregation with integer arithmetic. Finished games receive exact utility;
 non-terminal utility remains strictly inside that bound.
 
-The evaluator covers Vital safety, current abilities, formation changes,
-control, safe mobility, concrete capture/push/pull opportunities, low-weight
-Red/Black material, side-to-move tempo, and explicit control × ability ×
-mobility interactions. Draw actions exchange the two Vital pieces and are
-scored only through their exact terminal utility of zero; they do not become a
-positive soft feature. Targeted Resign actions are present in the legal action
-list and receive the exact win or loss implied by the selected Vital piece.
+The evaluator covers Vital safety, inherent abilities, net formation changes,
+control, empty-destination mobility, actual resolved capture/push/pull outcomes,
+low-weight Red/Black material, side-to-move tempo, and control × ability ×
+mobility interactions. Placement control also measures row/column coverage,
+connected-component concentration, excessive neighbors, and long-range ally
+blocking; formation value pays a cost for every adjacent allied edge. Positive
+capture or blocked-push exchanges use up to two same-point replies as a bounded
+static exchange evaluation, so an undefended tactical gain can be rejected while
+a defended capture recovers value through its recapture chain. Negative
+reply-adjusted exchanges do not create mobility or action-effect bonuses. Draw
+actions exchange the two Vital pieces and are scored only through their exact
+terminal utility of zero. Targeted Resign actions receive the exact result
+implied by the selected Vital piece.
 
 MinAgent implements deterministic placement analysis. It scans unique
 piece-position combinations lazily rather than materializing the Cartesian
@@ -127,20 +135,29 @@ exhaustive and do not consume the movement node budget. Exact wins, draws, and
 losses score 1, 0, and -1; unfinished leaves use the bounded static evaluator.
 
 At depth two, the search minimizes selected opponent replies. Recursive movement
-actions consume the shared node budget. The budget is divided across unfinished
-roots; when it cannot probe every legal reply, deterministic spread sampling
-covers the complete ordered action list instead of only its prefix. Opponent
-width retains the statically worst branches.
+actions consume the shared node budget. Roughly two thirds of that budget first
+cover every unfinished root; the remaining third plus unused first-pass nodes
+then re-search the leading four roots with substantially broader refutation
+coverage. When a pass cannot probe every legal reply, deterministic spread
+sampling covers the complete ordered action list instead of only its prefix.
+Opponent width retains the statically worst branches.
 
-An immediate terminal result at the preferred minimax bound stops that branch
-early. Final candidates are ordered by searched utility, then root static
-utility, then original legal-action order before truncation to top_k. Setting
-max_depth to one preserves pure static root analysis; two enables the opponent
-reply.
+A capture, blocked-push capture, or immediate Vital threat present after an
+opponent reply can enter up to three alternating tactical response plies. The
+shared node budget and response width bound every continuation; remaining nodes
+are divided only among branches that stay tactically noisy. Actions returning to
+the capture point are probed first so recapture chains are not lost to
+enumeration order. Quiet leaves remain two-ply. An immediate terminal result at
+the preferred minimax bound stops that branch early. Final
+candidates are ordered by searched utility, then root static utility, then
+original legal-action order before truncation to top_k. Setting max_depth to one
+preserves pure static root analysis; two enables the opponent reply and tactical
+response extension.
 
 ## Scope
 
 This crate contains the agent framework, random baseline, pure UCT baseline,
 versioned Min configuration, static evaluator, placement search, and selective
-two-ply movement search. Web integration, arena orchestration, recording, and
+movement search with tactical response extension. Web integration, arena
+orchestration, recording, and
 statistics belong to their respective crates.

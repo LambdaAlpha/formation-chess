@@ -7,6 +7,7 @@ use formation_chess_core::action::Place;
 use formation_chess_core::game::Game;
 use formation_chess_core::game::Phase;
 use formation_chess_core::piece::Piece;
+use formation_chess_core::piece::PieceId;
 use formation_chess_core::piece::Player;
 
 use super::MIN_TERMINAL_UTILITY;
@@ -16,6 +17,8 @@ use crate::AgentError;
 use crate::PlacementArea;
 use crate::ScoredAction;
 use crate::placement_area;
+
+const ROOT_DIVERSITY_POOL_MULTIPLIER: usize = 8;
 
 pub(super) fn analyze_placements(
     game: &Game, area: PlacementArea, top_k: NonZeroU8, config: MinPlacementSearchConfig,
@@ -34,13 +37,12 @@ pub(super) fn analyze_placements(
         usize::try_from(config.max_nodes.get()).expect("validated Min node budget must fit usize");
     let root_width = usize::from(config.root_width.get());
     let root_probe_limit = probe_limit(max_nodes, root_width, max_depth > 1);
-    let root_selection = select_children(
+    let root_selection = select_root_children(
         &mut search_game,
         area,
         root_player,
         evaluator,
         root_width,
-        true,
         root_probe_limit,
     )?;
     if root_selection.children.is_empty() {
@@ -182,6 +184,19 @@ fn search_position(
     })
 }
 
+fn select_root_children(
+    game: &mut Game, area: PlacementArea, root_player: Player, evaluator: MinEvaluator,
+    width: usize, probe_limit: usize,
+) -> Result<ChildSelection, AgentError> {
+    if width == 0 || probe_limit == 0 {
+        return Ok(ChildSelection::default());
+    }
+
+    let (candidates, probed) = probe_children(game, area, root_player, evaluator, probe_limit)?;
+    let children = select_diverse_children(candidates, area, width, true);
+    Ok(ChildSelection { children, probed })
+}
+
 fn select_children(
     game: &mut Game, area: PlacementArea, root_player: Player, evaluator: MinEvaluator,
     width: usize, maximizing: bool, probe_limit: usize,
@@ -190,20 +205,32 @@ fn select_children(
         return Ok(ChildSelection::default());
     }
 
+    let (candidates, probed) = probe_children(game, area, root_player, evaluator, probe_limit)?;
+    let mut children = Vec::with_capacity(width.min(probed));
+    for candidate in candidates {
+        insert_child(&mut children, candidate, width, maximizing);
+    }
+    Ok(ChildSelection { children, probed })
+}
+
+fn probe_children(
+    game: &mut Game, area: PlacementArea, root_player: Player, evaluator: MinEvaluator,
+    probe_limit: usize,
+) -> Result<(Vec<SearchChild>, usize), AgentError> {
     let pieces = unique_pool(game);
     let positions = area
         .positions()
         .filter(|position| game.board().get(*position).is_none())
         .collect::<Vec<_>>();
     if pieces.is_empty() || positions.is_empty() {
-        return Ok(ChildSelection::default());
+        return Ok((Vec::new(), 0));
     }
 
     let total = pieces.len().checked_mul(positions.len()).ok_or_else(|| {
         AgentError::Decision("placement candidate count overflowed usize".to_owned())
     })?;
     let probes = total.min(probe_limit);
-    let mut children = Vec::with_capacity(width.min(probes));
+    let mut candidates = Vec::with_capacity(probes);
     for sample_index in 0 .. probes {
         let ordinal = spread_index(sample_index, probes, total);
         let piece = pieces[ordinal / positions.len()];
@@ -214,15 +241,139 @@ fn select_children(
         })?;
         let ordering_utility = evaluator.evaluate(game, root_player).utility;
         game.undo(reaction);
-        insert_child(
-            &mut children,
-            SearchChild { action, ordering_utility, ordinal },
-            width,
-            maximizing,
-        );
+        candidates.push(SearchChild { action, ordering_utility, ordinal });
+    }
+    Ok((candidates, probes))
+}
+
+fn select_diverse_children(
+    mut candidates: Vec<SearchChild>, area: PlacementArea, width: usize, maximizing: bool,
+) -> Vec<SearchChild> {
+    candidates.sort_by(|left, right| compare_children(left, right, maximizing));
+    if candidates.len() <= width {
+        return candidates;
     }
 
-    Ok(ChildSelection { children, probed: probes })
+    let diversity_pool_len =
+        candidates.len().min(width.saturating_mul(ROOT_DIVERSITY_POOL_MULTIPLIER));
+    let piece_target =
+        width.div_ceil(2).min(unique_piece_count(&candidates[.. diversity_pool_len]));
+    let spatial_grid = spatial_grid_side(width.saturating_sub(piece_target));
+    let mut selected = Vec::with_capacity(width);
+    let mut selected_indices = vec![false; candidates.len()];
+    let mut selected_pieces = Vec::with_capacity(piece_target);
+    for index in 0 .. diversity_pool_len {
+        if selected.len() >= piece_target {
+            break;
+        }
+        let piece = placement_piece(candidates[index].action);
+        if selected_pieces.contains(&piece) {
+            continue;
+        }
+        selected_indices[index] = true;
+        selected_pieces.push(piece);
+        selected.push(candidates[index]);
+    }
+
+    let mut selected_buckets = Vec::with_capacity(width);
+    for candidate in &selected {
+        let bucket = placement_bucket(area, placement_position(candidate.action), spatial_grid);
+        if !selected_buckets.contains(&bucket) {
+            selected_buckets.push(bucket);
+        }
+    }
+    for index in 0 .. diversity_pool_len {
+        if selected.len() >= width {
+            break;
+        }
+        if selected_indices[index] {
+            continue;
+        }
+        let bucket =
+            placement_bucket(area, placement_position(candidates[index].action), spatial_grid);
+        if selected_buckets.contains(&bucket) {
+            continue;
+        }
+        selected_indices[index] = true;
+        selected_buckets.push(bucket);
+        selected.push(candidates[index]);
+    }
+
+    for (index, candidate) in candidates.into_iter().enumerate() {
+        if selected.len() >= width {
+            break;
+        }
+        if selected_indices[index] {
+            continue;
+        }
+        selected.push(candidate);
+    }
+    selected.sort_by(|left, right| compare_children(left, right, maximizing));
+    selected
+}
+
+fn unique_piece_count(candidates: &[SearchChild]) -> usize {
+    let mut pieces = Vec::new();
+    for candidate in candidates {
+        let piece = placement_piece(candidate.action);
+        if !pieces.contains(&piece) {
+            pieces.push(piece);
+        }
+    }
+    pieces.len()
+}
+
+fn placement_piece(action: Action) -> PieceId {
+    let Action::Place(place) = action else {
+        unreachable!("placement search candidate must be a placement")
+    };
+    place.piece
+}
+
+fn placement_position(action: Action) -> (u8, u8) {
+    let Action::Place(place) = action else {
+        unreachable!("placement search candidate must be a placement")
+    };
+    place.to
+}
+
+fn spatial_grid_side(slot_count: usize) -> usize {
+    if slot_count <= 1 {
+        return 1;
+    }
+    let mut side: usize = 1;
+    while side.saturating_mul(side) < slot_count {
+        side += 1;
+    }
+    side
+}
+
+fn placement_bucket(area: PlacementArea, (x, y): (u8, u8), grid_side: usize) -> PlacementBucket {
+    let x_range = area.x_range();
+    let y_range = area.y_range();
+    PlacementBucket {
+        x: bucket_coordinate(x, x_range.start, x_range.end, grid_side),
+        y: bucket_coordinate(y, y_range.start, y_range.end, grid_side),
+    }
+}
+
+fn bucket_coordinate(value: u8, start: u8, end: u8, grid_side: usize) -> usize {
+    if grid_side <= 1 || start >= end {
+        return 0;
+    }
+    let span = usize::from(end - start);
+    let offset = usize::from(value.saturating_sub(start));
+    (offset.saturating_mul(grid_side) / span).min(grid_side - 1)
+}
+
+fn compare_children(left: &SearchChild, right: &SearchChild, maximizing: bool) -> Ordering {
+    if child_precedes(left, right, maximizing) {
+        return Ordering::Less;
+    }
+    if child_precedes(right, left, maximizing) {
+        return Ordering::Greater;
+    }
+    Ordering::Equal
 }
 
 fn unique_pool(game: &Game) -> Vec<Piece> {
@@ -304,6 +455,7 @@ struct ChildSelection {
     probed: usize,
 }
 
+#[derive(Copy, Clone)]
 struct SearchChild {
     action: Action,
     ordering_utility: i32,
@@ -315,6 +467,12 @@ struct RootResult {
     ordering_utility: i32,
     utility: i32,
     ordinal: usize,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+struct PlacementBucket {
+    x: usize,
+    y: usize,
 }
 
 struct SearchResult {

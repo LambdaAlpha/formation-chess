@@ -397,7 +397,7 @@ async fn new_handler(
 fn complete_random_placement(
     game: &mut Game, red: &mut PlayerRuntime, black: &mut PlayerRuntime,
 ) -> Result<(), String> {
-    let policy = ActionSelectionPolicy::standard_rank_softmax();
+    let policy = ActionSelectionPolicy::standard_score_softmax();
     let mut red_selector = ActionSelector::new(policy);
     let mut black_selector = ActionSelector::new(policy);
     let placement_count = game.red_pool().len() + game.black_pool().len();

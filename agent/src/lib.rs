@@ -76,3 +76,4 @@ pub use selection::ActionSelectionError;
 pub use selection::ActionSelectionPolicy;
 pub use selection::ActionSelector;
 pub use selection::RankSoftmaxPolicy;
+pub use selection::ScoreSoftmaxPolicy;
