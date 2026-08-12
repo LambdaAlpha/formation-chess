@@ -64,17 +64,21 @@
         <label>红方
           <select id="red-control">
             <option value="human" selected>人类</option>
-            <option value="agent">AI</option>
+            <option value="agent:very_weak">AI · 极弱</option>
+            <option value="agent:weak">AI · 弱</option>
+            <option value="agent:medium">AI · 中</option>
           </select>
         </label>
         <label>黑方
           <select id="black-control">
             <option value="human">人类</option>
-            <option value="agent" selected>AI</option>
+            <option value="agent:very_weak">AI · 极弱</option>
+            <option value="agent:weak">AI · 弱</option>
+            <option value="agent:medium" selected>AI · 中</option>
           </select>
         </label>
       </div>
-      <p>每方都使用独立的当前 Min AI；人类控制时 AI 仍可提供提示。</p>
+      <p>棋力主要调整搜索预算：极弱约 0.5 秒、弱约 1 秒、中约 2 秒。双方可选择不同棋力对弈；人类控制时 AI 提示使用中等棋力。</p>
     </div>
     <div class="panel-tabs">
       <button class="tab active" data-tab="tab-size" type="button">棋盘尺寸</button>

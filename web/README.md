@@ -6,9 +6,10 @@ JavaScript, and the synchronized Chinese rule text; no frontend build step is
 required.
 
 The server binds to `127.0.0.1` and keeps one in-memory game session. Red and
-Black each own an independent `MinAgent::best()` instance. Either side may be
-Human- or Agent-controlled; the default is Red Human and Black Agent. Restarting
-the process starts a fresh session.
+Black each own an independent Min Agent instance. Either side may be Human- or
+Agent-controlled, and each Agent side independently selects very-weak, weak, or
+medium strength. The default is Red Human and Black medium Agent. Restarting the
+process starts a fresh session.
 
 ## Run from the workspace
 
@@ -28,7 +29,7 @@ no authentication, remote matchmaking, or durable game storage.
 
 ## UI behavior
 
-- Red and Black have independent Human or Min AI control.
+- Red and Black independently select Human control or very-weak, weak, or medium Min AI strength.
 - Human turns can request up to five ranked Min hints.
 - Mixed Human/AI games automatically play one AI reply after a human action.
 - AI-vs-AI games advance only when the user clicks `下一步`.
@@ -78,13 +79,14 @@ display name:
   "player": "Red",
   "phase": "movement",
   "controllers": {
-    "red": { "control": "agent", "agent": "Min AI best-v1" },
-    "black": { "control": "agent", "agent": "Min AI best-v1" }
+    "red": { "control": "agent", "strength": "very_weak", "agent": "Min AI web-very-weak-v1" },
+    "black": { "control": "agent", "strength": "weak", "agent": "Min AI web-weak-v1" }
   },
   "current_controller": {
     "side": "Red",
     "control": "agent",
-    "agent": "Min AI best-v1"
+    "strength": "very_weak",
+    "agent": "Min AI web-very-weak-v1"
   }
 }
 ```
@@ -157,15 +159,27 @@ endpoint has no `top_k` field and executes Min's top-one candidate.
 {
   "revision": 17,
   "side": "Red",
-  "controllers": { "red": "human", "black": "agent" },
+  "controllers": {
+    "red": { "control": "human", "strength": "medium" },
+    "black": { "control": "agent", "strength": "weak" }
+  },
   "board": { "width": 9, "height": 10 },
   "random_placement": true
 }
 ```
 
-When `random_placement` is true, the backend alternates the two Min agents until
-placement is complete, then atomically replaces the session with the resulting
-movement-phase game. Independent score-Softmax selectors sample only close
-layout candidates and keep clear best moves deterministic; normal Agent steps
-remain deterministic top-one play. Intermediate
-placements are not returned.
+Each controller also accepts the legacy string form (`"human"` or `"agent"`),
+which defaults to medium strength. The Web UI sends the structured form so the
+two Agent sides can use different strengths. Strength primarily scales search
+node budgets: very-weak uses 1,500 placement / 90 movement nodes, weak uses
+3,000 / 450, and medium uses 6,000 / 750. Search widths are also narrowed.
+All three profiles use two-ply movement search; very-weak additionally uses a more
+material-oriented evaluation. These remain approximate responsiveness targets
+rather than hard wall-clock deadlines.
+
+When `random_placement` is true, the backend alternates the two configured Min
+agents until placement is complete, then atomically replaces the session with
+the resulting movement-phase game. Independent score-Softmax selectors sample
+only close layout candidates and keep clear best moves deterministic; normal
+Agent steps remain deterministic top-one play. Intermediate placements are not
+returned.

@@ -1,4 +1,5 @@
 use std::num::NonZeroU8;
+use std::num::NonZeroU32;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -16,6 +17,7 @@ use axum::routing::post;
 use formation_chess_agent::ActionSelectionPolicy;
 use formation_chess_agent::ActionSelector;
 use formation_chess_agent::MinAgent;
+use formation_chess_agent::MinConfig;
 use formation_chess_agent::analyze_agent;
 use formation_chess_agent::play_agent_turn;
 use formation_chess_core::action::Reaction;
@@ -32,19 +34,34 @@ use crate::protocol::*;
 #[folder = "static/"]
 struct Assets;
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum PlacementMode {
+    Standard,
+    Random,
+}
+
 struct PlayerRuntime {
     control: ApiControl,
+    strength: ApiAgentStrength,
     agent: MinAgent,
     agent_display_name: String,
     selector: ActionSelector,
 }
 
 impl PlayerRuntime {
-    fn best(control: ApiControl) -> Self {
-        let agent = MinAgent::best();
+    fn new(setting: ApiControllerSetting) -> Self {
+        Self::with_placement_mode(setting, PlacementMode::Standard)
+    }
+
+    fn with_placement_mode(setting: ApiControllerSetting, placement_mode: PlacementMode) -> Self {
+        let control = setting.control();
+        let strength = setting.strength();
+        let agent = MinAgent::new(min_config(strength, placement_mode))
+            .expect("web Min profiles must remain valid");
         let agent_display_name = format!("Min AI {}", agent.config().versioned_id());
         Self {
             control,
+            strength,
             agent,
             agent_display_name,
             selector: ActionSelector::new(ActionSelectionPolicy::Best),
@@ -52,8 +69,75 @@ impl PlayerRuntime {
     }
 
     fn info(&self) -> ApiControllerInfo {
-        ApiControllerInfo { control: self.control, agent: self.agent_display_name.clone() }
+        ApiControllerInfo {
+            control: self.control,
+            strength: self.strength,
+            agent: self.agent_display_name.clone(),
+        }
     }
+}
+
+fn min_config(strength: ApiAgentStrength, placement_mode: PlacementMode) -> MinConfig {
+    let mut config = MinConfig::best();
+    match strength {
+        ApiAgentStrength::VeryWeak => {
+            "web-very-weak".clone_into(&mut config.config_id);
+            config.movement_search.max_depth = non_zero_u8(2);
+            config.movement_search.max_nodes = non_zero_u32(90);
+            config.movement_search.opponent_width = non_zero_u8(3);
+            config.movement_search.response_width = non_zero_u8(2);
+            config.evaluation.movement_weights.vital_safety = 360;
+            config.evaluation.movement_weights.effective_abilities = 80;
+            config.evaluation.movement_weights.formation_effects = 60;
+            config.evaluation.movement_weights.control = 80;
+            config.evaluation.movement_weights.mobility = 100;
+            config.evaluation.movement_weights.action_effects = 260;
+            config.evaluation.movement_weights.material = 80;
+            config.evaluation.movement_weights.interactions = 80;
+        },
+        ApiAgentStrength::Weak => {
+            "web-weak".clone_into(&mut config.config_id);
+            config.movement_search.max_depth = non_zero_u8(2);
+            config.movement_search.max_nodes = non_zero_u32(450);
+            config.movement_search.opponent_width = non_zero_u8(4);
+            config.movement_search.response_width = non_zero_u8(3);
+        },
+        ApiAgentStrength::Medium => {
+            "web-medium".clone_into(&mut config.config_id);
+            config.movement_search.max_nodes = non_zero_u32(750);
+            config.movement_search.opponent_width = non_zero_u8(6);
+            config.movement_search.response_width = non_zero_u8(4);
+        },
+    }
+
+    if placement_mode == PlacementMode::Random {
+        match strength {
+            ApiAgentStrength::VeryWeak => {
+                config.placement_search.max_nodes = non_zero_u32(1_500);
+                config.placement_search.root_width = non_zero_u8(12);
+                config.placement_search.opponent_width = non_zero_u8(4);
+                config.placement_search.response_width = non_zero_u8(2);
+            },
+            ApiAgentStrength::Weak => {
+                config.placement_search.max_nodes = non_zero_u32(3_000);
+                config.placement_search.root_width = non_zero_u8(20);
+                config.placement_search.opponent_width = non_zero_u8(6);
+                config.placement_search.response_width = non_zero_u8(3);
+            },
+            ApiAgentStrength::Medium => {},
+        }
+        config.config_id.push_str("-random");
+    }
+
+    config
+}
+
+fn non_zero_u8(value: u8) -> NonZeroU8 {
+    NonZeroU8::new(value).expect("web Min profile value must be non-zero")
+}
+
+fn non_zero_u32(value: u32) -> NonZeroU32 {
+    NonZeroU32::new(value).expect("web Min profile value must be non-zero")
 }
 
 struct PreparedAgentAnalysis {
@@ -113,8 +197,8 @@ impl GameSession {
             game,
             history: Vec::new(),
             revision,
-            red: PlayerRuntime::best(controllers.red),
-            black: PlayerRuntime::best(controllers.black),
+            red: PlayerRuntime::new(controllers.red),
+            black: PlayerRuntime::new(controllers.black),
         }
     }
 
@@ -382,8 +466,10 @@ async fn new_handler(
     let config =
         request.to_game_config().map_err(|error| api_error(StatusCode::BAD_REQUEST, error))?;
     let mut game = Game::new(config).map_err(|error| api_error(StatusCode::BAD_REQUEST, error))?;
-    let mut red = PlayerRuntime::best(request.controllers.red);
-    let mut black = PlayerRuntime::best(request.controllers.black);
+    let placement_mode =
+        if request.random_placement { PlacementMode::Random } else { PlacementMode::Standard };
+    let mut red = PlayerRuntime::with_placement_mode(request.controllers.red, placement_mode);
+    let mut black = PlayerRuntime::with_placement_mode(request.controllers.black, placement_mode);
     if request.random_placement {
         complete_random_placement(&mut game, &mut red, &mut black)
             .map_err(|error| api_error(StatusCode::UNPROCESSABLE_ENTITY, error))?;
@@ -447,12 +533,14 @@ mod tests {
     #[test]
     fn state_identifies_the_current_side_when_agent_names_match() {
         let game = Game::new(GameConfig::default()).expect("default game must be valid");
-        let controllers =
-            ApiControllerSettings { red: ApiControl::Agent, black: ApiControl::Agent };
+        let controllers = ApiControllerSettings {
+            red: ApiControllerSetting::new(ApiControl::Agent, ApiAgentStrength::Medium),
+            black: ApiControllerSetting::new(ApiControl::Agent, ApiAgentStrength::Medium),
+        };
         let session = GameSession::new(game, controllers, 17);
         let state = session.state();
 
-        let expected_agent = format!("Min AI {}", MinAgent::best().config().versioned_id());
+        let expected_agent = "Min AI web-medium-v1";
         assert_eq!(state.revision, 17, "revision should be preserved");
         assert_eq!(state.current_controller.side, "Red", "side must identify the runtime");
         assert_eq!(state.controllers.red.agent, expected_agent, "red agent should be versioned");
@@ -463,6 +551,41 @@ mod tests {
         assert_eq!(state.current_controller.agent, expected_agent);
         assert_eq!(session.red.selector.top_k(), NonZeroU8::MIN, "step must request top one");
         assert_eq!(session.black.selector.top_k(), NonZeroU8::MIN, "step must request top one");
+    }
+
+    #[test]
+    fn different_strengths_create_distinct_agent_profiles() {
+        let game = Game::new(GameConfig::default()).expect("default game must be valid");
+        let controllers = ApiControllerSettings {
+            red: ApiControllerSetting::new(ApiControl::Agent, ApiAgentStrength::VeryWeak),
+            black: ApiControllerSetting::new(ApiControl::Agent, ApiAgentStrength::Weak),
+        };
+        let session = GameSession::new(game, controllers, 0);
+        let state = session.state();
+
+        assert_eq!(state.controllers.red.strength, ApiAgentStrength::VeryWeak);
+        assert_eq!(state.controllers.black.strength, ApiAgentStrength::Weak);
+        assert_eq!(session.red.agent.config().config_id, "web-very-weak");
+        assert_eq!(session.black.agent.config().config_id, "web-weak");
+        assert_eq!(session.red.agent.config().movement_search.max_nodes.get(), 90);
+        assert_eq!(session.black.agent.config().movement_search.max_nodes.get(), 450);
+        assert_eq!(session.red.agent.config().placement_search.max_nodes.get(), 6_000);
+        assert_eq!(session.black.agent.config().placement_search.max_nodes.get(), 6_000);
+        assert_ne!(state.controllers.red.agent, state.controllers.black.agent);
+    }
+
+    #[test]
+    fn random_placement_uses_light_agent_profiles() {
+        let red_setting = ApiControllerSetting::new(ApiControl::Agent, ApiAgentStrength::VeryWeak);
+        let black_setting = ApiControllerSetting::new(ApiControl::Agent, ApiAgentStrength::Medium);
+        let red = PlayerRuntime::with_placement_mode(red_setting, PlacementMode::Random);
+        let black = PlayerRuntime::with_placement_mode(black_setting, PlacementMode::Random);
+
+        assert_eq!(red.agent.config().config_id, "web-very-weak-random");
+        assert_eq!(red.agent.config().placement_search.max_nodes.get(), 1_500);
+        assert_eq!(red.agent.config().movement_search.max_nodes.get(), 90);
+        assert_eq!(black.agent.config().config_id, "web-medium-random");
+        assert_eq!(black.agent.config().placement_search.max_nodes.get(), 6_000);
     }
 
     #[test]
@@ -480,8 +603,10 @@ mod tests {
             result: GameResult::Unfinished,
         })
         .expect("valid movement game");
-        let controllers =
-            ApiControllerSettings { red: ApiControl::Human, black: ApiControl::Human };
+        let controllers = ApiControllerSettings {
+            red: ApiControllerSetting::new(ApiControl::Human, ApiAgentStrength::Medium),
+            black: ApiControllerSetting::new(ApiControl::Human, ApiAgentStrength::Medium),
+        };
         let session = GameSession::new(game, controllers, 3);
 
         let pull_actions = session
@@ -516,8 +641,10 @@ mod tests {
     #[test]
     fn targeted_resign_remains_available_during_placement() {
         let game = Game::new(GameConfig::default()).expect("default game must be valid");
-        let controllers =
-            ApiControllerSettings { red: ApiControl::Human, black: ApiControl::Human };
+        let controllers = ApiControllerSettings {
+            red: ApiControllerSetting::new(ApiControl::Human, ApiAgentStrength::Medium),
+            black: ApiControllerSetting::new(ApiControl::Human, ApiAgentStrength::Medium),
+        };
         let mut session = GameSession::new(game, controllers, 0);
         let request = ApiActionRequest {
             revision: 0,
@@ -532,8 +659,14 @@ mod tests {
     #[test]
     fn min_best_agents_complete_standard_random_placement() {
         let mut game = Game::new(GameConfig::default()).expect("default game must be valid");
-        let mut red = PlayerRuntime::best(ApiControl::Agent);
-        let mut black = PlayerRuntime::best(ApiControl::Agent);
+        let mut red = PlayerRuntime::with_placement_mode(
+            ApiControllerSetting::new(ApiControl::Agent, ApiAgentStrength::Medium),
+            PlacementMode::Random,
+        );
+        let mut black = PlayerRuntime::with_placement_mode(
+            ApiControllerSetting::new(ApiControl::Agent, ApiAgentStrength::Medium),
+            PlacementMode::Random,
+        );
 
         complete_random_placement(&mut game, &mut red, &mut black)
             .expect("standard placement should complete");
@@ -546,8 +679,10 @@ mod tests {
     #[test]
     fn prepared_analysis_remains_bound_to_its_original_revision() {
         let game = Game::new(GameConfig::default()).expect("default game must be valid");
-        let controllers =
-            ApiControllerSettings { red: ApiControl::Human, black: ApiControl::Agent };
+        let controllers = ApiControllerSettings {
+            red: ApiControllerSetting::new(ApiControl::Human, ApiAgentStrength::Medium),
+            black: ApiControllerSetting::new(ApiControl::Agent, ApiAgentStrength::Medium),
+        };
         let mut session = GameSession::new(game, controllers, 0);
         let request = ApiAgentAnalyzeRequest { revision: 0, side: "Red".to_owned(), top_k: 1 };
         let prepared = session.prepare_analysis(&request).expect("prepare red analysis snapshot");
@@ -572,8 +707,10 @@ mod tests {
     #[test]
     fn undo_reverts_a_human_action_and_automatic_reply() {
         let game = Game::new(GameConfig::default()).expect("default game must be valid");
-        let controllers =
-            ApiControllerSettings { red: ApiControl::Human, black: ApiControl::Agent };
+        let controllers = ApiControllerSettings {
+            red: ApiControllerSetting::new(ApiControl::Human, ApiAgentStrength::Medium),
+            black: ApiControllerSetting::new(ApiControl::Agent, ApiAgentStrength::Medium),
+        };
         let mut session = GameSession::new(game, controllers, 0);
         let action = ApiActionRequest {
             revision: 0,

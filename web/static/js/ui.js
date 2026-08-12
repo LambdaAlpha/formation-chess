@@ -168,7 +168,7 @@ export function render(state) {
     } else {
         hideGameOver();
         const verb = placement ? '布子' : '行棋';
-        setStatus(playerLabel(state.player) + '方（' + controlLabel(state.current_controller.control) + '）' + verb);
+        setStatus(playerLabel(state.player) + '方（' + controllerLabel(state.current_controller) + '）' + verb);
     }
 }
 
@@ -195,8 +195,17 @@ function playerLabel(player) {
     return player === 'Red' ? '红' : '黑';
 }
 
-function controlLabel(control) {
-    return control === 'agent' ? 'AI' : '人类';
+function strengthLabel(strength) {
+    switch (strength) {
+        case 'very_weak': return '极弱';
+        case 'weak': return '弱';
+        default: return '中';
+    }
+}
+
+function controllerLabel(controller) {
+    if (controller.control !== 'agent') return '人类';
+    return 'AI · ' + strengthLabel(controller.strength);
 }
 
 function resultLabel(result) {
@@ -211,7 +220,7 @@ function resultLabel(result) {
 function renderToolbar(state) {
     const current = state.current_controller;
     const controller = current.control === 'agent'
-        ? 'AI（' + current.agent + '）'
+        ? controllerLabel(current) + '（' + current.agent + '）'
         : '人类';
     document.getElementById('player-indicator').textContent =
         '行棋方：' + playerLabel(state.player) + ' · ' + controller;
@@ -640,16 +649,28 @@ function confirmLoadGame() {
     });
 }
 
+function controllerSetting(elementId) {
+    const value = document.getElementById(elementId).value;
+    if (value === 'human') return { control: 'human', strength: 'medium' };
+    return { control: 'agent', strength: value.split(':')[1] };
+}
+
 function controllerSettings() {
     return {
-        red: document.getElementById('red-control').value,
-        black: document.getElementById('black-control').value,
+        red: controllerSetting('red-control'),
+        black: controllerSetting('black-control'),
     };
 }
 
 function syncControllerSettings(state) {
-    document.getElementById('red-control').value = state.controllers.red.control;
-    document.getElementById('black-control').value = state.controllers.black.control;
+    syncControllerSetting('red-control', state.controllers.red);
+    syncControllerSetting('black-control', state.controllers.black);
+}
+
+function syncControllerSetting(elementId, controller) {
+    document.getElementById(elementId).value = controller.control === 'agent'
+        ? 'agent:' + controller.strength
+        : 'human';
 }
 
 function closeAllPanels() {

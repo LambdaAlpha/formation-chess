@@ -71,31 +71,75 @@ pub enum ApiControl {
     Agent,
 }
 
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ApiAgentStrength {
+    VeryWeak,
+    Weak,
+    #[default]
+    Medium,
+}
+
+#[derive(Debug, Copy, Clone, Deserialize)]
+pub struct ApiControllerConfig {
+    pub control: ApiControl,
+    #[serde(default)]
+    pub strength: ApiAgentStrength,
+}
+
+#[derive(Debug, Copy, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum ApiControllerSetting {
+    Control(ApiControl),
+    Config(ApiControllerConfig),
+}
+
+impl ApiControllerSetting {
+    pub fn new(control: ApiControl, strength: ApiAgentStrength) -> Self {
+        Self::Config(ApiControllerConfig { control, strength })
+    }
+
+    pub fn control(self) -> ApiControl {
+        match self {
+            Self::Control(control) => control,
+            Self::Config(config) => config.control,
+        }
+    }
+
+    pub fn strength(self) -> ApiAgentStrength {
+        match self {
+            Self::Control(_) => ApiAgentStrength::default(),
+            Self::Config(config) => config.strength,
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, Deserialize)]
 pub struct ApiControllerSettings {
-    #[serde(default = "default_red_control")]
-    pub red: ApiControl,
-    #[serde(default = "default_black_control")]
-    pub black: ApiControl,
+    #[serde(default = "default_red_controller")]
+    pub red: ApiControllerSetting,
+    #[serde(default = "default_black_controller")]
+    pub black: ApiControllerSetting,
 }
 
 impl Default for ApiControllerSettings {
     fn default() -> Self {
-        Self { red: default_red_control(), black: default_black_control() }
+        Self { red: default_red_controller(), black: default_black_controller() }
     }
 }
 
-fn default_red_control() -> ApiControl {
-    ApiControl::Human
+fn default_red_controller() -> ApiControllerSetting {
+    ApiControllerSetting::new(ApiControl::Human, ApiAgentStrength::Medium)
 }
 
-fn default_black_control() -> ApiControl {
-    ApiControl::Agent
+fn default_black_controller() -> ApiControllerSetting {
+    ApiControllerSetting::new(ApiControl::Agent, ApiAgentStrength::Medium)
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ApiControllerInfo {
     pub control: ApiControl,
+    pub strength: ApiAgentStrength,
     pub agent: String,
 }
 
@@ -109,6 +153,7 @@ pub struct ApiControllers {
 pub struct ApiCurrentController {
     pub side: String,
     pub control: ApiControl,
+    pub strength: ApiAgentStrength,
     pub agent: String,
 }
 
@@ -145,6 +190,7 @@ impl ApiState {
         let current_controller = ApiCurrentController {
             side: player_to_str(game.player()),
             control: current.control,
+            strength: current.strength,
             agent: current.agent.clone(),
         };
         let unfinished = game.result() == GameResult::Unfinished;
@@ -445,6 +491,29 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+
+    #[test]
+    fn controller_settings_accept_legacy_and_strength_forms() {
+        let legacy: ApiControllerSettings = serde_json::from_value(json!({
+            "red": "human",
+            "black": "agent",
+        }))
+        .expect("legacy controller settings");
+        assert_eq!(legacy.red.control(), ApiControl::Human);
+        assert_eq!(legacy.red.strength(), ApiAgentStrength::Medium);
+        assert_eq!(legacy.black.control(), ApiControl::Agent);
+        assert_eq!(legacy.black.strength(), ApiAgentStrength::Medium);
+
+        let configured: ApiControllerSettings = serde_json::from_value(json!({
+            "red": { "control": "agent", "strength": "very_weak" },
+            "black": { "control": "agent", "strength": "weak" },
+        }))
+        .expect("strength controller settings");
+        assert_eq!(configured.red.control(), ApiControl::Agent);
+        assert_eq!(configured.red.strength(), ApiAgentStrength::VeryWeak);
+        assert_eq!(configured.black.control(), ApiControl::Agent);
+        assert_eq!(configured.black.strength(), ApiAgentStrength::Weak);
+    }
 
     #[test]
     fn action_protocol_round_trips_pull_and_targeted_resign() {
