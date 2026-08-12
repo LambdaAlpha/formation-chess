@@ -10,7 +10,7 @@ import {
     showPlayedAction as highlightPlayedAction,
     clearPlayedAction,
 } from './hints.js';
-import { postLegalActions, getRules } from './api.js';
+import { getRules } from './api.js';
 
 let gameState = null;
 let selection = { type: null };
@@ -305,7 +305,7 @@ function clearManualSelectionForPreview() {
     refreshInteractivity();
 }
 
-async function handleBoardClick(x, y) {
+function handleBoardClick(x, y) {
     if (!canHumanAct()) return;
     clearStatus();
     clearAnalysisSelection();
@@ -317,12 +317,13 @@ async function handleBoardClick(x, y) {
     const hintTypes = intersection ? (intersection.dataset.hintTypes || '') : '';
 
     if (currentPhase === 'movement' && (hintType || hintTypes)) {
-        if (hintTypes) {
-            showPopup(x, y, hintTypes.split(','));
-        } else if (hasOwnPieceAt(x, y)) {
-            showPopup(x, y, [hintType, 'switch']);
+        const choices = hintTypes ? hintTypes.split(',') : [hintType];
+        if (choices.length > 1) {
+            showPopup(x, y, choices);
+        } else if (choices[0] === 'switch') {
+            selectBoardPiece(x, y);
         } else {
-            executeHintAction(hintType, x, y);
+            executeHintAction(choices[0], x, y);
         }
         return;
     }
@@ -348,33 +349,35 @@ async function handleBoardClick(x, y) {
     clearInteraction();
 }
 
-function hasOwnPieceAt(x, y) {
-    if (!gameState) return false;
-    const piece = getIntersection(x, y)?.querySelector('.piece');
-    if (!piece) return false;
-    return piece.classList.contains('piece-' + gameState.player.toLowerCase());
+function legalActionsFrom(x, y) {
+    if (!gameState) return [];
+    return (gameState.legal_actions || []).filter((action) => {
+        const origin = action.from || action.at;
+        return origin && origin[0] === x && origin[1] === y;
+    });
 }
 
-async function selectBoardPiece(x, y) {
+function switchablePositionsFrom(selectedX, selectedY) {
+    if (!gameState) return [];
+    const positions = new Map();
+    for (const action of gameState.legal_actions || []) {
+        const origin = action.from || action.at;
+        if (!origin) continue;
+        if (origin[0] === selectedX && origin[1] === selectedY) continue;
+        positions.set(`${origin[0]},${origin[1]}`, origin);
+    }
+    return [...positions.values()];
+}
+
+function selectBoardPiece(x, y) {
     clearInteraction();
     setSelected(x, y);
-    try {
-        const response = await postLegalActions({
-            revision: gameState.revision,
-            side: gameState.player,
-            from: [x, y],
-        });
-        if (!gameState || response.revision !== gameState.revision) return;
-        showMoveHints(response.actions);
-        resignableAt = response.actions.some((action) => action.type === 'resign')
-            ? [x, y]
-            : null;
-        refreshInteractivity();
-        if (response.actions.length === 0) {
-            setStatus('该棋子无可行动作', true);
-        }
-    } catch (error) {
-        setStatus(error.message, true);
+    const actions = legalActionsFrom(x, y);
+    showMoveHints(actions, switchablePositionsFrom(x, y));
+    resignableAt = actions.some((action) => action.type === 'resign') ? [x, y] : null;
+    refreshInteractivity();
+    if (actions.length === 0) {
+        setStatus('该棋子无可行动作', true);
     }
 }
 

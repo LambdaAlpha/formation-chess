@@ -168,6 +168,7 @@ pub struct ApiState {
     pub board: ApiBoard,
     pub red_pool: Vec<ApiPiece>,
     pub black_pool: Vec<ApiPiece>,
+    pub legal_actions: Vec<ApiAction>,
     pub can_human_act: bool,
     pub can_agent_step: bool,
     pub can_undo: bool,
@@ -195,6 +196,9 @@ impl ApiState {
         };
         let unfinished = game.result() == GameResult::Unfinished;
         let current_control = current_controller.control;
+        let mut legal_actions = Vec::new();
+        game.all_valid_moves(&mut legal_actions);
+        let legal_actions = legal_actions.into_iter().map(ApiAction::from_action).collect();
 
         Self {
             revision,
@@ -206,6 +210,7 @@ impl ApiState {
             board: ApiBoard { width: board.width(), height: board.height(), cells },
             red_pool: game.red_pool().iter().copied().map(ApiPiece::from_piece).collect(),
             black_pool: game.black_pool().iter().copied().map(ApiPiece::from_piece).collect(),
+            legal_actions,
             can_human_act: unfinished && current_control == ApiControl::Human,
             can_agent_step: unfinished && current_control == ApiControl::Agent,
             can_undo,
@@ -285,20 +290,6 @@ pub struct ApiActionResponse {
     #[serde(flatten)]
     pub state: ApiState,
     pub error: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ApiLegalActionsRequest {
-    pub revision: u64,
-    pub side: String,
-    pub from: [u8; 2],
-}
-
-#[derive(Debug, Serialize)]
-pub struct ApiLegalActionsResponse {
-    pub revision: u64,
-    pub side: String,
-    pub actions: Vec<ApiAction>,
 }
 
 #[derive(Debug, Deserialize)]

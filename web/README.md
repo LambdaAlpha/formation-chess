@@ -61,7 +61,6 @@ are rejected.
 | `GET` | `/` | Serve the embedded Web UI |
 | `GET` | `/api/state` | Return the current session state |
 | `POST` | `/api/action` | Submit one action for the current Human side |
-| `POST` | `/api/legal-actions` | Return legal actions for one board origin |
 | `POST` | `/api/agent/analyze` | Return up to `top_k` ranked Agent candidates |
 | `POST` | `/api/agent/step` | Execute the current Agent side's top candidate |
 | `POST` | `/api/new` | Create or notation-load a game |
@@ -135,13 +134,11 @@ is resigning.
 
 ### Legal actions and Agent analysis
 
-```json
-{ "revision": 17, "side": "Red", "from": [4, 9] }
-```
-
-`/api/legal-actions` returns the complete `ApiAction` values for that origin.
-For a controlled General, the list may include
+Every state response includes `legal_actions`, containing all legal movement
+`ApiAction` values for the current position and player. The list is empty during
+placement and after the game finishes. For a controlled General, it may include
 `{ "type": "resign", "at": [4, 9] }` in addition to movement interactions.
+The Web UI filters this list by `from` or `at` when a board piece is selected.
 
 Agent analysis uses:
 

@@ -8,6 +8,7 @@ const ACTION_LABELS = {
     push: '推子',
     pull: '拉子',
     resign: '认负',
+    switch: '切换',
 };
 
 function uniqueTypes(types) {
@@ -55,16 +56,23 @@ function removeElements(selector) {
     }
 }
 
-export function showMoveHints(actions) {
+export function showMoveHints(actions, switchablePositions = []) {
     clearHints();
     if (!actions) return;
 
     const byPosition = {};
+    const actionTargets = new Set();
     for (const action of actions) {
         if (!action.to) continue;
         const key = `${action.to[0]},${action.to[1]}`;
         if (!byPosition[key]) byPosition[key] = [];
         byPosition[key].push(action.type);
+        actionTargets.add(key);
+    }
+    for (const [x, y] of switchablePositions) {
+        const key = `${x},${y}`;
+        if (!byPosition[key]) byPosition[key] = [];
+        byPosition[key].push('switch');
     }
 
     for (const [key, actionTypes] of Object.entries(byPosition)) {
@@ -74,7 +82,8 @@ export function showMoveHints(actions) {
 
         const types = uniqueTypes(actionTypes);
         const multiple = types.length > 1;
-        intersection.classList.add('hint-target');
+        if (actionTargets.has(key)) intersection.classList.add('hint-target');
+        if (types.includes('switch')) intersection.classList.add('hint-switch');
         if (multiple) intersection.classList.add('hint-multi');
 
         if (multiple) {
@@ -83,15 +92,17 @@ export function showMoveHints(actions) {
             intersection.dataset.hintType = types[0];
         }
 
-        addTargetMarker(intersection, 'legal');
+        if (actionTargets.has(key)) addTargetMarker(intersection, 'legal');
         const labels = types.map(actionLabel);
         addTooltip(intersection, multiple ? `可选：${labels.join(' · ')}` : labels[0], 'legal');
     }
 }
 
 export function clearHints() {
-    for (const element of document.querySelectorAll('.intersection.hint-target, .intersection.hint-multi')) {
-        element.classList.remove('hint-target', 'hint-multi');
+    for (const element of document.querySelectorAll(
+        '.intersection.hint-target, .intersection.hint-switch, .intersection.hint-multi',
+    )) {
+        element.classList.remove('hint-target', 'hint-switch', 'hint-multi');
         delete element.dataset.hintType;
         delete element.dataset.hintTypes;
     }

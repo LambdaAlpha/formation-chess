@@ -25,10 +25,6 @@ export function postAction(request) {
     return requestJson('/api/action', jsonOptions(request));
 }
 
-export function postLegalActions(request) {
-    return requestJson('/api/legal-actions', jsonOptions(request));
-}
-
 export function postAgentAnalyze(request) {
     return requestJson('/api/agent/analyze', jsonOptions(request));
 }

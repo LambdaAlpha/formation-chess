@@ -241,23 +241,6 @@ impl GameSession {
         Ok(())
     }
 
-    fn legal_actions(
-        &self, request: &ApiLegalActionsRequest,
-    ) -> Result<ApiLegalActionsResponse, String> {
-        let player = self.validate_request(request.revision, &request.side)?;
-        let actions = self
-            .game
-            .valid_moves(request.from[0], request.from[1])
-            .into_iter()
-            .map(ApiAction::from_action)
-            .collect();
-        Ok(ApiLegalActionsResponse {
-            revision: self.revision,
-            side: player_to_str(player),
-            actions,
-        })
-    }
-
     fn prepare_analysis(
         &self, request: &ApiAgentAnalyzeRequest,
     ) -> Result<PreparedAgentAnalysis, String> {
@@ -351,7 +334,6 @@ pub fn build_app() -> Router {
         .route("/", get(index_handler))
         .route("/api/state", get(state_handler))
         .route("/api/action", post(action_handler))
-        .route("/api/legal-actions", post(legal_actions_handler))
         .route("/api/agent/analyze", post(agent_analyze_handler))
         .route("/api/agent/step", post(agent_step_handler))
         .route("/api/new", post(new_handler))
@@ -404,16 +386,6 @@ async fn action_handler(
     let mut session = state.session.lock().unwrap();
     let error = session.apply_human_action(&request).err();
     Json(ApiActionResponse { state: session.state(), error })
-}
-
-async fn legal_actions_handler(
-    State(state): State<SharedState>, Json(request): Json<ApiLegalActionsRequest>,
-) -> ApiResult<ApiLegalActionsResponse> {
-    let session = state.session.lock().unwrap();
-    session
-        .legal_actions(&request)
-        .map(Json)
-        .map_err(|error| api_error(StatusCode::CONFLICT, error))
 }
 
 async fn agent_analyze_handler(
@@ -549,6 +521,7 @@ mod tests {
             "black agent should be versioned"
         );
         assert_eq!(state.current_controller.agent, expected_agent);
+        assert!(state.legal_actions.is_empty(), "placement has no board actions");
         assert_eq!(session.red.selector.top_k(), NonZeroU8::MIN, "step must request top one");
         assert_eq!(session.black.selector.top_k(), NonZeroU8::MIN, "step must request top one");
     }
@@ -589,7 +562,7 @@ mod tests {
     }
 
     #[test]
-    fn legal_actions_expose_pull_and_targeted_resign() {
+    fn state_exposes_all_legal_actions() {
         let mut board = Board::new(5, 5);
         board[(0, 4)] = Some(Piece::RED_GENERAL);
         board[(4, 0)] = Some(Piece::BLACK_GENERAL);
@@ -608,33 +581,26 @@ mod tests {
             black: ApiControllerSetting::new(ApiControl::Human, ApiAgentStrength::Medium),
         };
         let session = GameSession::new(game, controllers, 3);
+        let state = session.state();
 
-        let pull_actions = session
-            .legal_actions(&ApiLegalActionsRequest {
-                revision: 3,
-                side: "Red".to_owned(),
-                from: [2, 2],
-            })
-            .expect("wind legal actions");
         assert!(
-            pull_actions
-                .actions
+            state
+                .legal_actions
                 .iter()
                 .any(|action| matches!(action, ApiAction::Pull { from: [2, 2], to: [2, 1] }))
         );
-
-        let general_actions = session
-            .legal_actions(&ApiLegalActionsRequest {
-                revision: 3,
-                side: "Red".to_owned(),
-                from: [0, 4],
-            })
-            .expect("general legal actions");
         assert!(
-            general_actions
-                .actions
+            state
+                .legal_actions
                 .iter()
                 .any(|action| matches!(action, ApiAction::Resign { at: [0, 4] }))
+        );
+        assert!(
+            state
+                .legal_actions
+                .iter()
+                .any(|action| { matches!(action, ApiAction::Move { from: [0, 4], .. }) }),
+            "state should include actions from every selectable origin"
         );
     }
 
