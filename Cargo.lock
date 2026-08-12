@@ -197,7 +197,7 @@ dependencies = [
 
 [[package]]
 name = "formation-chess-agent"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "formation-chess-core",
  "rand",
@@ -207,7 +207,7 @@ dependencies = [
 
 [[package]]
 name = "formation-chess-arena"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "formation-chess-agent",
  "formation-chess-core",
@@ -230,7 +230,7 @@ dependencies = [
 
 [[package]]
 name = "formation-chess-web"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "axum",
  "formation-chess-agent",
