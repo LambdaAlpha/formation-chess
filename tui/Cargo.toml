@@ -1,6 +1,6 @@
 [package]
 name = "formation-chess-tui"
-version = "0.3.0"
+version = "0.3.2"
 edition = "2024"
 description = "Terminal interface for Formation Chess (阵棋)"
 repository = "https://github.com/LambdaAlpha/formation-chess"
@@ -12,5 +12,5 @@ categories = ["games"]
 workspace = true
 
 [dependencies]
-formation-chess-core = { path = "../core", version = "0.3.0" }
+formation-chess-core = { path = "../core", version = "0.3.2" }
 rand = "0.10"
