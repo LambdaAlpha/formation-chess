@@ -1081,9 +1081,12 @@ fn preview_capture_against_quiet_move(
         PositionChanges::try_from_slice(&[departure, arrival])
             .expect("predicted capture changes must remain valid")
     };
+    let mut projected = board.clone();
+    projected[moved_from] = None;
+    projected[to] = Some(target);
     Some((
         result_after_changes(changes.as_slice()),
-        exchange_units(board, changes.as_slice(), perspective),
+        exchange_units(&projected, changes.as_slice(), perspective),
     ))
 }
 
