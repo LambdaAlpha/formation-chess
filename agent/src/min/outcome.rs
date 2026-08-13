@@ -75,13 +75,13 @@ fn vital_survives(changes: &[PositionChange], player: Player) -> bool {
     for change in changes {
         if let Some(old) = change.old
             && old.player == player
-            && old.ability.has(Ability::VITAL)
+            && old.ability.has(Ability::LEADER)
         {
             removed = true;
         }
         if let Some(new) = change.new
             && new.player == player
-            && new.ability.has(Ability::VITAL)
+            && new.ability.has(Ability::LEADER)
         {
             added = true;
         }
@@ -103,9 +103,9 @@ mod tests {
     #[test]
     fn capture_demotion_is_resolved_as_push() {
         let mut attacker = Piece::RED_ROOK;
-        attacker.ability |= Ability::PUSH_ON_CAPTURE_UNBLOCKED;
+        attacker.ability |= Ability::OVERT_CAPTURE;
         let mut target = Piece::BLACK_ROOK;
-        target.ability |= Ability::PUSHED_BY_ENEMY;
+        target.ability |= Ability::ENEMY_PUSH;
         let mut board = Board::new(3, 3);
         board[(0, 1)] = Some(attacker);
         board[(1, 1)] = Some(target);
@@ -118,9 +118,9 @@ mod tests {
     #[test]
     fn blocked_push_escalation_is_resolved_as_capture() {
         let mut attacker = Piece::RED_ROOK;
-        attacker.ability |= Ability::PUSH_ENEMY | Ability::CAPTURE_ON_PUSH_BLOCKED;
+        attacker.ability |= Ability::PUSH_ENEMY | Ability::HIDDEN_CAPTURE;
         let mut target = Piece::BLACK_ROOK;
-        target.ability |= Ability::PUSHED_BY_ENEMY;
+        target.ability |= Ability::ENEMY_PUSH;
         let mut board = Board::new(3, 3);
         board[(1, 1)] = Some(attacker);
         board[(2, 1)] = Some(target);

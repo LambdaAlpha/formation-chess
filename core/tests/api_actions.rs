@@ -80,7 +80,7 @@ fn try_move_changes_keep_the_original_piece_configuration() {
     board[(1, 1)] = Some(Piece::BLACK_ROOK);
 
     let effective = board.effective((1, 1)).expect("moving piece");
-    assert!(!effective.ability.has(Ability::ANY_DISTANCE));
+    assert!(!effective.ability.has(Ability::SWIFT_MOVE));
 
     let changes = board.try_move((1, 1), (1, 2)).expect("one-step move should succeed");
     assert_eq!(changes.as_slice(), &[
@@ -123,8 +123,8 @@ fn try_push_changes_keep_the_original_piece_configurations() {
     board[(4, 0)] = Some(Piece::BLACK_GENERAL);
 
     let effective = board.effective((2, 2)).expect("moving piece");
-    assert!(effective.ability.has(Ability::DIRECTION_DIAGONAL));
-    assert!(!Piece::RED_FIRE.ability.has(Ability::DIRECTION_DIAGONAL));
+    assert!(effective.ability.has(Ability::DIAGONAL_MOVE));
+    assert!(!Piece::RED_FIRE.ability.has(Ability::DIAGONAL_MOVE));
 
     let changes = board.try_push((2, 2), (3, 3)).expect("push should succeed");
     assert_eq!(changes.as_slice(), &[
@@ -159,10 +159,8 @@ fn try_push_omits_an_unchanged_middle_point() {
 
 #[test]
 fn blocked_push_capture_omits_an_unchanged_destination() {
-    let piece = Piece {
-        ability: Piece::RED_FIRE.ability | Ability::CAPTURE_ON_PUSH_BLOCKED,
-        ..Piece::RED_FIRE
-    };
+    let piece =
+        Piece { ability: Piece::RED_FIRE.ability | Ability::HIDDEN_CAPTURE, ..Piece::RED_FIRE };
     let mut board = Board::new(5, 5);
     board[(1, 2)] = Some(piece);
     board[(2, 2)] = Some(piece);

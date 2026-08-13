@@ -24,7 +24,7 @@ Mobility:        士 卒 马 车
 ```
 
 Movement play supports ordinary moves, allied or opposing captures, pushes,
-pulls, Vital-piece draw exchanges, and target-based resignation.
+pulls, draw exchanges of pieces with Leader, and target-based resignation.
 
 ## Learn the game
 
@@ -130,7 +130,7 @@ For public API boundaries, reversible reactions, and custom snapshots, see
 `GameConfig` and the snapshot protocol support rectangular boards up to 16×16
 and internally consistent positions that need not be reachable from the standard
 opening. Validation still checks pool ownership, placement halves, alternating
-pool sizes, Vital-piece counts, and the declared result. See
+pool sizes, piece with Leader counts, and the declared result. See
 [Text notation](docs/notation.md) for the accepted format.
 
 ## Development checks

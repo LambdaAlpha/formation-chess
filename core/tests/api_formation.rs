@@ -93,16 +93,16 @@ fn formation_black_orientation_flips_the_vertical_pattern() {
 #[test]
 fn formation_effects_use_player_relationships() {
     let grants = [
-        (Formation::general as fn(Player, Player) -> _, Ability::DRAW),
-        (Formation::scholar, Ability::DIRECTION_DIAGONAL),
-        (Formation::pawn, Ability::DIRECTION_CROSS),
-        (Formation::horse, Ability::DIRECTION_SHAPE_L),
-        (Formation::rook, Ability::ANY_DISTANCE),
-        (Formation::fire, Ability::PUSH_ALLY | Ability::PUSH_ENEMY),
-        (Formation::wind, Ability::PULL_ALLY | Ability::PULL_ENEMY),
+        (Formation::general as fn(Player, Player) -> _, Ability::PEACE_TALK),
+        (Formation::scholar, Ability::DIAGONAL_MOVE),
+        (Formation::pawn, Ability::ORTHOGONAL_MOVE),
+        (Formation::horse, Ability::BROAD_STEP),
+        (Formation::rook, Ability::SWIFT_MOVE),
+        (Formation::fire, Ability::PUSH_FRIEND | Ability::PUSH_ENEMY),
+        (Formation::wind, Ability::PULL_FRIEND | Ability::PULL_ENEMY),
         (Formation::spear, Ability::CAPTURE),
-        (Formation::shell, Ability::CAPTURED_ON_CAPTURE),
-        (Formation::mine, Ability::CAPTURE_ON_CAPTURED),
+        (Formation::shell, Ability::FORCE_CAPTURE),
+        (Formation::mine, Ability::COUNTER_CAPTURE),
     ];
 
     for (effect, ability) in grants {
@@ -110,46 +110,43 @@ fn formation_effects_use_player_relationships() {
         assert_eq!(effect(Player::Red, Player::Black), (ability, Ability::NONE));
     }
 
-    assert_eq!(Formation::shield(Player::Red, Player::Red), (Ability::CAPTURED, Ability::NONE));
+    assert_eq!(Formation::shield(Player::Red, Player::Red), (Ability::CAPTURABLE, Ability::NONE));
     assert_eq!(
         Formation::shield(Player::Red, Player::Black),
-        (Ability::CAPTURED, Ability::CAPTURED)
+        (Ability::CAPTURABLE, Ability::CAPTURABLE)
     );
     assert_eq!(
         Formation::mountain(Player::Red, Player::Red),
-        (Ability::PUSHED_BY_ALLY | Ability::PUSHED_BY_ENEMY, Ability::PUSHED_BY_ALLY)
+        (Ability::FRIEND_PUSH | Ability::ENEMY_PUSH, Ability::FRIEND_PUSH)
     );
     assert_eq!(
         Formation::mountain(Player::Red, Player::Black),
-        (Ability::PUSHED_BY_ALLY | Ability::PUSHED_BY_ENEMY, Ability::PUSHED_BY_ENEMY)
+        (Ability::FRIEND_PUSH | Ability::ENEMY_PUSH, Ability::ENEMY_PUSH)
     );
     assert_eq!(
         Formation::forest(Player::Red, Player::Red),
-        (Ability::PULLED_BY_ALLY | Ability::PULLED_BY_ENEMY, Ability::PULLED_BY_ALLY)
+        (Ability::FRIEND_PULL | Ability::ENEMY_PULL, Ability::FRIEND_PULL)
     );
     assert_eq!(
         Formation::forest(Player::Red, Player::Black),
-        (Ability::PULLED_BY_ALLY | Ability::PULLED_BY_ENEMY, Ability::PULLED_BY_ENEMY)
+        (Ability::FRIEND_PULL | Ability::ENEMY_PULL, Ability::ENEMY_PULL)
     );
     assert_eq!(
         Formation::stratagem(Player::Red, Player::Black),
-        (Ability::CONTROLLED_BY_ENEMY, Ability::CONTROLLED_BY_ENEMY)
+        (Ability::PASSIVITY, Ability::PASSIVITY)
     );
 }
 
 #[test]
 fn stratagem_formation_control_effects_use_player_relationships() {
-    assert_eq!(
-        Formation::stratagem(Player::Red, Player::Red),
-        (Ability::CONTROLLED_BY_ENEMY, Ability::NONE)
-    );
+    assert_eq!(Formation::stratagem(Player::Red, Player::Red), (Ability::PASSIVITY, Ability::NONE));
     assert_eq!(
         Formation::stratagem(Player::Black, Player::Black),
-        (Ability::CONTROLLED_BY_ENEMY, Ability::NONE)
+        (Ability::PASSIVITY, Ability::NONE)
     );
     assert_eq!(
         Formation::stratagem(Player::Black, Player::Red),
-        (Ability::CONTROLLED_BY_ENEMY, Ability::CONTROLLED_BY_ENEMY)
+        (Ability::PASSIVITY, Ability::PASSIVITY)
     );
 }
 
@@ -166,7 +163,7 @@ fn strategy_and_restraint_groups_have_active_push_pull_capabilities() {
         Piece::RED_MOUNTAIN,
     ];
     let required =
-        [Ability::PUSH_ALLY, Ability::PUSH_ENEMY, Ability::PULL_ALLY, Ability::PULL_ENEMY];
+        [Ability::PUSH_FRIEND, Ability::PUSH_ENEMY, Ability::PULL_FRIEND, Ability::PULL_ENEMY];
 
     for piece in pieces {
         for ability in required {
@@ -189,10 +186,10 @@ fn strategy_and_restraint_groups_have_expected_passive_capabilities() {
     ];
 
     for (piece, pushed_by_ally, pushed_by_enemy, pulled_by_ally, pulled_by_enemy) in pieces {
-        assert_eq!(piece.ability.has(Ability::PUSHED_BY_ALLY), pushed_by_ally, "{piece}");
-        assert_eq!(piece.ability.has(Ability::PUSHED_BY_ENEMY), pushed_by_enemy, "{piece}");
-        assert_eq!(piece.ability.has(Ability::PULLED_BY_ALLY), pulled_by_ally, "{piece}");
-        assert_eq!(piece.ability.has(Ability::PULLED_BY_ENEMY), pulled_by_enemy, "{piece}");
+        assert_eq!(piece.ability.has(Ability::FRIEND_PUSH), pushed_by_ally, "{piece}");
+        assert_eq!(piece.ability.has(Ability::ENEMY_PUSH), pushed_by_enemy, "{piece}");
+        assert_eq!(piece.ability.has(Ability::FRIEND_PULL), pulled_by_ally, "{piece}");
+        assert_eq!(piece.ability.has(Ability::ENEMY_PULL), pulled_by_enemy, "{piece}");
     }
 }
 
@@ -220,7 +217,7 @@ fn effective_formation_updates_are_order_independent_and_denial_wins() {
 
     let mut granted = Piece::RED_FIRE;
     granted.take_effect(&[granting_neighbor]);
-    assert!(granted.ability.has(Ability::DIRECTION_CROSS));
+    assert!(granted.ability.has(Ability::ORTHOGONAL_MOVE));
 
     let mut forward = Piece::RED_FIRE;
     forward.take_effect(&[granting_neighbor, denying_neighbor]);
@@ -228,7 +225,7 @@ fn effective_formation_updates_are_order_independent_and_denial_wins() {
     reverse.take_effect(&[denying_neighbor, granting_neighbor]);
 
     assert_eq!(forward.ability, reverse.ability);
-    assert!(!forward.ability.has(Ability::DIRECTION_CROSS));
+    assert!(!forward.ability.has(Ability::ORTHOGONAL_MOVE));
 }
 
 #[test]

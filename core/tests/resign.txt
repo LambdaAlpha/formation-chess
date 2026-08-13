@@ -1,5 +1,5 @@
 =====
-RESIGN of the current lower-side VITAL declares an upper-side win
+RESIGN of the current lower-side Leader declares an upper-side win
 -----
 行棋方：红
 红方：[]
@@ -30,7 +30,7 @@ RESIGN of the current lower-side VITAL declares an upper-side win
 变化：[]
 胜负：黑胜
 =====
-RESIGN of the current upper-side VITAL declares a lower-side win
+RESIGN of the current upper-side Leader declares a lower-side win
 -----
 行棋方：黑
 红方：[]
@@ -92,7 +92,7 @@ RESIGN remains valid during placement
 变化：[]
 胜负：黑胜
 =====
-RESIGN rejects an uncontrolled opponent VITAL
+RESIGN rejects an uncontrolled opponent Leader
 -----
 行棋方：红
 红方：[]
@@ -122,7 +122,7 @@ RESIGN rejects an uncontrolled opponent VITAL
 -----
 错误：player 红 cannot control piece 黑将 at (4,0)
 =====
-RESIGN of a controlled opponent VITAL makes its owner lose
+RESIGN of a controlled opponent Leader makes its owner lose
 -----
 行棋方：红
 红方：[]
@@ -149,7 +149,7 @@ RESIGN of a controlled opponent VITAL makes its owner lose
 变化：[]
 胜负：红胜
 =====
-RESIGN requires the VITAL piece name
+RESIGN requires the Leader piece name
 -----
 行棋方：红
 红方：[]
@@ -177,7 +177,7 @@ RESIGN requires the VITAL piece name
 四[一一 一一 一一 一一 一一]
 五[红将 一一 一一 一一 一一]
 -----
-错误：红计 is not a vital piece
+错误：红计 is not a Leader piece
 =====
 all actions are rejected after the game is decided
 -----

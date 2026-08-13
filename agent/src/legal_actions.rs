@@ -63,7 +63,7 @@ pub fn placement_area(game: &Game) -> Option<PlacementArea> {
 /// Append every legal movement-phase action to `actions`.
 ///
 /// Core actions retain the engine's enumeration order, including resignation
-/// actions for controlled vital pieces.
+/// actions for controlled leader pieces.
 pub fn legal_movement_actions(game: &Game, actions: &mut Vec<Action>) {
     if game.phase() != Phase::Move || game.result() != GameResult::Unfinished {
         return;

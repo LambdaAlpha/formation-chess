@@ -418,14 +418,14 @@ fn immediate_vital_capture_is_reflected_in_vital_safety() {
 
     assert!(
         open.features.vital_safety > blocked.features.vital_safety,
-        "immediate vital capture must improve vital feature"
+        "immediate leader capture must improve leader feature"
     );
 }
 
 #[test]
 fn draw_ability_does_not_change_soft_evaluation() {
     let mut draw_shield = Piece::RED_SHIELD;
-    draw_shield.ability.add(Ability::DRAW);
+    draw_shield.ability.add(Ability::PEACE_TALK);
     let without_draw = game(
         Player::Red,
         &[

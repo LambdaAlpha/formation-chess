@@ -1,5 +1,5 @@
 =====
-PULL_ALLY alone moves a same-player source into the origin
+Pull Ally alone moves a same-player source into the origin
 -----
 行棋方：红
 红方：[]
@@ -30,7 +30,7 @@ PULL_ALLY alone moves a same-player source into the origin
 变化：[红卒平三 红火平四]
 胜负：未分
 =====
-PULLED_BY_ALLY alone permits a same-player source
+Ally Pull alone permits a same-player source
 -----
 行棋方：红
 红方：[]
@@ -61,7 +61,7 @@ PULLED_BY_ALLY alone permits a same-player source
 变化：[红士平三 红卒平四]
 胜负：未分
 =====
-PULL_ENEMY and PULLED_BY_ENEMY move an opposing-player source
+Pull Enemy and Enemy Pull move an opposing-player source
 -----
 行棋方：红
 红方：[]
@@ -92,7 +92,7 @@ PULL_ENEMY and PULLED_BY_ENEMY move an opposing-player source
 变化：[黑矛平三 红火平四]
 胜负：未分
 =====
-PULL rejects an opposing-player source when PULL_ENEMY is absent
+PULL rejects an opposing-player source when Pull Enemy is absent
 -----
 行棋方：红
 红方：[]
@@ -122,7 +122,7 @@ PULL rejects an opposing-player source when PULL_ENEMY is absent
 -----
 错误：cannot pull 黑矛 at (1,2)
 =====
-PULL rejects an opposing-player source when PULLED_BY_ENEMY is absent
+PULL rejects an opposing-player source when Enemy Pull is absent
 -----
 行棋方：红
 红方：[]

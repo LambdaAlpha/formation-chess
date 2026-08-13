@@ -250,8 +250,7 @@ impl Board {
         }
         // Capture demotion: if either piece has demotion ability and the
         // pushed target is valid, demote to push instead.
-        if (piece.ability.has(Ability::PUSH_ON_CAPTURE_UNBLOCKED)
-            || target.ability.has(Ability::PUSHED_ON_CAPTURE_UNBLOCKED))
+        if (piece.ability.has(Ability::OVERT_CAPTURE) || target.ability.has(Ability::HARD_CAPTURE))
             && let Some(pt) = self.pushed_target(from, to)
         {
             return Ok(self.push_result(from, to, pt));
@@ -288,9 +287,7 @@ impl Board {
         // Push is blocked. Escalate to capture if either piece has
         // escalation ability; otherwise fail. The escalated capture is
         // a plain capture, never a mutual destruction.
-        if piece.ability.has(Ability::CAPTURE_ON_PUSH_BLOCKED)
-            || target.ability.has(Ability::CAPTURED_ON_PUSH_BLOCKED)
-        {
+        if piece.ability.has(Ability::HIDDEN_CAPTURE) || target.ability.has(Ability::EASY_CAPTURE) {
             Ok(self.capture_landing(from, to))
         } else {
             Err(format!("push blocked at ({},{}) and no escalation ability", to.0, to.1))
@@ -331,7 +328,7 @@ impl Board {
     }
 
     /// Validate a draw without modifying the board. Checks movement, path
-    /// blocking, opposing players, DRAW ability, and the target's VITAL
+    /// blocking, opposing players, Peace Talk能力, and the target's Leader
     /// ability. A legal draw exchanges the two occupied points and ends the
     /// game in a draw.
     pub fn try_draw(&self, from: (u8, u8), to: (u8, u8)) -> Result<PositionChanges, String> {
@@ -345,11 +342,11 @@ impl Board {
         if piece.player == target.player {
             return Err("draw requires pieces belonging to opposing players".into());
         }
-        if !piece.ability.has(Ability::DRAW) {
-            return Err("only pieces with DRAW ability can draw".into());
+        if !piece.ability.has(Ability::PEACE_TALK) {
+            return Err("only pieces with Peace Talk能力 can draw".into());
         }
-        if !target.ability.has(Ability::VITAL) {
-            return Err(format!("{} at ({},{}) is not a vital piece", target, to.0, to.1));
+        if !target.ability.has(Ability::LEADER) {
+            return Err(format!("{} at ({},{}) is not a Leader piece", target, to.0, to.1));
         }
         Ok(PositionChanges::two(self.change(from, self[to]), self.change(to, self[from])))
     }
@@ -380,7 +377,7 @@ impl Board {
 
     /// Whether the single step from `from` to `to` is clear. For
     /// cross/diagonal steps there are no intermediate points — always true.
-    /// For L-shaped (knight) steps, checks that the leg-blocking point is
+    /// For Broad Step (knight) steps, checks that the leg-blocking point is
     /// empty.
     fn step_passable(&self, from: (u8, u8), to: (u8, u8)) -> bool {
         let dx = from.0.abs_diff(to.0);
@@ -510,7 +507,7 @@ impl Board {
     /// direction. The pushed piece's own direction abilities are irrelevant:
     /// the shove supplies the movement. Returns None if the pushed piece
     /// cannot make that step: the landing point is off the board or occupied,
-    /// or the pushed piece's path there is blocked (for L-shaped pushes this
+    /// or the pushed piece's path there is blocked (for Broad Step pushes this
     /// is the pushed piece's leg).
     fn pushed_target(&self, from: (u8, u8), to: (u8, u8)) -> Option<(u8, u8)> {
         let (step_x, step_y) = Self::movement_step(from, to);
@@ -524,9 +521,9 @@ impl Board {
             return None;
         }
         // The push always moves the target a single step: adjacent for
-        // cross/diagonal, one knight-step for L-shaped. `step_passable`
+        // Orthogonal Move/Diagonal Move, one knight-step for Broad Step. `step_passable`
         // suffices — cross/diagonal steps have no intermediate points,
-        // and L-shaped steps only need the leg checked.
+        // and Broad Step steps only need the leg checked.
         if !self.step_passable(to, pt) {
             return None;
         }
@@ -536,21 +533,20 @@ impl Board {
     /// Whether from→to lies on a horizontal or vertical line. Note:
     /// `from == to` satisfies all three direction predicates; callers must
     /// exclude it first.
-    fn is_direction_cross(from: (u8, u8), to: (u8, u8)) -> bool {
+    fn is_orthogonal_move(from: (u8, u8), to: (u8, u8)) -> bool {
         from.0 == to.0 || from.1 == to.1
     }
 
     /// Whether from→to lies on a diagonal line. See the `from == to` note
-    /// on [`Self::is_direction_cross`].
-    fn is_direction_diagonal(from: (u8, u8), to: (u8, u8)) -> bool {
+    /// on [`Self::is_orthogonal_move`].
+    fn is_diagonal_move(from: (u8, u8), to: (u8, u8)) -> bool {
         from.0.abs_diff(to.0) == from.1.abs_diff(to.1)
     }
 
     /// Whether from→to lies on a knight line (1:2 slope, including chained
     /// knight moves). See the `from == to` note on
-    /// [`Self::is_direction_cross`].
-    #[expect(non_snake_case)]
-    fn is_direction_shape_L(from: (u8, u8), to: (u8, u8)) -> bool {
+    /// [`Self::is_orthogonal_move`].
+    fn is_broad_step(from: (u8, u8), to: (u8, u8)) -> bool {
         if from.0.abs_diff(to.0) * 2 == from.1.abs_diff(to.1) {
             return true;
         }
@@ -567,32 +563,31 @@ impl Board {
         if from == to {
             return false;
         }
-        let is_cross = Self::is_direction_cross(from, to);
-        let is_diagonal = Self::is_direction_diagonal(from, to);
-        #[expect(non_snake_case)]
-        let is_shape_L = Self::is_direction_shape_L(from, to);
-        if !is_cross && !is_diagonal && !is_shape_L {
+        let is_orthogonal = Self::is_orthogonal_move(from, to);
+        let is_diagonal = Self::is_diagonal_move(from, to);
+        let is_broad_step = Self::is_broad_step(from, to);
+        if !is_orthogonal && !is_diagonal && !is_broad_step {
             return false;
         }
-        if is_cross && !piece.ability.has(Ability::DIRECTION_CROSS) {
+        if is_orthogonal && !piece.ability.has(Ability::ORTHOGONAL_MOVE) {
             return false;
         }
-        if is_diagonal && !piece.ability.has(Ability::DIRECTION_DIAGONAL) {
+        if is_diagonal && !piece.ability.has(Ability::DIAGONAL_MOVE) {
             return false;
         }
-        if is_shape_L && !piece.ability.has(Ability::DIRECTION_SHAPE_L) {
+        if is_broad_step && !piece.ability.has(Ability::BROAD_STEP) {
             return false;
         }
-        if piece.ability.has(Ability::ANY_DISTANCE) {
+        if piece.ability.has(Ability::SWIFT_MOVE) {
             return true;
         }
         let dx = from.0.abs_diff(to.0);
         let dy = from.1.abs_diff(to.1);
-        if is_cross {
+        if is_orthogonal {
             dx + dy == 1
         } else if is_diagonal {
             dx == 1
-        } else if is_shape_L {
+        } else if is_broad_step {
             dx.min(dy) == 1
         } else {
             false
@@ -620,8 +615,8 @@ impl Board {
     }
 
     /// Compute the changes of a successful capture, including
-    /// mutual‑destruction effects. Sacrifice (CAPTURED_ON_CAPTURE) and
-    /// retaliation (CAPTURE_ON_CAPTURED) destroy both pieces only when
+    /// mutual‑destruction effects. Force Capture and
+    /// Counter Capture destroy both pieces only when
     /// the capture is initiated through one of those abilities — the
     /// normal CAPTURE + CAPTURED pairing is missing. A normal capture
     /// always resolves as a plain landing; push escalation uses the
@@ -629,9 +624,9 @@ impl Board {
     fn capture_result(
         &self, piece: Piece, target: Piece, from: (u8, u8), to: (u8, u8),
     ) -> PositionChanges {
-        if (piece.ability.has(Ability::CAPTURED_ON_CAPTURE)
-            || target.ability.has(Ability::CAPTURE_ON_CAPTURED))
-            && !(piece.ability.has(Ability::CAPTURE) && target.ability.has(Ability::CAPTURED))
+        if (piece.ability.has(Ability::FORCE_CAPTURE)
+            || target.ability.has(Ability::COUNTER_CAPTURE))
+            && !(piece.ability.has(Ability::CAPTURE) && target.ability.has(Ability::CAPTURABLE))
         {
             return PositionChanges::two(self.change(from, None), self.change(to, None));
         }
@@ -660,29 +655,29 @@ impl Board {
         let Some(piece) = self.effective(from) else {
             return;
         };
-        let max = if piece.ability.has(Ability::ANY_DISTANCE) {
+        let max = if piece.ability.has(Ability::SWIFT_MOVE) {
             self.width.max(self.height) as i8
         } else {
             1
         };
-        if piece.ability.has(Ability::DIRECTION_CROSS) {
+        if piece.ability.has(Ability::ORTHOGONAL_MOVE) {
             for (dx, dy) in [(0i8, -1), (0, 1), (-1, 0), (1, 0)] {
                 self.enumerate_line(player, piece, from, dx, dy, max, actions);
             }
         }
-        if piece.ability.has(Ability::DIRECTION_DIAGONAL) {
+        if piece.ability.has(Ability::DIAGONAL_MOVE) {
             for (dx, dy) in [(-1i8, -1), (1, -1), (-1, 1), (1, 1)] {
                 self.enumerate_line(player, piece, from, dx, dy, max, actions);
             }
         }
-        if piece.ability.has(Ability::DIRECTION_SHAPE_L) {
+        if piece.ability.has(Ability::BROAD_STEP) {
             for (dx, dy) in
                 [(1i8, 2), (2, 1), (-1, 2), (-2, 1), (1, -2), (2, -1), (-1, -2), (-2, -1)]
             {
                 self.enumerate_line(player, piece, from, dx, dy, max, actions);
             }
         }
-        if piece.ability.has(Ability::VITAL) && piece.can_controlled_by(player) {
+        if piece.ability.has(Ability::LEADER) && piece.can_controlled_by(player) {
             actions.push(Action::Resign(from.0, from.1));
         }
     }
@@ -741,16 +736,16 @@ impl Board {
         if piece.can_push(target) {
             let push_blocked = self.pushed_target(from, to).is_none();
             if !push_blocked
-                || piece.ability.has(Ability::CAPTURE_ON_PUSH_BLOCKED)
-                || target.ability.has(Ability::CAPTURED_ON_PUSH_BLOCKED)
+                || piece.ability.has(Ability::HIDDEN_CAPTURE)
+                || target.ability.has(Ability::EASY_CAPTURE)
             {
                 actions.push(Action::Push(move_));
             }
         }
         if piece.player == player
             && target.player != player
-            && piece.ability.has(Ability::DRAW)
-            && target.ability.has(Ability::VITAL)
+            && piece.ability.has(Ability::PEACE_TALK)
+            && target.ability.has(Ability::LEADER)
         {
             actions.push(Action::Draw(move_));
         }

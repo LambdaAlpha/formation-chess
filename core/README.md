@@ -85,7 +85,7 @@ on-board piece during movement.
 | `红马四五捉` | Declare capture intent at the destination |
 | `红火五四推` | Declare push intent at the destination |
 | `红风平四拉` | Move the Wind and pull the piece behind its origin |
-| `红将五一和` | Exchange with an opposing Vital piece and draw |
+| `红将五一和` | Exchange with an opposing piece with Leader and draw |
 | `黑将认负` | Resign the controlled Black General |
 
 A formatted outcome is either a successful reaction:
@@ -112,7 +112,7 @@ passed to `Game::undo` in strict last-in-first-out order.
 - `Game::all_valid_moves(&mut actions)` appends actions for every currently
   controlled board piece.
 - The board enumeration includes `Move`, `Capture`, `Push`, `Pull`, `Draw`, and
-  `Resign` for controlled Vital pieces.
+  `Resign` for controlled pieces with Leader.
 - Placement is a caller-level concern; the Agent crate serves the core
   movement enumeration directly.
 
@@ -130,8 +130,8 @@ arbitrary board contents and explicit Red and Black placement pools.
 - pool piece ownership;
 - placement halves while either pool remains;
 - Red/Black placement alternation and the next player;
-- at most one Vital piece per owner across board and pool; and
-- consistency between the persistent result and the Vital pieces that remain.
+- at most one piece with Leader per owner across board and pool; and
+- consistency between the persistent result and the pieces with Leader that remain.
 
 This valid custom snapshot is still in placement because both pools are
 non-empty and Black acts next:
@@ -174,7 +174,7 @@ cargo +nightly test --workspace
 
 The crate combines API tests with data-driven scenarios in `core/tests/*.txt`.
 They cover placement validation, formation overlap, same-owner capture, push and
-pull permissions, conversion rules, mutual destruction, draw exchanges,
+pull permissions, conversion rules, mutual destruction, Peace Talk exchanges,
 targeted resignation, undo, and notation round trips.
 
 ## License

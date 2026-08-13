@@ -1,5 +1,5 @@
 =====
-PUSH_ALLY alone permits a same-player push
+Push Ally alone permits a same-player push
 -----
 行棋方：红
 红方：[]
@@ -30,7 +30,7 @@ PUSH_ALLY alone permits a same-player push
 变化：[红火三三 红卒四二]
 胜负：未分
 =====
-PUSHED_BY_ALLY alone permits a same-player push
+Ally Push alone permits a same-player push
 -----
 行棋方：红
 红方：[]
@@ -61,7 +61,7 @@ PUSHED_BY_ALLY alone permits a same-player push
 变化：[红车平三 红山平四]
 胜负：未分
 =====
-PUSH_ENEMY and PUSHED_BY_ENEMY together permit an opposing-player push
+Push Enemy and Enemy Push together permit an opposing-player push
 -----
 行棋方：红
 红方：[]
@@ -92,7 +92,7 @@ PUSH_ENEMY and PUSHED_BY_ENEMY together permit an opposing-player push
 变化：[红火平三 黑矛平四]
 胜负：未分
 =====
-PUSH rejects an opposing-player target when PUSH_ENEMY is absent
+PUSH rejects an opposing-player target when Push Enemy is absent
 -----
 行棋方：红
 红方：[]
@@ -122,7 +122,7 @@ PUSH rejects an opposing-player target when PUSH_ENEMY is absent
 -----
 错误：cannot push 黑士 at (2,2)
 =====
-PUSH rejects an opposing-player target when PUSHED_BY_ENEMY is absent
+PUSH rejects an opposing-player target when Enemy Push is absent
 -----
 行棋方：红
 红方：[]
@@ -152,7 +152,7 @@ PUSH rejects an opposing-player target when PUSHED_BY_ENEMY is absent
 -----
 错误：cannot push 黑矛 at (2,2)
 =====
-DIRECTION_SHAPE_L PUSH sends the target to the next knight point
+Broad Step PUSH sends the target to the next knight point
 -----
 行棋方：红
 红方：[]
@@ -183,7 +183,7 @@ DIRECTION_SHAPE_L PUSH sends the target to the next knight point
 变化：[红火二三 黑卒三五]
 胜负：未分
 =====
-DIRECTION_SHAPE_L PUSH is blocked by the mover leg
+Broad Step PUSH is blocked by the mover leg
 -----
 行棋方：红
 红方：[]
@@ -213,7 +213,7 @@ DIRECTION_SHAPE_L PUSH is blocked by the mover leg
 -----
 错误：path blocked, cannot reach destination
 =====
-DIRECTION_SHAPE_L PUSH is blocked by the pushed piece leg
+Broad Step PUSH is blocked by the pushed piece leg
 -----
 行棋方：红
 红方：[]
@@ -243,7 +243,7 @@ DIRECTION_SHAPE_L PUSH is blocked by the pushed piece leg
 -----
 错误：push blocked at (1,2) and no escalation ability
 =====
-DIRECTION_SHAPE_L PUSH is blocked by an occupied landing
+Broad Step PUSH is blocked by an occupied landing
 -----
 行棋方：红
 红方：[]
@@ -303,7 +303,7 @@ PUSH without escalation fails when the landing is off-board
 -----
 错误：push blocked at (0,2) and no escalation ability
 =====
-CAPTURE_ON_PUSH_BLOCKED escalates an off-board PUSH to CAPTURE
+Hidden Capture escalates an off-board PUSH to CAPTURE
 -----
 行棋方：红
 红方：[]
@@ -334,7 +334,7 @@ CAPTURE_ON_PUSH_BLOCKED escalates an off-board PUSH to CAPTURE
 变化：[红势一三]
 胜负：未分
 =====
-CAPTURED_ON_PUSH_BLOCKED escalates an off-board PUSH to CAPTURE
+Easy Capture escalates an off-board PUSH to CAPTURE
 -----
 行棋方：红
 红方：[]
@@ -427,7 +427,7 @@ push escalation may destroy a same-player target
 变化：[红势一三]
 胜负：未分
 =====
-push escalation ignores CAPTURE_ON_CAPTURED mutual destruction
+push escalation ignores Counter Capture mutual destruction
 -----
 行棋方：红
 红方：[]
@@ -458,7 +458,7 @@ push escalation ignores CAPTURE_ON_CAPTURED mutual destruction
 变化：[红势一三]
 胜负：未分
 =====
-DIRECTION_SHAPE_L push escalation handles a blocked pushed-piece leg
+Broad Step push escalation handles a blocked pushed-piece leg
 -----
 行棋方：红
 红方：[]
@@ -489,7 +489,7 @@ DIRECTION_SHAPE_L push escalation handles a blocked pushed-piece leg
 变化：[红势二三]
 胜负：未分
 =====
-DIRECTION_SHAPE_L push escalation handles an occupied landing
+Broad Step push escalation handles an occupied landing
 -----
 行棋方：红
 红方：[]
@@ -520,7 +520,7 @@ DIRECTION_SHAPE_L push escalation handles an occupied landing
 变化：[红势二三]
 胜负：未分
 =====
-DIRECTION_SHAPE_L push escalation handles an off-board landing
+Broad Step push escalation handles an off-board landing
 -----
 行棋方：红
 红方：[]

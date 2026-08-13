@@ -81,7 +81,7 @@ struct PlaceResult {
 
 impl Game {
     /// Validate `config` and start a game from it. Rejects snapshots that
-    /// break the rules: wrong pool colors, more than one vital piece per
+    /// break the rules: wrong pool colors, more than one Leader piece per
     /// side, placement-phase pieces outside their half, pools that cannot
     /// alternate, or a declared-unfinished position that is already
     /// decided.
@@ -133,7 +133,7 @@ impl Game {
             config.board.validate_halves()?;
             Self::validate_alternation(config)?;
         }
-        Self::validate_vital_result(config)
+        Self::validate_leader_result(config)
     }
 
     fn validate_pool(config: &GameConfig) -> Result<(), String> {
@@ -189,15 +189,15 @@ impl Game {
         Ok(())
     }
 
-    fn validate_vital_result(config: &GameConfig) -> Result<(), String> {
-        let red = Self::count_vital(config, Player::Red);
+    fn validate_leader_result(config: &GameConfig) -> Result<(), String> {
+        let red = Self::count_leader(config, Player::Red);
         if red > 1 {
-            return Err(format!("{} must have at most one vital piece, found {red}", Player::Red));
+            return Err(format!("{} must have at most one Leader piece, found {red}", Player::Red));
         }
-        let black = Self::count_vital(config, Player::Black);
+        let black = Self::count_leader(config, Player::Black);
         if black > 1 {
             return Err(format!(
-                "{} must have at most one vital piece, found {black}",
+                "{} must have at most one Leader piece, found {black}",
                 Player::Black
             ));
         }
@@ -211,24 +211,24 @@ impl Game {
             return Ok(());
         }
         Err(format!(
-            "validate_vital_result failed, declared result is {}, but red has vital: {red}, black has vital: {black}",
+            "validate_leader_result failed, declared result is {}, but red has Leader: {red}, black has Leader: {black}",
             config.result
         ))
     }
 
-    fn count_vital(config: &GameConfig, player: Player) -> usize {
+    fn count_leader(config: &GameConfig, player: Player) -> usize {
         let pool = match player {
             Player::Red => &config.red_pool,
             Player::Black => &config.black_pool,
         };
         let mut count = 0;
         for piece in pool {
-            if piece.ability.has(Ability::VITAL) {
+            if piece.ability.has(Ability::LEADER) {
                 count += 1;
             }
         }
         for (_, piece) in config.board.iter() {
-            if piece.player == player && piece.ability.has(Ability::VITAL) {
+            if piece.player == player && piece.ability.has(Ability::LEADER) {
                 count += 1;
             }
         }
@@ -448,8 +448,8 @@ impl Game {
     }
 
     fn move_result(&self, changes: &[PositionChange]) -> GameResult {
-        let red = self.move_vital(Player::Red, changes);
-        let black = self.move_vital(Player::Black, changes);
+        let red = self.move_leader(Player::Red, changes);
+        let black = self.move_leader(Player::Black, changes);
         match (red, black) {
             (false, false) => GameResult::Draw,
             (false, true) => GameResult::BlackWin,
@@ -458,19 +458,19 @@ impl Game {
         }
     }
 
-    fn move_vital(&self, player: Player, changes: &[PositionChange]) -> bool {
+    fn move_leader(&self, player: Player, changes: &[PositionChange]) -> bool {
         let mut removed = false;
         let mut added = false;
         for &change in changes {
             if let Some(old) = change.old
                 && old.player == player
-                && old.ability.has(Ability::VITAL)
+                && old.ability.has(Ability::LEADER)
             {
                 removed = true;
             }
             if let Some(new) = change.new
                 && new.player == player
-                && new.ability.has(Ability::VITAL)
+                && new.ability.has(Ability::LEADER)
             {
                 added = true;
             }
@@ -491,8 +491,8 @@ impl Game {
         let Some(piece) = self.board.effective(at) else {
             return Err(format!("no piece at ({},{})", at.0, at.1));
         };
-        if !piece.ability.has(Ability::VITAL) {
-            return Err(format!("{} at ({},{}) is not a vital piece", piece, at.0, at.1));
+        if !piece.ability.has(Ability::LEADER) {
+            return Err(format!("{} at ({},{}) is not a Leader piece", piece, at.0, at.1));
         }
         if !piece.can_controlled_by(self.player) {
             return Err(format!(

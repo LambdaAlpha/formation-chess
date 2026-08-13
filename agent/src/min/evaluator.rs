@@ -383,7 +383,7 @@ fn analyze_pool(side: &mut SideAnalysis, pieces: &[Piece]) {
     for piece in pieces {
         side.effective_ability_units += i64::from(ability_units(piece.ability));
         side.control_units += 4;
-        if piece.ability.has(Ability::VITAL) {
+        if piece.ability.has(Ability::LEADER) {
             side.vital_control_units += 12;
             side.vital_resilience_units += i64::from(resilience_units(piece.ability));
         } else {
@@ -549,25 +549,25 @@ fn empty_formation_point_units(board: &Board, player: Player, position: (u8, u8)
 
 fn projected_empty_development(board: &Board, position: (u8, u8), piece: Piece) -> u16 {
     let mut destinations = [false; BOARD_POINT_CAPACITY];
-    if piece.ability.has(Ability::DIRECTION_CROSS) {
+    if piece.ability.has(Ability::ORTHOGONAL_MOVE) {
         record_projected_lines(
             board,
             position,
-            piece.ability.has(Ability::ANY_DISTANCE),
+            piece.ability.has(Ability::SWIFT_MOVE),
             &[(0, -1), (0, 1), (-1, 0), (1, 0)],
             &mut destinations,
         );
     }
-    if piece.ability.has(Ability::DIRECTION_DIAGONAL) {
+    if piece.ability.has(Ability::DIAGONAL_MOVE) {
         record_projected_lines(
             board,
             position,
-            piece.ability.has(Ability::ANY_DISTANCE),
+            piece.ability.has(Ability::SWIFT_MOVE),
             &[(-1, -1), (1, -1), (-1, 1), (1, 1)],
             &mut destinations,
         );
     }
-    if piece.ability.has(Ability::DIRECTION_SHAPE_L) {
+    if piece.ability.has(Ability::BROAD_STEP) {
         record_projected_steps(
             board,
             position,
@@ -579,10 +579,10 @@ fn projected_empty_development(board: &Board, position: (u8, u8), piece: Piece) 
 }
 
 fn record_projected_lines(
-    board: &Board, position: (u8, u8), any_distance: bool, directions: &[(i8, i8)],
+    board: &Board, position: (u8, u8), swift_move: bool, directions: &[(i8, i8)],
     destinations: &mut [bool; BOARD_POINT_CAPACITY],
 ) {
-    let max_steps = if any_distance { board.width().max(board.height()) } else { 1 };
+    let max_steps = if swift_move { board.width().max(board.height()) } else { 1 };
     for &(dx, dy) in directions {
         for step in 1 ..= max_steps {
             let step = i8::try_from(step).expect("board dimension must fit i8");
@@ -724,18 +724,18 @@ fn long_range_ally_blocks(board: &Board, player: Player) -> i64 {
         }
         let effective =
             board.effective(position).expect("occupied point must have an effective piece");
-        if !effective.ability.has(Ability::ANY_DISTANCE) {
+        if !effective.ability.has(Ability::SWIFT_MOVE) {
             continue;
         }
-        if effective.ability.has(Ability::DIRECTION_CROSS) {
+        if effective.ability.has(Ability::ORTHOGONAL_MOVE) {
             blocks +=
                 blocked_directions(board, player, position, &[(0, -1), (0, 1), (-1, 0), (1, 0)]);
         }
-        if effective.ability.has(Ability::DIRECTION_DIAGONAL) {
+        if effective.ability.has(Ability::DIAGONAL_MOVE) {
             blocks +=
                 blocked_directions(board, player, position, &[(-1, -1), (1, -1), (-1, 1), (1, 1)]);
         }
-        if effective.ability.has(Ability::DIRECTION_SHAPE_L) {
+        if effective.ability.has(Ability::BROAD_STEP) {
             blocks += blocked_directions(board, player, position, &[
                 (1, 2),
                 (2, 1),
@@ -832,7 +832,7 @@ fn analyze_owned_piece(piece: Piece, effective: Piece, analysis: &mut PositionAn
     side.effective_ability_units += i64::from(base_units);
     side.formation_effect_units += i64::from(effective_units - base_units);
 
-    if piece.ability.has(Ability::VITAL) {
+    if piece.ability.has(Ability::LEADER) {
         if effective.can_controlled_by(owner) {
             side.vital_control_units += 12;
         } else {
@@ -990,7 +990,7 @@ fn analyze_generated_action(
         QuietMoveSafety::SAFE
     };
     if candidate.piece.player == player
-        && candidate.piece.ability.has(Ability::VITAL)
+        && candidate.piece.ability.has(Ability::LEADER)
         && quiet_safety.material_safe
         && quiet_safety.vital_safe
     {
@@ -1048,7 +1048,7 @@ fn quiet_move_safety_with_scratch(
             }
             if game_result == GameResult::Draw
                 && piece.player == perspective
-                && piece.ability.has(Ability::VITAL)
+                && piece.ability.has(Ability::LEADER)
             {
                 safety.vital_safe = false;
             }
@@ -1107,10 +1107,10 @@ fn preview_capture_against_quiet_move(
         return None;
     }
 
-    let mutual = (effective.ability.has(Ability::CAPTURED_ON_CAPTURE)
-        || target_effective.ability.has(Ability::CAPTURE_ON_CAPTURED))
+    let mutual = (effective.ability.has(Ability::FORCE_CAPTURE)
+        || target_effective.ability.has(Ability::COUNTER_CAPTURE))
         && !(effective.ability.has(Ability::CAPTURE)
-            && target_effective.ability.has(Ability::CAPTURED));
+            && target_effective.ability.has(Ability::CAPTURABLE));
     let departure = PositionChange { at: attacker_from, old: Some(attacker), new: None };
     let destination = PositionChange { at: to, old: Some(target), new: None };
     let changes = if mutual {
@@ -1222,7 +1222,7 @@ fn analyze_action_outcome_with_scratch(
         Action::Resign(x, y) => {
             let piece = board
                 .effective((x, y))
-                .expect("enumerated resignation must retain its vital piece");
+                .expect("enumerated resignation must retain its leader piece");
             let game_result = match piece.player {
                 Player::Red => GameResult::BlackWin,
                 Player::Black => GameResult::RedWin,
@@ -1474,7 +1474,7 @@ fn exchange_units(board: &Board, changes: &[PositionChange], player: Player) -> 
 }
 
 fn exchange_piece_units(piece: Piece, player: Player) -> i32 {
-    if piece.ability.has(Ability::VITAL) {
+    if piece.ability.has(Ability::LEADER) {
         return 0;
     }
     let magnitude = (32 + ability_units(piece.ability)).max(8);
@@ -1652,7 +1652,7 @@ fn terminal_utility(game_result: GameResult, perspective: Player) -> Option<i32>
 
 pub(super) fn tactical_piece_units(piece: Piece) -> i32 {
     let ability = piece.ability;
-    let mut units = if ability.has(Ability::VITAL) {
+    let mut units = if ability.has(Ability::LEADER) {
         96 + active_power_units(ability) + resilience_units(ability)
     } else {
         (32 + ability_units(ability)).max(8)
@@ -1665,56 +1665,56 @@ pub(super) fn tactical_piece_units(piece: Piece) -> i32 {
     if piece.can_controlled_by(opponent(piece.player)) {
         units -= 8;
     }
-    if ability.has(Ability::DRAW) {
+    if ability.has(Ability::PEACE_TALK) {
         units += 4;
     }
     units.max(8)
 }
 
 fn ability_units(ability: Ability) -> i32 {
-    ability_weight(ability, Ability::PUSH_ALLY, 1)
+    ability_weight(ability, Ability::PUSH_FRIEND, 1)
         + ability_weight(ability, Ability::PUSH_ENEMY, 4)
-        + ability_weight(ability, Ability::PUSHED_BY_ALLY, 1)
-        + ability_weight(ability, Ability::PUSHED_BY_ENEMY, -3)
-        + ability_weight(ability, Ability::PULL_ALLY, 1)
+        + ability_weight(ability, Ability::FRIEND_PUSH, 1)
+        + ability_weight(ability, Ability::ENEMY_PUSH, -3)
+        + ability_weight(ability, Ability::PULL_FRIEND, 1)
         + ability_weight(ability, Ability::PULL_ENEMY, 4)
-        + ability_weight(ability, Ability::PULLED_BY_ALLY, 1)
-        + ability_weight(ability, Ability::PULLED_BY_ENEMY, -3)
-        + ability_weight(ability, Ability::CAPTURE_ON_PUSH_BLOCKED, 4)
-        + ability_weight(ability, Ability::CAPTURED_ON_PUSH_BLOCKED, -4)
-        + ability_weight(ability, Ability::PUSH_ON_CAPTURE_UNBLOCKED, -1)
-        + ability_weight(ability, Ability::PUSHED_ON_CAPTURE_UNBLOCKED, 3)
+        + ability_weight(ability, Ability::FRIEND_PULL, 1)
+        + ability_weight(ability, Ability::ENEMY_PULL, -3)
+        + ability_weight(ability, Ability::HIDDEN_CAPTURE, 4)
+        + ability_weight(ability, Ability::EASY_CAPTURE, -4)
+        + ability_weight(ability, Ability::OVERT_CAPTURE, -1)
+        + ability_weight(ability, Ability::HARD_CAPTURE, 3)
         + ability_weight(ability, Ability::CAPTURE, 5)
-        + ability_weight(ability, Ability::CAPTURED, -5)
-        + ability_weight(ability, Ability::CAPTURE_ON_CAPTURED, 5)
-        + ability_weight(ability, Ability::CAPTURED_ON_CAPTURE, -1)
-        + ability_weight(ability, Ability::ANY_DISTANCE, 5)
-        + ability_weight(ability, Ability::DIRECTION_CROSS, 2)
-        + ability_weight(ability, Ability::DIRECTION_DIAGONAL, 2)
-        + ability_weight(ability, Ability::DIRECTION_SHAPE_L, 3)
+        + ability_weight(ability, Ability::CAPTURABLE, -5)
+        + ability_weight(ability, Ability::COUNTER_CAPTURE, 5)
+        + ability_weight(ability, Ability::FORCE_CAPTURE, -1)
+        + ability_weight(ability, Ability::SWIFT_MOVE, 5)
+        + ability_weight(ability, Ability::ORTHOGONAL_MOVE, 2)
+        + ability_weight(ability, Ability::DIAGONAL_MOVE, 2)
+        + ability_weight(ability, Ability::BROAD_STEP, 3)
 }
 
 fn active_power_units(ability: Ability) -> i32 {
-    ability_weight(ability, Ability::PUSH_ALLY, 1)
+    ability_weight(ability, Ability::PUSH_FRIEND, 1)
         + ability_weight(ability, Ability::PUSH_ENEMY, 4)
-        + ability_weight(ability, Ability::PULL_ALLY, 1)
+        + ability_weight(ability, Ability::PULL_FRIEND, 1)
         + ability_weight(ability, Ability::PULL_ENEMY, 4)
-        + ability_weight(ability, Ability::CAPTURE_ON_PUSH_BLOCKED, 4)
+        + ability_weight(ability, Ability::HIDDEN_CAPTURE, 4)
         + ability_weight(ability, Ability::CAPTURE, 5)
-        + ability_weight(ability, Ability::CAPTURED_ON_CAPTURE, 1)
-        + ability_weight(ability, Ability::ANY_DISTANCE, 5)
-        + ability_weight(ability, Ability::DIRECTION_CROSS, 2)
-        + ability_weight(ability, Ability::DIRECTION_DIAGONAL, 2)
-        + ability_weight(ability, Ability::DIRECTION_SHAPE_L, 3)
+        + ability_weight(ability, Ability::FORCE_CAPTURE, 1)
+        + ability_weight(ability, Ability::SWIFT_MOVE, 5)
+        + ability_weight(ability, Ability::ORTHOGONAL_MOVE, 2)
+        + ability_weight(ability, Ability::DIAGONAL_MOVE, 2)
+        + ability_weight(ability, Ability::BROAD_STEP, 3)
 }
 
 fn resilience_units(ability: Ability) -> i32 {
-    ability_weight(ability, Ability::PUSHED_BY_ENEMY, -4)
-        + ability_weight(ability, Ability::PULLED_BY_ENEMY, -4)
-        + ability_weight(ability, Ability::CAPTURED_ON_PUSH_BLOCKED, -5)
-        + ability_weight(ability, Ability::PUSHED_ON_CAPTURE_UNBLOCKED, 4)
-        + if ability.has(Ability::CAPTURED) { -6 } else { 6 }
-        + ability_weight(ability, Ability::CAPTURE_ON_CAPTURED, 6)
+    ability_weight(ability, Ability::ENEMY_PUSH, -4)
+        + ability_weight(ability, Ability::ENEMY_PULL, -4)
+        + ability_weight(ability, Ability::EASY_CAPTURE, -5)
+        + ability_weight(ability, Ability::HARD_CAPTURE, 4)
+        + if ability.has(Ability::CAPTURABLE) { -6 } else { 6 }
+        + ability_weight(ability, Ability::COUNTER_CAPTURE, 6)
 }
 
 fn ability_weight(abilities: Ability, ability: Ability, weight: i32) -> i32 {
@@ -1918,7 +1918,7 @@ mod tests {
     #[test]
     fn vacated_dual_controlled_origin_does_not_attack_its_destination() {
         let mut dual_controlled_rook = Piece::RED_ROOK;
-        dual_controlled_rook.ability |= Ability::CONTROLLED_BY_ENEMY;
+        dual_controlled_rook.ability |= Ability::PASSIVITY;
         let mut board = Board::new(5, 5);
         board[(0, 2)] = Some(dual_controlled_rook);
         let black_actions = generate_player_actions(&board, Player::Black);
@@ -1956,7 +1956,7 @@ mod tests {
     #[test]
     fn harmful_own_capture_does_not_create_soft_action_value() {
         let mut controlled_black_rook = Piece::BLACK_ROOK;
-        controlled_black_rook.ability |= Ability::CONTROLLED_BY_ENEMY;
+        controlled_black_rook.ability |= Ability::PASSIVITY;
         let mut board = Board::new(5, 5);
         board[(2, 1)] = Some(controlled_black_rook);
         board[(2, 4)] = Some(Piece::RED_PAWN);
@@ -2040,7 +2040,7 @@ mod tests {
         board[(0, 0)] = Some(red_general);
         board[(2, 2)] = Some(Piece::RED_PAWN);
         let harmful_capture = Action::Capture(Move { from: (0, 0), to: (2, 2) });
-        board.try_capture((0, 0), (2, 2)).expect("vital own capture must be legal");
+        board.try_capture((0, 0), (2, 2)).expect("leader own capture must be legal");
 
         let mut analysis = ActionAnalysis::default();
         analyze_piece_actions(

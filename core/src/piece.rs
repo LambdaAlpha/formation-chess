@@ -39,11 +39,6 @@ impl Piece {
         PieceId { name: self.name, player: self.player }
     }
 
-    /// (controlled_by_ally, controlled_by_enemy) for every piece.
-    const fn controlled() -> (bool, bool) {
-        (true, false)
-    }
-
     /// Vertically mirror a formation for Black pieces, whose advance
     /// direction points toward the bottom of the board.
     const fn orient(player: Player, formation: Formation) -> Formation {
@@ -56,576 +51,560 @@ impl Piece {
     pub const GENERAL_NAME: char = '将';
 
     const fn general(player: Player) -> Piece {
-        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '将',
             player,
             formation: Self::orient(player, Formation::GENERAL),
             ability: AbilityConfig {
-                controlled_by_ally,
-                controlled_by_enemy,
-                push_ally: true,
+                initiative: true,
+                passivity: false,
+                push_friend: true,
                 push_enemy: true,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: true,
+                friend_push: false,
+                enemy_push: true,
+                pull_friend: true,
                 pull_enemy: true,
-                pulled_by_ally: false,
-                pulled_by_enemy: true,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
+                friend_pull: false,
+                enemy_pull: true,
+                hidden_capture: false,
+                easy_capture: false,
+                overt_capture: false,
+                hard_capture: false,
                 capture: false,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: true,
-                direction_cross: false,
-                direction_diagonal: true,
-                direction_shape_L: false,
-                vital: true,
-                draw: true,
+                capturable: true,
+                counter_capture: false,
+                force_capture: false,
+                swift_move: true,
+                orthogonal_move: false,
+                diagonal_move: true,
+                broad_step: false,
+                leader: true,
+                peace_talk: true,
             }
             .build(),
         }
     }
 
     const fn stratagem(player: Player) -> Piece {
-        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '计',
             player,
             formation: Self::orient(player, Formation::STRATAGEM),
             ability: AbilityConfig {
-                controlled_by_ally,
-                controlled_by_enemy,
-                push_ally: true,
+                initiative: true,
+                passivity: false,
+                push_friend: true,
                 push_enemy: true,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: true,
+                friend_push: false,
+                enemy_push: true,
+                pull_friend: true,
                 pull_enemy: true,
-                pulled_by_ally: false,
-                pulled_by_enemy: true,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
+                friend_pull: false,
+                enemy_pull: true,
+                hidden_capture: false,
+                easy_capture: false,
+                overt_capture: false,
+                hard_capture: false,
                 capture: false,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: true,
-                direction_cross: false,
-                direction_diagonal: true,
-                direction_shape_L: false,
-                vital: false,
-                draw: false,
+                capturable: true,
+                counter_capture: false,
+                force_capture: false,
+                swift_move: true,
+                orthogonal_move: false,
+                diagonal_move: true,
+                broad_step: false,
+                leader: false,
+                peace_talk: false,
             }
             .build(),
         }
     }
 
     const fn momentum(player: Player) -> Piece {
-        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '势',
             player,
             formation: Self::orient(player, Formation::MOMENTUM),
             ability: AbilityConfig {
-                controlled_by_ally,
-                controlled_by_enemy,
-                push_ally: true,
+                initiative: true,
+                passivity: false,
+                push_friend: true,
                 push_enemy: true,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: true,
+                friend_push: false,
+                enemy_push: true,
+                pull_friend: true,
                 pull_enemy: true,
-                pulled_by_ally: false,
-                pulled_by_enemy: true,
-                capture_on_push_blocked: true,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
+                friend_pull: false,
+                enemy_pull: true,
+                hidden_capture: true,
+                easy_capture: false,
+                overt_capture: false,
+                hard_capture: false,
                 capture: false,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: true,
-                direction_cross: false,
-                direction_diagonal: true,
-                direction_shape_L: false,
-                vital: false,
-                draw: false,
+                capturable: true,
+                counter_capture: false,
+                force_capture: false,
+                swift_move: true,
+                orthogonal_move: false,
+                diagonal_move: true,
+                broad_step: false,
+                leader: false,
+                peace_talk: false,
             }
             .build(),
         }
     }
 
     const fn adaptation(player: Player) -> Piece {
-        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '变',
             player,
             formation: Self::orient(player, Formation::ADAPTATION),
             ability: AbilityConfig {
-                controlled_by_ally,
-                controlled_by_enemy,
-                push_ally: true,
+                initiative: true,
+                passivity: false,
+                push_friend: true,
                 push_enemy: true,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: true,
+                friend_push: false,
+                enemy_push: true,
+                pull_friend: true,
                 pull_enemy: true,
-                pulled_by_ally: false,
-                pulled_by_enemy: true,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: true,
+                friend_pull: false,
+                enemy_pull: true,
+                hidden_capture: false,
+                easy_capture: false,
+                overt_capture: false,
+                hard_capture: true,
                 capture: false,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: true,
-                direction_cross: false,
-                direction_diagonal: true,
-                direction_shape_L: false,
-                vital: false,
-                draw: false,
+                capturable: true,
+                counter_capture: false,
+                force_capture: false,
+                swift_move: true,
+                orthogonal_move: false,
+                diagonal_move: true,
+                broad_step: false,
+                leader: false,
+                peace_talk: false,
             }
             .build(),
         }
     }
 
     const fn wind(player: Player) -> Piece {
-        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '风',
             player,
             formation: Self::orient(player, Formation::WIND),
             ability: AbilityConfig {
-                controlled_by_ally,
-                controlled_by_enemy,
-                push_ally: true,
+                initiative: true,
+                passivity: false,
+                push_friend: true,
                 push_enemy: true,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: true,
+                friend_push: false,
+                enemy_push: true,
+                pull_friend: true,
                 pull_enemy: true,
-                pulled_by_ally: false,
-                pulled_by_enemy: true,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
+                friend_pull: false,
+                enemy_pull: true,
+                hidden_capture: false,
+                easy_capture: false,
+                overt_capture: false,
+                hard_capture: false,
                 capture: false,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: true,
-                direction_cross: true,
-                direction_diagonal: false,
-                direction_shape_L: false,
-                vital: false,
-                draw: false,
+                capturable: true,
+                counter_capture: false,
+                force_capture: false,
+                swift_move: true,
+                orthogonal_move: true,
+                diagonal_move: false,
+                broad_step: false,
+                leader: false,
+                peace_talk: false,
             }
             .build(),
         }
     }
 
     const fn forest(player: Player) -> Piece {
-        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '林',
             player,
             formation: Self::orient(player, Formation::FOREST),
             ability: AbilityConfig {
-                controlled_by_ally,
-                controlled_by_enemy,
-                push_ally: true,
+                initiative: true,
+                passivity: false,
+                push_friend: true,
                 push_enemy: true,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: true,
+                friend_push: false,
+                enemy_push: true,
+                pull_friend: true,
                 pull_enemy: true,
-                pulled_by_ally: true,
-                pulled_by_enemy: false,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
+                friend_pull: true,
+                enemy_pull: false,
+                hidden_capture: false,
+                easy_capture: false,
+                overt_capture: false,
+                hard_capture: false,
                 capture: false,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: true,
-                direction_cross: true,
-                direction_diagonal: false,
-                direction_shape_L: false,
-                vital: false,
-                draw: false,
+                capturable: true,
+                counter_capture: false,
+                force_capture: false,
+                swift_move: true,
+                orthogonal_move: true,
+                diagonal_move: false,
+                broad_step: false,
+                leader: false,
+                peace_talk: false,
             }
             .build(),
         }
     }
 
     const fn fire(player: Player) -> Piece {
-        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '火',
             player,
             formation: Self::orient(player, Formation::FIRE),
             ability: AbilityConfig {
-                controlled_by_ally,
-                controlled_by_enemy,
-                push_ally: true,
+                initiative: true,
+                passivity: false,
+                push_friend: true,
                 push_enemy: true,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: true,
+                friend_push: false,
+                enemy_push: true,
+                pull_friend: true,
                 pull_enemy: true,
-                pulled_by_ally: false,
-                pulled_by_enemy: true,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
+                friend_pull: false,
+                enemy_pull: true,
+                hidden_capture: false,
+                easy_capture: false,
+                overt_capture: false,
+                hard_capture: false,
                 capture: false,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: true,
-                direction_cross: true,
-                direction_diagonal: false,
-                direction_shape_L: false,
-                vital: false,
-                draw: false,
+                capturable: true,
+                counter_capture: false,
+                force_capture: false,
+                swift_move: true,
+                orthogonal_move: true,
+                diagonal_move: false,
+                broad_step: false,
+                leader: false,
+                peace_talk: false,
             }
             .build(),
         }
     }
 
     const fn mountain(player: Player) -> Piece {
-        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '山',
             player,
             formation: Self::orient(player, Formation::MOUNTAIN),
             ability: AbilityConfig {
-                controlled_by_ally,
-                controlled_by_enemy,
-                push_ally: true,
+                initiative: true,
+                passivity: false,
+                push_friend: true,
                 push_enemy: true,
-                pushed_by_ally: true,
-                pushed_by_enemy: false,
-                pull_ally: true,
+                friend_push: true,
+                enemy_push: false,
+                pull_friend: true,
                 pull_enemy: true,
-                pulled_by_ally: false,
-                pulled_by_enemy: true,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
+                friend_pull: false,
+                enemy_pull: true,
+                hidden_capture: false,
+                easy_capture: false,
+                overt_capture: false,
+                hard_capture: false,
                 capture: false,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: true,
-                direction_cross: true,
-                direction_diagonal: false,
-                direction_shape_L: false,
-                vital: false,
-                draw: false,
+                capturable: true,
+                counter_capture: false,
+                force_capture: false,
+                swift_move: true,
+                orthogonal_move: true,
+                diagonal_move: false,
+                broad_step: false,
+                leader: false,
+                peace_talk: false,
             }
             .build(),
         }
     }
 
     const fn spear(player: Player) -> Piece {
-        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '矛',
             player,
             formation: Self::orient(player, Formation::SPEAR),
             ability: AbilityConfig {
-                controlled_by_ally,
-                controlled_by_enemy,
-                push_ally: false,
+                initiative: true,
+                passivity: false,
+                push_friend: false,
                 push_enemy: false,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: false,
+                friend_push: false,
+                enemy_push: true,
+                pull_friend: false,
                 pull_enemy: false,
-                pulled_by_ally: false,
-                pulled_by_enemy: true,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
+                friend_pull: false,
+                enemy_pull: true,
+                hidden_capture: false,
+                easy_capture: false,
+                overt_capture: false,
+                hard_capture: false,
                 capture: true,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: false,
-                direction_cross: false,
-                direction_diagonal: false,
-                direction_shape_L: true,
-                vital: false,
-                draw: false,
+                capturable: true,
+                counter_capture: false,
+                force_capture: false,
+                swift_move: false,
+                orthogonal_move: false,
+                diagonal_move: false,
+                broad_step: true,
+                leader: false,
+                peace_talk: false,
             }
             .build(),
         }
     }
 
     const fn shield(player: Player) -> Piece {
-        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '盾',
             player,
             formation: Self::orient(player, Formation::SHIELD),
             ability: AbilityConfig {
-                controlled_by_ally,
-                controlled_by_enemy,
-                push_ally: false,
+                initiative: true,
+                passivity: false,
+                push_friend: false,
                 push_enemy: false,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: false,
+                friend_push: false,
+                enemy_push: true,
+                pull_friend: false,
                 pull_enemy: false,
-                pulled_by_ally: false,
-                pulled_by_enemy: true,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
+                friend_pull: false,
+                enemy_pull: true,
+                hidden_capture: false,
+                easy_capture: false,
+                overt_capture: false,
+                hard_capture: false,
                 capture: true,
-                captured: false,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: false,
-                direction_cross: false,
-                direction_diagonal: false,
-                direction_shape_L: true,
-                vital: false,
-                draw: false,
+                capturable: false,
+                counter_capture: false,
+                force_capture: false,
+                swift_move: false,
+                orthogonal_move: false,
+                diagonal_move: false,
+                broad_step: true,
+                leader: false,
+                peace_talk: false,
             }
             .build(),
         }
     }
 
     const fn shell(player: Player) -> Piece {
-        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '弹',
             player,
             formation: Self::orient(player, Formation::SHELL),
             ability: AbilityConfig {
-                controlled_by_ally,
-                controlled_by_enemy,
-                push_ally: false,
+                initiative: true,
+                passivity: false,
+                push_friend: false,
                 push_enemy: false,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: false,
+                friend_push: false,
+                enemy_push: true,
+                pull_friend: false,
                 pull_enemy: false,
-                pulled_by_ally: false,
-                pulled_by_enemy: true,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
+                friend_pull: false,
+                enemy_pull: true,
+                hidden_capture: false,
+                easy_capture: false,
+                overt_capture: false,
+                hard_capture: false,
                 capture: true,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: true,
-                any_distance: false,
-                direction_cross: false,
-                direction_diagonal: false,
-                direction_shape_L: true,
-                vital: false,
-                draw: false,
+                capturable: true,
+                counter_capture: false,
+                force_capture: true,
+                swift_move: false,
+                orthogonal_move: false,
+                diagonal_move: false,
+                broad_step: true,
+                leader: false,
+                peace_talk: false,
             }
             .build(),
         }
     }
 
     const fn mine(player: Player) -> Piece {
-        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '雷',
             player,
             formation: Self::orient(player, Formation::MINE),
             ability: AbilityConfig {
-                controlled_by_ally,
-                controlled_by_enemy,
-                push_ally: false,
+                initiative: true,
+                passivity: false,
+                push_friend: false,
                 push_enemy: false,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: false,
+                friend_push: false,
+                enemy_push: true,
+                pull_friend: false,
                 pull_enemy: false,
-                pulled_by_ally: false,
-                pulled_by_enemy: true,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
+                friend_pull: false,
+                enemy_pull: true,
+                hidden_capture: false,
+                easy_capture: false,
+                overt_capture: false,
+                hard_capture: false,
                 capture: true,
-                captured: true,
-                capture_on_captured: true,
-                captured_on_capture: false,
-                any_distance: false,
-                direction_cross: false,
-                direction_diagonal: false,
-                direction_shape_L: true,
-                vital: false,
-                draw: false,
+                capturable: true,
+                counter_capture: true,
+                force_capture: false,
+                swift_move: false,
+                orthogonal_move: false,
+                diagonal_move: false,
+                broad_step: true,
+                leader: false,
+                peace_talk: false,
             }
             .build(),
         }
     }
 
     const fn scholar(player: Player) -> Piece {
-        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '士',
             player,
             formation: Self::orient(player, Formation::SCHOLAR),
             ability: AbilityConfig {
-                controlled_by_ally,
-                controlled_by_enemy,
-                push_ally: false,
+                initiative: true,
+                passivity: false,
+                push_friend: false,
                 push_enemy: false,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: false,
+                friend_push: false,
+                enemy_push: true,
+                pull_friend: false,
                 pull_enemy: false,
-                pulled_by_ally: false,
-                pulled_by_enemy: true,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
+                friend_pull: false,
+                enemy_pull: true,
+                hidden_capture: false,
+                easy_capture: false,
+                overt_capture: false,
+                hard_capture: false,
                 capture: true,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: false,
-                direction_cross: false,
-                direction_diagonal: true,
-                direction_shape_L: false,
-                vital: false,
-                draw: false,
+                capturable: true,
+                counter_capture: false,
+                force_capture: false,
+                swift_move: false,
+                orthogonal_move: false,
+                diagonal_move: true,
+                broad_step: false,
+                leader: false,
+                peace_talk: false,
             }
             .build(),
         }
     }
 
     const fn pawn(player: Player) -> Piece {
-        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '卒',
             player,
             formation: Self::orient(player, Formation::PAWN),
             ability: AbilityConfig {
-                controlled_by_ally,
-                controlled_by_enemy,
-                push_ally: false,
+                initiative: true,
+                passivity: false,
+                push_friend: false,
                 push_enemy: false,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: false,
+                friend_push: false,
+                enemy_push: true,
+                pull_friend: false,
                 pull_enemy: false,
-                pulled_by_ally: false,
-                pulled_by_enemy: true,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
+                friend_pull: false,
+                enemy_pull: true,
+                hidden_capture: false,
+                easy_capture: false,
+                overt_capture: false,
+                hard_capture: false,
                 capture: true,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: false,
-                direction_cross: true,
-                direction_diagonal: false,
-                direction_shape_L: false,
-                vital: false,
-                draw: false,
+                capturable: true,
+                counter_capture: false,
+                force_capture: false,
+                swift_move: false,
+                orthogonal_move: true,
+                diagonal_move: false,
+                broad_step: false,
+                leader: false,
+                peace_talk: false,
             }
             .build(),
         }
     }
 
     const fn horse(player: Player) -> Piece {
-        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '马',
             player,
             formation: Self::orient(player, Formation::HORSE),
             ability: AbilityConfig {
-                controlled_by_ally,
-                controlled_by_enemy,
-                push_ally: false,
+                initiative: true,
+                passivity: false,
+                push_friend: false,
                 push_enemy: false,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: false,
+                friend_push: false,
+                enemy_push: true,
+                pull_friend: false,
                 pull_enemy: false,
-                pulled_by_ally: false,
-                pulled_by_enemy: true,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
+                friend_pull: false,
+                enemy_pull: true,
+                hidden_capture: false,
+                easy_capture: false,
+                overt_capture: false,
+                hard_capture: false,
                 capture: true,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: false,
-                direction_cross: false,
-                direction_diagonal: false,
-                direction_shape_L: true,
-                vital: false,
-                draw: false,
+                capturable: true,
+                counter_capture: false,
+                force_capture: false,
+                swift_move: false,
+                orthogonal_move: false,
+                diagonal_move: false,
+                broad_step: true,
+                leader: false,
+                peace_talk: false,
             }
             .build(),
         }
     }
 
     const fn rook(player: Player) -> Piece {
-        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '车',
             player,
             formation: Self::orient(player, Formation::ROOK),
             ability: AbilityConfig {
-                controlled_by_ally,
-                controlled_by_enemy,
-                push_ally: false,
+                initiative: true,
+                passivity: false,
+                push_friend: false,
                 push_enemy: false,
-                pushed_by_ally: false,
-                pushed_by_enemy: true,
-                pull_ally: false,
+                friend_push: false,
+                enemy_push: true,
+                pull_friend: false,
                 pull_enemy: false,
-                pulled_by_ally: false,
-                pulled_by_enemy: true,
-                capture_on_push_blocked: false,
-                captured_on_push_blocked: false,
-                push_on_capture_unblocked: false,
-                pushed_on_capture_unblocked: false,
+                friend_pull: false,
+                enemy_pull: true,
+                hidden_capture: false,
+                easy_capture: false,
+                overt_capture: false,
+                hard_capture: false,
                 capture: true,
-                captured: true,
-                capture_on_captured: false,
-                captured_on_capture: false,
-                any_distance: true,
-                direction_cross: true,
-                direction_diagonal: false,
-                direction_shape_L: false,
-                vital: false,
-                draw: false,
+                capturable: true,
+                counter_capture: false,
+                force_capture: false,
+                swift_move: true,
+                orthogonal_move: true,
+                diagonal_move: false,
+                broad_step: false,
+                leader: false,
+                peace_talk: false,
             }
             .build(),
         }
@@ -768,49 +747,48 @@ impl Piece {
     }
 
     /// Whether this piece can shove `target`: same color needs mover
-    /// PUSH_ALLY **or** target PUSHED_BY_ALLY; different colors need mover
-    /// PUSH_ENEMY **and** target PUSHED_BY_ENEMY.
+    /// PUSH_FRIEND **or** target FRIEND_PUSH; different colors need mover
+    /// PUSH_ENEMY **and** target ENEMY_PUSH.
     pub fn can_push(&self, target: Piece) -> bool {
         if self.player == target.player {
-            return self.ability.has(Ability::PUSH_ALLY)
-                || target.ability.has(Ability::PUSHED_BY_ALLY);
+            return self.ability.has(Ability::PUSH_FRIEND)
+                || target.ability.has(Ability::FRIEND_PUSH);
         }
-        self.ability.has(Ability::PUSH_ENEMY) && target.ability.has(Ability::PUSHED_BY_ENEMY)
+        self.ability.has(Ability::PUSH_ENEMY) && target.ability.has(Ability::ENEMY_PUSH)
     }
 
     /// Whether this piece can pull `target`: same color needs mover
-    /// PULL_ALLY **or** target PULLED_BY_ALLY; different colors need mover
-    /// PULL_ENEMY **and** target PULLED_BY_ENEMY.
+    /// PULL_FRIEND **or** target FRIEND_PULL; different colors need mover
+    /// PULL_ENEMY **and** target ENEMY_PULL.
     pub fn can_pull(&self, target: Piece) -> bool {
         if self.player == target.player {
-            return self.ability.has(Ability::PULL_ALLY)
-                || target.ability.has(Ability::PULLED_BY_ALLY);
+            return self.ability.has(Ability::PULL_FRIEND)
+                || target.ability.has(Ability::FRIEND_PULL);
         }
-        self.ability.has(Ability::PULL_ENEMY) && target.ability.has(Ability::PULLED_BY_ENEMY)
+        self.ability.has(Ability::PULL_ENEMY) && target.ability.has(Ability::ENEMY_PULL)
     }
 
     /// Whether this piece can capture `target` normally or through
     /// mutual-destruction bypass, regardless of color, and either
-    /// (i) attacker has CAPTURED_ON_CAPTURE (sacrifice, bypasses target's
-    /// CAPTURED), (ii) target has CAPTURE_ON_CAPTURED (retaliation, bypasses
+    /// (i) attacker has FORCE_CAPTURE (sacrifice, bypasses target's
+    /// CAPTURED), (ii) target has COUNTER_CAPTURE (retaliation, bypasses
     /// attacker's CAPTURE), or (iii) attacker has CAPTURE and target has
     /// CAPTURED. Path rules are the caller's concern.
     pub fn can_capture(&self, target: Piece) -> bool {
-        if self.ability.has(Ability::CAPTURED_ON_CAPTURE)
-            || target.ability.has(Ability::CAPTURE_ON_CAPTURED)
+        if self.ability.has(Ability::FORCE_CAPTURE) || target.ability.has(Ability::COUNTER_CAPTURE)
         {
             return true;
         }
-        self.ability.has(Ability::CAPTURE) && target.ability.has(Ability::CAPTURED)
+        self.ability.has(Ability::CAPTURE) && target.ability.has(Ability::CAPTURABLE)
     }
 
-    /// Whether player may command this piece, per its CONTROLLED_BY_*
+    /// Whether player may command this piece, per its INITIATIVE or PASSIVITY
     /// abilities relative to the piece's owning player.
     pub fn can_controlled_by(&self, player: Player) -> bool {
         if player == self.player {
-            return self.ability.has(Ability::CONTROLLED_BY_ALLY);
+            return self.ability.has(Ability::INITIATIVE);
         }
-        self.ability.has(Ability::CONTROLLED_BY_ENEMY)
+        self.ability.has(Ability::PASSIVITY)
     }
 }
 

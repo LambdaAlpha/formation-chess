@@ -41,7 +41,7 @@ no authentication, remote matchmaking, or durable game storage.
   including move, capture, push, pull, draw, and targeted resign candidates.
 - The board renders both Red's down-pointing Mobility pentagon and Black's
   vertically mirrored up-pointing pentagon.
-- A successful Draw refreshes both exchanged Vital-piece positions.
+- A successful draw updates both exchanged pieces with Leader.
 - The standalone resign button is shown only during placement. During movement,
   resignation is the `认负` candidate on a controlled General's action menu.
 - Undo restores one action in Human/Human or Agent/Agent games. In mixed games,
@@ -129,7 +129,7 @@ Placement and targeted resignation are:
 ```
 
 During placement the backend ignores the resign coordinate; the UI sends
-`[0, 0]`. During movement, `at` must identify the controlled Vital piece that
+`[0, 0]`. During movement, `at` must identify the controlled piece with Leader that
 is resigning.
 
 ### Legal actions and Agent analysis

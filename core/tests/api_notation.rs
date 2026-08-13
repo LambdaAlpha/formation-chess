@@ -111,9 +111,9 @@ fn state_parser_rejects_invalid_vital_configuration() {
 五[红将 一一 一一 一一 一一]
 ";
     let Err(err) = Game::from_str(state) else {
-        panic!("double vital must fail");
+        panic!("double leader must fail");
     };
-    assert!(err.contains("at most one vital piece"), "unexpected error: {err}");
+    assert!(err.contains("at most one Leader piece"), "unexpected error: {err}");
 }
 
 #[test]
@@ -210,7 +210,7 @@ fn state_parser_requires_result_after_vital_loss() {
     let Err(err) = Game::from_str(state) else {
         panic!("unfinished result on a decided position must fail");
     };
-    assert!(err.contains("validate_vital_result failed"), "unexpected error: {err}");
+    assert!(err.contains("validate_leader_result failed"), "unexpected error: {err}");
 }
 
 #[test]

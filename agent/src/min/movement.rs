@@ -1032,7 +1032,7 @@ fn displaces_tactical_piece(
             continue;
         }
         let effective = board.effective(change.at).unwrap_or(piece);
-        if effective.ability.has(Ability::VITAL) || effective.ability.has(Ability::ANY_DISTANCE) {
+        if effective.ability.has(Ability::LEADER) || effective.ability.has(Ability::SWIFT_MOVE) {
             return true;
         }
     }
@@ -1082,10 +1082,10 @@ fn tactical_ability_changed(before: Piece, after: Piece) -> bool {
     }
     for ability in [
         Ability::CAPTURE,
-        Ability::CAPTURE_ON_PUSH_BLOCKED,
-        Ability::CAPTURE_ON_CAPTURED,
-        Ability::CAPTURED_ON_CAPTURE,
-        Ability::ANY_DISTANCE,
+        Ability::HIDDEN_CAPTURE,
+        Ability::COUNTER_CAPTURE,
+        Ability::FORCE_CAPTURE,
+        Ability::SWIFT_MOVE,
     ] {
         if before.ability.has(ability) != after.ability.has(ability) {
             return true;
@@ -1122,7 +1122,7 @@ fn preview_action(board: &Board, action: Action) -> ActionPreview {
         Action::Resign(x, y) => {
             let piece = board
                 .effective((x, y))
-                .expect("enumerated resignation must retain its vital piece");
+                .expect("enumerated resignation must retain its leader piece");
             let result = match piece.player {
                 Player::Red => GameResult::BlackWin,
                 Player::Black => GameResult::RedWin,
@@ -1596,9 +1596,9 @@ mod tests {
     fn internal_probe_keeps_push_escalation_that_really_captures() {
         let mut attacker = Piece::RED_ROOK;
         attacker.ability &= !Ability::CAPTURE;
-        attacker.ability |= Ability::PUSH_ENEMY | Ability::CAPTURE_ON_PUSH_BLOCKED;
+        attacker.ability |= Ability::PUSH_ENEMY | Ability::HIDDEN_CAPTURE;
         let mut target = Piece::BLACK_ROOK;
-        target.ability |= Ability::PUSHED_BY_ENEMY;
+        target.ability |= Ability::ENEMY_PUSH;
         let game = movement_game(&[
             ((0, 4), Piece::RED_GENERAL),
             ((3, 2), attacker),
@@ -1678,8 +1678,8 @@ mod tests {
     fn quick_shortlist_rejects_quiet_move_into_capture() {
         let mut board = Board::new(7, 7);
         let mut black_attacker = Piece::BLACK_ROOK;
-        black_attacker.ability &= !Ability::CAPTURED;
-        black_attacker.ability &= !Ability::CAPTURE_ON_CAPTURED;
+        black_attacker.ability &= !Ability::CAPTURABLE;
+        black_attacker.ability &= !Ability::COUNTER_CAPTURE;
         board[(6, 6)] = Some(Piece::RED_GENERAL);
         board[(1, 3)] = Some(Piece::RED_ROOK);
         board[(6, 0)] = Some(Piece::BLACK_GENERAL);
@@ -1715,13 +1715,13 @@ mod tests {
         let mut board = Board::new(7, 7);
         let mut attacker = Piece::RED_ROOK;
         attacker.ability &= !Ability::CAPTURE;
-        attacker.ability |= Ability::CAPTURED_ON_CAPTURE
+        attacker.ability |= Ability::FORCE_CAPTURE
             | Ability::PUSH_ENEMY
             | Ability::PULL_ENEMY
-            | Ability::CAPTURE_ON_PUSH_BLOCKED
-            | Ability::DIRECTION_DIAGONAL;
+            | Ability::HIDDEN_CAPTURE
+            | Ability::DIAGONAL_MOVE;
         let mut target = Piece::BLACK_PAWN;
-        target.ability = Ability::CONTROLLED_BY_ALLY | Ability::CAPTURED;
+        target.ability = Ability::INITIATIVE | Ability::CAPTURABLE;
         board[(6, 6)] = Some(Piece::RED_GENERAL);
         board[(0, 3)] = Some(attacker);
         board[(6, 0)] = Some(Piece::BLACK_GENERAL);

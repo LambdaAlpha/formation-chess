@@ -165,7 +165,7 @@ fn piece_position(m: Move) -> PiecePosition {
     }
 }
 
-fn vital_id(player: Player) -> PieceId {
+fn leader_id(player: Player) -> PieceId {
     PieceId { name: Piece::GENERAL_NAME, player }
 }
 
@@ -524,11 +524,11 @@ impl<'a> NotationResolver<'a> {
 
     fn resolve_resign(&self, piece: PieceId) -> Result<Action, String> {
         if piece.name != Piece::GENERAL_NAME {
-            return Err(format!("{} is not a vital piece", piece));
+            return Err(format!("{} is not a Leader piece", piece));
         }
         if self.game.phase() == Phase::Place {
             if piece.player != self.game.player() {
-                return Err(format!("认负 requires {}'s vital piece", self.game.player()));
+                return Err(format!("认负 requires {}'s Leader piece", self.game.player()));
             }
             return Ok(Action::Resign(0, 0));
         }
@@ -777,10 +777,10 @@ impl<'a> NotationResolver<'a> {
 
     fn resign_id(&self, pos: (u8, u8)) -> PieceId {
         if self.game.phase() == Phase::Place {
-            return vital_id(self.game.player());
+            return leader_id(self.game.player());
         }
         let Some(piece) = self.game.board().get(pos) else {
-            return vital_id(self.game.player());
+            return leader_id(self.game.player());
         };
         piece.id()
     }

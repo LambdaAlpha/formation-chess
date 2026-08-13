@@ -18,9 +18,9 @@ pub enum Action {
     /// Move to an empty point and pull the piece one movement step behind
     /// the origin into the origin.
     Pull(Move),
-    /// Exchange positions with an opponent's vital piece to draw the game.
+    /// Exchange positions with an opponent's Leader piece to draw the game.
     Draw(Move),
-    /// Concede the side owning the vital piece at the coordinate. The
+    /// Concede the side owning the Leader piece at the coordinate. The
     /// coordinate is ignored during the placement phase.
     Resign(u8, u8),
 }

@@ -62,109 +62,99 @@ impl Formation {
         (mask, Ability::NONE)
     }
 
-    /// Allies gain DRAW; enemies lose it.
+    /// Allies gain Peace Talk; enemies lose it.
     pub fn general(owner: Player, object: Player) -> (Ability, Ability) {
-        Self::grant_allies_strip_enemies(owner, object, Ability::DRAW)
+        Self::grant_allies_strip_enemies(owner, object, Ability::PEACE_TALK)
     }
 
     /// Allies lose enemy control; enemies gain enemy control.
     pub fn stratagem(owner: Player, object: Player) -> (Ability, Ability) {
-        let update = if owner == object { Ability::NONE } else { Ability::CONTROLLED_BY_ENEMY };
-        (Ability::CONTROLLED_BY_ENEMY, update)
+        let update = if owner == object { Ability::NONE } else { Ability::PASSIVITY };
+        (Ability::PASSIVITY, update)
     }
 
-    /// Allies gain active push escalation; enemies gain passive escalation.
+    /// Allies gain Hidden Capture; enemies gain Easy Capture.
     pub fn momentum(owner: Player, object: Player) -> (Ability, Ability) {
-        let mask = Ability::CAPTURE_ON_PUSH_BLOCKED | Ability::CAPTURED_ON_PUSH_BLOCKED;
-        let update = if owner == object {
-            Ability::CAPTURE_ON_PUSH_BLOCKED
-        } else {
-            Ability::CAPTURED_ON_PUSH_BLOCKED
-        };
+        let mask = Ability::HIDDEN_CAPTURE | Ability::EASY_CAPTURE;
+        let update = if owner == object { Ability::HIDDEN_CAPTURE } else { Ability::EASY_CAPTURE };
         (mask, update)
     }
 
-    /// Allies gain passive capture demotion; enemies gain active demotion.
+    /// Allies gain Hard Capture; enemies gain Overt Capture.
     pub fn adaptation(owner: Player, object: Player) -> (Ability, Ability) {
-        let mask = Ability::PUSH_ON_CAPTURE_UNBLOCKED | Ability::PUSHED_ON_CAPTURE_UNBLOCKED;
-        let update = if owner == object {
-            Ability::PUSHED_ON_CAPTURE_UNBLOCKED
-        } else {
-            Ability::PUSH_ON_CAPTURE_UNBLOCKED
-        };
+        let mask = Ability::OVERT_CAPTURE | Ability::HARD_CAPTURE;
+        let update = if owner == object { Ability::HARD_CAPTURE } else { Ability::OVERT_CAPTURE };
         (mask, update)
     }
 
-    /// Allies gain DIRECTION_DIAGONAL; enemies lose it.
+    /// Allies gain Diagonal Move; enemies lose it.
     pub fn scholar(owner: Player, object: Player) -> (Ability, Ability) {
-        Self::grant_allies_strip_enemies(owner, object, Ability::DIRECTION_DIAGONAL)
+        Self::grant_allies_strip_enemies(owner, object, Ability::DIAGONAL_MOVE)
     }
 
-    /// Allies gain DIRECTION_CROSS; enemies lose it.
+    /// Allies gain Orthogonal Move; enemies lose it.
     pub fn pawn(owner: Player, object: Player) -> (Ability, Ability) {
-        Self::grant_allies_strip_enemies(owner, object, Ability::DIRECTION_CROSS)
+        Self::grant_allies_strip_enemies(owner, object, Ability::ORTHOGONAL_MOVE)
     }
 
-    /// Allies gain DIRECTION_SHAPE_L; enemies lose it.
+    /// Allies gain Broad Step; enemies lose it.
     pub fn horse(owner: Player, object: Player) -> (Ability, Ability) {
-        Self::grant_allies_strip_enemies(owner, object, Ability::DIRECTION_SHAPE_L)
+        Self::grant_allies_strip_enemies(owner, object, Ability::BROAD_STEP)
     }
 
-    /// Allies gain ANY_DISTANCE; enemies lose it.
+    /// Allies gain Swift Move; enemies lose it.
     pub fn rook(owner: Player, object: Player) -> (Ability, Ability) {
-        Self::grant_allies_strip_enemies(owner, object, Ability::ANY_DISTANCE)
+        Self::grant_allies_strip_enemies(owner, object, Ability::SWIFT_MOVE)
     }
 
-    /// Allies gain both pull abilities; enemies lose both.
+    /// Allies gain Pull Ally and Pull Enemy; enemies lose both.
     pub fn wind(owner: Player, object: Player) -> (Ability, Ability) {
-        let mask = Ability::PULL_ALLY | Ability::PULL_ENEMY;
+        let mask = Ability::PULL_FRIEND | Ability::PULL_ENEMY;
         Self::grant_allies_strip_enemies(owner, object, mask)
     }
 
-    /// Takes over both pulled-by abilities: allies become pullable by
-    /// allies only, enemies pullable by the forest's side only.
+    /// Replaces both passive pull abilities: allies gain Ally Pull and lose Enemy Pull;
+    /// enemies gain Enemy Pull and lose Ally Pull.
     pub fn forest(owner: Player, object: Player) -> (Ability, Ability) {
-        let mask = Ability::PULLED_BY_ALLY | Ability::PULLED_BY_ENEMY;
-        let update =
-            if owner == object { Ability::PULLED_BY_ALLY } else { Ability::PULLED_BY_ENEMY };
+        let mask = Ability::FRIEND_PULL | Ability::ENEMY_PULL;
+        let update = if owner == object { Ability::FRIEND_PULL } else { Ability::ENEMY_PULL };
         (mask, update)
     }
 
-    /// Allies gain both push abilities; enemies lose both.
+    /// Allies gain Push Ally and Push Enemy; enemies lose both.
     pub fn fire(owner: Player, object: Player) -> (Ability, Ability) {
-        let mask = Ability::PUSH_ALLY | Ability::PUSH_ENEMY;
+        let mask = Ability::PUSH_FRIEND | Ability::PUSH_ENEMY;
         Self::grant_allies_strip_enemies(owner, object, mask)
     }
 
-    /// Takes over both pushed-by abilities: allies become pushable by
-    /// allies only, enemies pushable by the mountain's side only.
+    /// Replaces both passive push abilities: allies gain Ally Push and lose Enemy Push;
+    /// enemies gain Enemy Push and lose Ally Push.
     pub fn mountain(owner: Player, object: Player) -> (Ability, Ability) {
-        let mask = Ability::PUSHED_BY_ALLY | Ability::PUSHED_BY_ENEMY;
-        let update =
-            if owner == object { Ability::PUSHED_BY_ALLY } else { Ability::PUSHED_BY_ENEMY };
+        let mask = Ability::FRIEND_PUSH | Ability::ENEMY_PUSH;
+        let update = if owner == object { Ability::FRIEND_PUSH } else { Ability::ENEMY_PUSH };
         (mask, update)
     }
 
-    /// Allies gain CAPTURE; enemies lose it.
+    /// Allies gain Capture; enemies lose it.
     pub fn spear(owner: Player, object: Player) -> (Ability, Ability) {
         Self::grant_allies_strip_enemies(owner, object, Ability::CAPTURE)
     }
 
     /// Allies become uncapturable; enemies become capturable.
     pub fn shield(owner: Player, object: Player) -> (Ability, Ability) {
-        let mask = Ability::CAPTURED;
-        let update = if owner == object { Ability::NONE } else { Ability::CAPTURED };
+        let mask = Ability::CAPTURABLE;
+        let update = if owner == object { Ability::NONE } else { Ability::CAPTURABLE };
         (mask, update)
     }
 
-    /// Allies gain CAPTURED_ON_CAPTURE; enemies lose it.
+    /// Allies gain Force Capture; enemies lose it.
     pub fn shell(owner: Player, object: Player) -> (Ability, Ability) {
-        Self::grant_allies_strip_enemies(owner, object, Ability::CAPTURED_ON_CAPTURE)
+        Self::grant_allies_strip_enemies(owner, object, Ability::FORCE_CAPTURE)
     }
 
-    /// Allies gain CAPTURE_ON_CAPTURED; enemies lose it.
+    /// Allies gain Counter Capture; enemies lose it.
     pub fn mine(owner: Player, object: Player) -> (Ability, Ability) {
-        Self::grant_allies_strip_enemies(owner, object, Ability::CAPTURE_ON_CAPTURED)
+        Self::grant_allies_strip_enemies(owner, object, Ability::COUNTER_CAPTURE)
     }
 
     /// Whether the formation covers the neighbor at relative offset (dx, dy),

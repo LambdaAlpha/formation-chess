@@ -1,5 +1,5 @@
 =====
-allied ANY_DISTANCE grant extends movement
+allied Swift Move grant extends movement
 -----
 行棋方：红
 红方：[]
@@ -30,7 +30,7 @@ allied ANY_DISTANCE grant extends movement
 变化：[红士四二]
 胜负：未分
 =====
-enemy ANY_DISTANCE denial reduces movement to one step
+enemy Swift Move denial reduces movement to one step
 -----
 行棋方：黑
 红方：[]
@@ -60,7 +60,7 @@ enemy ANY_DISTANCE denial reduces movement to one step
 -----
 错误：piece 黑车 at (1,2) cannot move to (3,2)
 =====
-allied DIRECTION_DIAGONAL grant enables movement
+allied Diagonal Move grant enables movement
 -----
 行棋方：红
 红方：[]
@@ -91,7 +91,7 @@ allied DIRECTION_DIAGONAL grant enables movement
 变化：[红卒三三]
 胜负：未分
 =====
-enemy DIRECTION_DIAGONAL denial removes a base direction
+enemy Diagonal Move denial removes a base direction
 -----
 行棋方：黑
 红方：[]
@@ -458,7 +458,7 @@ allied pushability rewrite blocks an enemy PUSH
 -----
 错误：cannot push 红矛 at (2,2)
 =====
-allied PUSHED_BY_ALLY grant permits PUSH without PUSH_ALLY
+allied Ally Push grant permits PUSH without Push Ally
 -----
 行棋方：红
 红方：[]
@@ -489,7 +489,7 @@ allied PUSHED_BY_ALLY grant permits PUSH without PUSH_ALLY
 变化：[红车平三 红卒平四]
 胜负：未分
 =====
-enemy pushability rewrite removes PUSHED_BY_ALLY
+enemy pushability rewrite removes Ally Push
 -----
 行棋方：黑
 红方：[]
@@ -550,7 +550,7 @@ allied DRAW grant enables a DRAW exchange
 变化：[黑将二四 红卒进一]
 胜负：和棋
 =====
-allied CAPTURED_ON_CAPTURE grant causes mutual destruction
+allied Force Capture grant causes mutual destruction
 -----
 行棋方：红
 红方：[]
@@ -581,7 +581,7 @@ allied CAPTURED_ON_CAPTURE grant causes mutual destruction
 变化：[红车失 黑盾失]
 胜负：未分
 =====
-allied CAPTURE_ON_CAPTURED grant bypasses missing CAPTURE
+allied Counter Capture grant bypasses missing CAPTURE
 -----
 行棋方：黑
 红方：[]

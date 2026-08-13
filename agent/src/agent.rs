@@ -13,7 +13,7 @@ pub enum AgentInput<'a> {
     /// the supplied game, and receive only the compact geometric area.
     Placement { area: PlacementArea },
     /// Movement agents receive the exact legal-action list prepared by the
-    /// framework, including controlled-vital Resign actions.
+    /// framework, including controlled-leader Resign actions.
     Movement { legal_actions: &'a [Action] },
 }
 

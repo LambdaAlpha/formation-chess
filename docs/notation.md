@@ -75,13 +75,13 @@ acceptable snapshot must satisfy all of these consistency rules:
 
 - every Red pool entry is a Red piece and every Black pool entry is a Black
   piece;
-- each owner has at most one Vital piece across its pool and board;
+- each owner has at most one Leader piece across its pool and board;
 - when either pool is non-empty, every on-board piece lies in its owner's
   placement half;
 - placement pool sizes and the declared next player/result are compatible with
   strict Red-then-Black alternation;
-- an unfinished snapshot retains a Vital piece for both owners;
-- a declared Red or Black win retains a Vital piece for the winner; and
+- an unfinished snapshot retains a Leader piece for both owners;
+- a declared Red or Black win retains a Leader piece for the winner; and
 - a draw cannot be declared while the game is still in placement.
 
 On an odd-height board, the center row belongs to neither placement half.
@@ -129,7 +129,7 @@ destination, `平`, or `直`.
 | `捉` | capture | occupied |
 | `推` | push | occupied |
 | `拉` | pull the piece behind the origin | empty |
-| `和` | exchange with an opposing Vital piece and draw | occupied |
+| `和` | exchange with an opposing Leader piece and draw | occupied |
 
 There is no `分` suffix. A suffix declares intent but does not prove legality.
 
@@ -157,7 +157,7 @@ phase and the piece is uniquely present on the board.
 ```
 
 - `认负` must name a General. During movement, it must uniquely identify an
-  on-board Vital piece controlled by the current player; the named piece's owner
+  on-board Leader piece controlled by the current player; the named piece's owner
   loses. During placement, the phrase must name the current player's General,
   and the current player loses directly.
 
@@ -226,9 +226,9 @@ During placement, the unsuffixed form is also accepted for a pool arrival:
 胜负：未分
 ```
 
-A Draw action swaps the acting piece with an opposing Vital piece and ends the
+A 和棋行动 swaps the acting piece with an opposing Leader piece and ends the
 game as a draw. For example, in the position below 红势 at 二二 has gained the
-draw ability from 红将's formation and swaps with 黑将 at 四四:
+Peace Talk能力 from 红将's formation and swaps with 黑将 at 四四:
 
 ```text
 棋盘：

@@ -17,7 +17,7 @@ The framework prepares phase-specific AgentInput values:
   Game, so the framework does not materialize every piece-position action.
 - Movement receives the current Game and an explicit slice containing every
   legal core movement action, including targeted Resign actions for controlled
-  Vital pieces.
+  pieces with Leader.
 
 prepare_turn creates a PreparedTurn that borrows the exact immutable Game and
 owns any enumerated movement actions. Core enumeration order is preserved.
@@ -100,7 +100,7 @@ group to a fixed signed range, exposes each weighted contribution, and performs
 all aggregation with integer arithmetic. Finished games receive exact utility;
 non-terminal utility remains strictly inside that bound.
 
-The evaluator covers Vital safety, inherent abilities, net formation changes,
+The evaluator covers Leader safety, inherent abilities, net formation changes,
 control, attack-tested empty-destination mobility, actual resolved
 capture/push/pull outcomes, low-weight Red/Black material, side-to-move tempo,
 and control × ability × mobility interactions. Placement control also measures
@@ -110,13 +110,13 @@ allied edge. Positive capture or blocked-push exchanges use up to two same-point
 replies as a bounded static exchange evaluation, so an undefended tactical gain
 can be rejected while a defended capture recovers value through its recapture
 chain. Exchange pressure groups those gains by distinct target instead of
-rewarding duplicate attacks on one hanging piece. Quiet mobility and Vital
+rewarding duplicate attacks on one hanging piece. Quiet mobility and Leader
 escape counts exclude destinations where a currently reachable opponent capture
 wins the game or produces a favorable exchange. Negative reply-adjusted
-exchanges do not create mobility or action-effect bonuses. Draw actions exchange
-the two Vital pieces and are scored only through their exact terminal utility of
+exchanges do not create mobility or action-effect bonuses. draw actions exchange
+the two pieces with Leader and are scored only through their exact terminal utility of
 zero. Targeted Resign actions receive the exact result implied by the selected
-Vital piece.
+piece with Leader.
 
 MinAgent implements deterministic placement analysis. It scans unique
 piece-position combinations lazily rather than materializing the Cartesian
@@ -154,7 +154,7 @@ the retained beam; the saved probes fund verification of more competitive roots
 instead of repeatedly re-evaluating marginal replies.
 Opponent width retains the statically worst branches.
 
-A capture, blocked-push capture, or immediate Vital threat present after an
+A capture, blocked-push capture, or immediate Leader threat present after an
 opponent reply can enter up to five alternating tactical response plies. The
 shared node budget and response width bound every continuation; remaining nodes
 are divided only among branches that stay tactically noisy. Actions returning to

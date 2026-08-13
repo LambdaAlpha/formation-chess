@@ -57,12 +57,12 @@ fn movement_game_on(width: u8, height: u8, player: Player, pieces: &[((u8, u8), 
 }
 
 fn quiet_piece(mut piece: Piece) -> Piece {
-    let control = Ability::CONTROLLED_BY_ALLY;
+    let control = Ability::INITIATIVE;
     let movement = piece.ability
-        & (Ability::DIRECTION_CROSS
-            | Ability::DIRECTION_DIAGONAL
-            | Ability::DIRECTION_SHAPE_L
-            | Ability::VITAL);
+        & (Ability::ORTHOGONAL_MOVE
+            | Ability::DIAGONAL_MOVE
+            | Ability::BROAD_STEP
+            | Ability::LEADER);
     piece.ability = control | movement;
     piece
 }
@@ -306,7 +306,7 @@ fn unfavorable_position_takes_an_available_draw() {
 #[test]
 fn immediate_loss_receives_exact_negative_score() {
     let mut red_general = Piece::RED_GENERAL;
-    red_general.ability.add(Ability::CAPTURED_ON_CAPTURE);
+    red_general.ability.add(Ability::FORCE_CAPTURE);
     let game = movement_game(Player::Red, &[
         ((0, 4), red_general),
         ((2, 2), Piece::BLACK_ROOK),
@@ -327,7 +327,7 @@ fn immediate_loss_receives_exact_negative_score() {
 #[test]
 fn controlled_vital_resignations_receive_exact_terminal_scores() {
     let mut controlled_black_general = Piece::BLACK_GENERAL;
-    controlled_black_general.ability.add(Ability::CONTROLLED_BY_ENEMY);
+    controlled_black_general.ability.add(Ability::PASSIVITY);
     let game = movement_game(Player::Red, &[
         ((0, 4), Piece::RED_GENERAL),
         ((4, 1), controlled_black_general),

@@ -151,7 +151,7 @@ CAPTURE rejects a blocked path
 -----
 错误：path blocked, cannot reach destination
 =====
-CAPTURE_ON_CAPTURED bypasses missing CAPTURE and destroys both pieces
+Counter Capture bypasses missing CAPTURE and destroys both pieces
 -----
 行棋方：红
 红方：[]
@@ -182,7 +182,7 @@ CAPTURE_ON_CAPTURED bypasses missing CAPTURE and destroys both pieces
 变化：[红计失 黑雷失]
 胜负：未分
 =====
-CAPTURED_ON_CAPTURE bypasses missing CAPTURED and destroys both pieces
+Force Capture bypasses missing CAPTURED and destroys both pieces
 -----
 行棋方：红
 红方：[]
@@ -244,7 +244,7 @@ mutual-destruction abilities permit a same-player target
 变化：[红弹失 红盾失]
 胜负：未分
 =====
-CAPTURED target suppresses CAPTURED_ON_CAPTURE sacrifice
+CAPTURED target suppresses Force Capture sacrifice
 -----
 行棋方：红
 红方：[]
@@ -275,7 +275,7 @@ CAPTURED target suppresses CAPTURED_ON_CAPTURE sacrifice
 变化：[红弹三三]
 胜负：未分
 =====
-CAPTURED target suppresses CAPTURE_ON_CAPTURED retaliation
+CAPTURED target suppresses Counter Capture retaliation
 -----
 行棋方：红
 红方：[]
@@ -306,7 +306,7 @@ CAPTURED target suppresses CAPTURE_ON_CAPTURED retaliation
 变化：[红车平三]
 胜负：未分
 =====
-PUSH_ON_CAPTURE_UNBLOCKED demotes CAPTURE to a push
+Overt Capture demotes CAPTURE to a push
 -----
 行棋方：黑
 红方：[]
@@ -337,7 +337,7 @@ PUSH_ON_CAPTURE_UNBLOCKED demotes CAPTURE to a push
 变化：[黑车平二 红士平一]
 胜负：未分
 =====
-PUSHED_ON_CAPTURE_UNBLOCKED demotes CAPTURE to a push
+Hard Capture demotes CAPTURE to a push
 -----
 行棋方：黑
 红方：[]
@@ -399,7 +399,7 @@ blocked capture demotion falls back to ordinary CAPTURE
 变化：[黑车平二]
 胜负：未分
 =====
-DIRECTION_SHAPE_L capture demotion pushes to the next knight point
+Broad Step capture demotion pushes to the next knight point
 -----
 行棋方：红
 红方：[]
@@ -430,7 +430,7 @@ DIRECTION_SHAPE_L capture demotion pushes to the next knight point
 变化：[红矛二三 黑卒三五]
 胜负：未分
 =====
-DIRECTION_SHAPE_L capture demotion falls back when the pushed leg is blocked
+Broad Step capture demotion falls back when the pushed leg is blocked
 -----
 行棋方：红
 红方：[]
@@ -461,7 +461,7 @@ DIRECTION_SHAPE_L capture demotion falls back when the pushed leg is blocked
 变化：[红矛二三]
 胜负：未分
 =====
-DIRECTION_SHAPE_L capture demotion falls back when the landing is occupied
+Broad Step capture demotion falls back when the landing is occupied
 -----
 行棋方：红
 红方：[]

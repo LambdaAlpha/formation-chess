@@ -1,5 +1,5 @@
 =====
-MOVE accepts an empty destination along DIRECTION_CROSS
+MOVE accepts an empty destination along Orthogonal Move
 -----
 行棋方：红
 红方：[]
@@ -30,7 +30,7 @@ MOVE accepts an empty destination along DIRECTION_CROSS
 变化：[红车平五]
 胜负：未分
 =====
-MOVE accepts an empty destination along DIRECTION_DIAGONAL
+MOVE accepts an empty destination along Diagonal Move
 -----
 行棋方：红
 红方：[]
@@ -91,7 +91,7 @@ MOVE rejects a direction whose ability is absent
 -----
 错误：piece 红士 at (1,2) cannot move to (2,2)
 =====
-ANY_DISTANCE extends an enabled direction beyond one step
+Swift Move extends an enabled direction beyond one step
 -----
 行棋方：红
 红方：[]
@@ -152,7 +152,7 @@ one-step movement rejects a farther destination
 -----
 错误：piece 红士 at (0,4) cannot move to (2,2)
 =====
-DIRECTION_SHAPE_L reaches one knight point
+Broad Step reaches one knight point
 -----
 行棋方：红
 红方：[]
@@ -183,7 +183,7 @@ DIRECTION_SHAPE_L reaches one knight point
 变化：[红马三五]
 胜负：未分
 =====
-DIRECTION_SHAPE_L is blocked by the mover leg
+Broad Step is blocked by the mover leg
 -----
 行棋方：红
 红方：[]
@@ -213,7 +213,7 @@ DIRECTION_SHAPE_L is blocked by the mover leg
 -----
 错误：path blocked, cannot reach destination
 =====
-ANY_DISTANCE chains DIRECTION_SHAPE_L steps
+Swift Move chains Broad Step steps
 -----
 行棋方：红
 红方：[]
@@ -244,7 +244,7 @@ ANY_DISTANCE chains DIRECTION_SHAPE_L steps
 变化：[红马三五]
 胜负：未分
 =====
-chained DIRECTION_SHAPE_L is blocked at an intermediate landing
+chained Broad Step is blocked at an intermediate landing
 -----
 行棋方：红
 红方：[]
@@ -274,7 +274,7 @@ chained DIRECTION_SHAPE_L is blocked at an intermediate landing
 -----
 错误：path blocked, cannot reach destination
 =====
-chained DIRECTION_SHAPE_L is blocked at a later leg
+chained Broad Step is blocked at a later leg
 -----
 行棋方：红
 红方：[]

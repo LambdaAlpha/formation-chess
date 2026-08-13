@@ -1,5 +1,5 @@
 =====
-DRAW exchanges with an opposing VITAL and ends the game
+DRAW exchanges with an opposing Leader and ends the game
 -----
 行棋方：红
 红方：[]
@@ -90,7 +90,7 @@ DRAW requires an opposing-player target
 -----
 错误：draw requires pieces belonging to opposing players
 =====
-DRAW requires a VITAL target
+DRAW requires a Leader target
 -----
 行棋方：红
 红方：[]
@@ -118,9 +118,9 @@ DRAW requires a VITAL target
 四[一一 一一 一一 黑矛 一一]
 五[一一 一一 一一 一一 一一]
 -----
-错误：黑矛 at (3,3) is not a vital piece
+错误：黑矛 at (3,3) is not a Leader piece
 =====
-DRAW requires the DRAW ability
+DRAW requires the Peace Talk能力
 -----
 行棋方：红
 红方：[]
@@ -148,7 +148,7 @@ DRAW requires the DRAW ability
 四[一一 一一 一一 黑将 一一]
 五[红将 一一 一一 一一 一一]
 -----
-错误：only pieces with DRAW ability can draw
+错误：only pieces with Peace Talk能力 can draw
 =====
 enemy DRAW denial disables a base DRAW action
 -----
@@ -178,7 +178,7 @@ enemy DRAW denial disables a base DRAW action
 四[一一 一一 一一 一一 一一]
 五[一一 一一 一一 一一 一一]
 -----
-错误：only pieces with DRAW ability can draw
+错误：only pieces with Peace Talk能力 can draw
 =====
 DRAW rejects a blocked path
 -----

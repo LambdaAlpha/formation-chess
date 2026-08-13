@@ -17,137 +17,85 @@ type Bits = u32;
 
 /// Builder for [`Ability`] with one named boolean per ability bit.
 // Force explicit specification of every ability field. No defaults, no omissions.
-// added to struct level due to https://github.com/rust-lang/rust/issues/159323
-#[expect(non_snake_case)]
 #[derive(Copy, Clone)]
 pub struct AbilityConfig {
-    pub controlled_by_ally: bool,
-    pub controlled_by_enemy: bool,
-    pub push_ally: bool,
+    pub initiative: bool,
+    pub passivity: bool,
+    pub push_friend: bool,
     pub push_enemy: bool,
-    pub pushed_by_ally: bool,
-    pub pushed_by_enemy: bool,
-    pub pull_ally: bool,
+    pub friend_push: bool,
+    pub enemy_push: bool,
+    pub pull_friend: bool,
     pub pull_enemy: bool,
-    pub pulled_by_ally: bool,
-    pub pulled_by_enemy: bool,
-    pub capture_on_push_blocked: bool,
-    pub captured_on_push_blocked: bool,
-    pub push_on_capture_unblocked: bool,
-    pub pushed_on_capture_unblocked: bool,
+    pub friend_pull: bool,
+    pub enemy_pull: bool,
+    pub hidden_capture: bool,
+    pub easy_capture: bool,
+    pub overt_capture: bool,
+    pub hard_capture: bool,
     pub capture: bool,
-    pub captured: bool,
-    pub capture_on_captured: bool,
-    pub captured_on_capture: bool,
-    pub any_distance: bool,
-    pub direction_cross: bool,
-    pub direction_diagonal: bool,
-    pub direction_shape_L: bool,
-    pub vital: bool,
-    pub draw: bool,
+    pub capturable: bool,
+    pub counter_capture: bool,
+    pub force_capture: bool,
+    pub swift_move: bool,
+    pub orthogonal_move: bool,
+    pub diagonal_move: bool,
+    pub broad_step: bool,
+    pub leader: bool,
+    pub peace_talk: bool,
 }
 
 impl Ability {
     /// The empty ability set.
     pub const NONE: Ability = Ability(0);
-    /// The piece's owning player may command (move) it.
-    pub const CONTROLLED_BY_ALLY: Ability = Ability(1 << 0);
-    /// The opponent of the piece's owning player may command (move) it.
-    pub const CONTROLLED_BY_ENEMY: Ability = Ability(1 << 1);
-    /// Push: land on a target and shove it one step farther along the
-    /// movement direction — for L-shaped moves, to the next knight point
-    /// on the same line: a horse at (0,0) pushing the target on (1,2)
-    /// sends it to (2,4). The shove is external force, so the target
-    /// needs no direction ability of its own.
-    ///
-    /// Pushing an ally requires mover PUSH_ALLY **or** target
-    /// PUSHED_BY_ALLY; either side's consent suffices.
-    pub const PUSH_ALLY: Ability = Ability(1 << 2);
-    /// Pushing an enemy requires mover PUSH_ENEMY **and** target
-    /// PUSHED_BY_ENEMY; both must agree. See [`Self::PUSH_ALLY`] for how
-    /// pushing works.
+    /// Initiative: the piece's owner can control it.
+    pub const INITIATIVE: Ability = Ability(1 << 0);
+    /// Passivity: the piece's enemy can control it.
+    pub const PASSIVITY: Ability = Ability(1 << 1);
+    /// Push Ally: actively push an allied piece.
+    pub const PUSH_FRIEND: Ability = Ability(1 << 2);
+    /// Push Enemy: actively push an enemy piece.
     pub const PUSH_ENEMY: Ability = Ability(1 << 3);
-    /// Can be shoved by allies; see [`Self::PUSH_ALLY`].
-    pub const PUSHED_BY_ALLY: Ability = Ability(1 << 4);
-    /// Can be shoved by enemies; see [`Self::PUSH_ENEMY`].
-    pub const PUSHED_BY_ENEMY: Ability = Ability(1 << 5);
-    /// Pulling an ally requires mover PULL_ALLY **or** target
-    /// PULLED_BY_ALLY; either side's consent suffices.
-    pub const PULL_ALLY: Ability = Ability(1 << 6);
-    /// Pulling an enemy requires mover PULL_ENEMY **and** target
-    /// PULLED_BY_ENEMY; both must agree.
+    /// Ally Push: be pushed by an allied piece.
+    pub const FRIEND_PUSH: Ability = Ability(1 << 4);
+    /// Enemy Push: be pushed by an enemy piece.
+    pub const ENEMY_PUSH: Ability = Ability(1 << 5);
+    /// Pull Ally: actively pull an allied piece.
+    pub const PULL_FRIEND: Ability = Ability(1 << 6);
+    /// Pull Enemy: actively pull an enemy piece.
     pub const PULL_ENEMY: Ability = Ability(1 << 7);
-    /// Can be pulled by an ally; see [`Self::PULL_ALLY`].
-    pub const PULLED_BY_ALLY: Ability = Ability(1 << 8);
-    /// Can be pulled by an enemy; see [`Self::PULL_ENEMY`].
-    pub const PULLED_BY_ENEMY: Ability = Ability(1 << 9);
-    /// Push escalation (active): when this piece pushes and the push is
-    /// blocked (target cannot land), the push becomes a capture —
-    /// destroying the target regardless of its abilities or color.
-    pub const CAPTURE_ON_PUSH_BLOCKED: Ability = Ability(1 << 10);
-    /// Push escalation (passive): when this piece is pushed and the push
-    /// is blocked, the pusher captures it. See
-    /// [`Self::CAPTURE_ON_PUSH_BLOCKED`].
-    pub const CAPTURED_ON_PUSH_BLOCKED: Ability = Ability(1 << 11);
-    /// Capture demotion (active): when this piece captures without blockers
-    /// on the path, the capture becomes a push — shoving the target one
-    /// step farther instead of capturing it.
-    pub const PUSH_ON_CAPTURE_UNBLOCKED: Ability = Ability(1 << 12);
-    /// Capture demotion (passive): when this piece would be captured
-    /// without blockers on the path, it is pushed instead. See
-    /// [`Self::PUSH_ON_CAPTURE_UNBLOCKED`].
-    pub const PUSHED_ON_CAPTURE_UNBLOCKED: Ability = Ability(1 << 13);
-    /// Normal capture: move onto an enemy-occupied point and remove that
-    /// piece. Requires attacker CAPTURE and target CAPTURED, and every
-    /// piece on the path must not block the move. Also succeeds when
-    /// the attacker has CAPTURED_ON_CAPTURE (sacrifice, ignores target's
-    /// CAPTURED) or the target has CAPTURE_ON_CAPTURED (retaliation,
-    /// ignores attacker's CAPTURE).
-    ///
-    /// Sacrifice and retaliation destroy the capturer only when the
-    /// capture is initiated through one of those abilities — the normal
-    /// CAPTURE + CAPTURED pairing is missing. A normal capture and any
-    /// escalated push capture never trigger them.
+    /// Ally Pull: be pulled by an allied piece.
+    pub const FRIEND_PULL: Ability = Ability(1 << 8);
+    /// Enemy Pull: be pulled by an enemy piece.
+    pub const ENEMY_PULL: Ability = Ability(1 << 9);
+    /// Hidden Capture: a blocked push captures the target.
+    pub const HIDDEN_CAPTURE: Ability = Ability(1 << 10);
+    /// Easy Capture: when this piece cannot retreat from a push, it captures the pusher.
+    pub const EASY_CAPTURE: Ability = Ability(1 << 11);
+    /// Overt Capture: a capture pushes the target when it has a valid landing.
+    pub const OVERT_CAPTURE: Ability = Ability(1 << 12);
+    /// Hard Capture: when this piece would be captured but has a valid landing, it is pushed instead.
+    pub const HARD_CAPTURE: Ability = Ability(1 << 13);
+    /// Capture: actively initiate a normal capture.
     pub const CAPTURE: Ability = Ability(1 << 14);
-    /// Required for normal capture. Escalated pushes and retaliation
-    /// (CAPTURE_ON_CAPTURED) bypass this bit — a blocked push destroys
-    /// the target regardless of CAPTURED, and a piece with
-    /// CAPTURE_ON_CAPTURED is capturable even without CAPTURED.
-    pub const CAPTURED: Ability = Ability(1 << 15);
-    /// Retaliation: when this piece is captured, the capturer is
-    /// destroyed as well. Also makes this piece capturable even by
-    /// pieces without CAPTURE — the capturer's CAPTURE requirement is
-    /// bypassed. Only a direct capture initiated through this ability
-    /// destroys the capturer: a normal capture (capturer has CAPTURE
-    /// and this piece has CAPTURED) and an escalated push capture
-    /// destroy only this piece.
-    pub const CAPTURE_ON_CAPTURED: Ability = Ability(1 << 16);
-    /// Sacrifice: when this piece captures another, it dies as well.
-    /// Also allows capturing targets even without CAPTURED — the
-    /// target's CAPTURED requirement is bypassed. Only a direct
-    /// capture initiated through this ability destroys the attacker:
-    /// a normal capture (this piece has CAPTURE and the target has
-    /// CAPTURED) and an escalated push capture destroy only the target.
-    pub const CAPTURED_ON_CAPTURE: Ability = Ability(1 << 17);
-    /// Slide any number of steps along one allowed direction instead of a
-    /// single step. For L-shaped moves this chains knight moves along the
-    /// same line: (0,0) → (1,2) → (2,4) → (3,6).
-    pub const ANY_DISTANCE: Ability = Ability(1 << 18);
-    /// Move in cross (horizontal/vertical) directions.
-    pub const DIRECTION_CROSS: Ability = Ability(1 << 19);
-    /// Move in diagonal directions.
-    pub const DIRECTION_DIAGONAL: Ability = Ability(1 << 20);
-    /// Move in L-shape (knight, 日) directions.
-    pub const DIRECTION_SHAPE_L: Ability = Ability(1 << 21);
-    /// A side with no vital piece left (on the board or in its pool)
-    /// loses; when both sides lose theirs in the same action, the game is
-    /// a draw.
-    pub const VITAL: Ability = Ability(1 << 22);
-    /// Can exchange positions with an opponent's vital piece to end the
-    /// game in a draw (the `Draw` action). Granted to allies by the General's
-    /// formation.
-    pub const DRAW: Ability = Ability(1 << 23);
-
+    /// Capturable: be the target of a normal capture.
+    pub const CAPTURABLE: Ability = Ability(1 << 15);
+    /// Counter Capture: remove the capturer too and bypass its Capture requirement.
+    pub const COUNTER_CAPTURE: Ability = Ability(1 << 16);
+    /// Force Capture: capture regardless of the target's Capturable ability, removing the attacker too.
+    pub const FORCE_CAPTURE: Ability = Ability(1 << 17);
+    /// Swift Move: repeat the same movement direction for any number of steps.
+    pub const SWIFT_MOVE: Ability = Ability(1 << 18);
+    /// Orthogonal Move: move horizontally or vertically.
+    pub const ORTHOGONAL_MOVE: Ability = Ability(1 << 19);
+    /// Diagonal Move: move along a diagonal.
+    pub const DIAGONAL_MOVE: Ability = Ability(1 << 20);
+    /// Broad Step: move by a knight step.
+    pub const BROAD_STEP: Ability = Ability(1 << 21);
+    /// Leader: the owner loses when it has no remaining Leader pieces.
+    pub const LEADER: Ability = Ability(1 << 22);
+    /// Peace Talk: exchange positions with an enemy Leader and immediately draw.
+    pub const PEACE_TALK: Ability = Ability(1 << 23);
     /// Whether **any** of the bits in `ability` is set. For single-bit
     /// queries this is a plain membership test; multi-bit queries are
     /// "has at least one", not "has all".
@@ -208,38 +156,30 @@ impl AbilityConfig {
     pub const fn build(self) -> Ability {
         const NONE: Ability = Ability::NONE;
         let mut a = NONE;
-        a.add(if self.controlled_by_ally { Ability::CONTROLLED_BY_ALLY } else { NONE });
-        a.add(if self.controlled_by_enemy { Ability::CONTROLLED_BY_ENEMY } else { NONE });
-        a.add(if self.push_ally { Ability::PUSH_ALLY } else { NONE });
+        a.add(if self.initiative { Ability::INITIATIVE } else { NONE });
+        a.add(if self.passivity { Ability::PASSIVITY } else { NONE });
+        a.add(if self.push_friend { Ability::PUSH_FRIEND } else { NONE });
         a.add(if self.push_enemy { Ability::PUSH_ENEMY } else { NONE });
-        a.add(if self.pushed_by_ally { Ability::PUSHED_BY_ALLY } else { NONE });
-        a.add(if self.pushed_by_enemy { Ability::PUSHED_BY_ENEMY } else { NONE });
-        a.add(if self.pull_ally { Ability::PULL_ALLY } else { NONE });
+        a.add(if self.friend_push { Ability::FRIEND_PUSH } else { NONE });
+        a.add(if self.enemy_push { Ability::ENEMY_PUSH } else { NONE });
+        a.add(if self.pull_friend { Ability::PULL_FRIEND } else { NONE });
         a.add(if self.pull_enemy { Ability::PULL_ENEMY } else { NONE });
-        a.add(if self.pulled_by_ally { Ability::PULLED_BY_ALLY } else { NONE });
-        a.add(if self.pulled_by_enemy { Ability::PULLED_BY_ENEMY } else { NONE });
-        a.add(if self.capture_on_push_blocked { Ability::CAPTURE_ON_PUSH_BLOCKED } else { NONE });
-        a.add(if self.captured_on_push_blocked { Ability::CAPTURED_ON_PUSH_BLOCKED } else { NONE });
-        a.add(if self.push_on_capture_unblocked {
-            Ability::PUSH_ON_CAPTURE_UNBLOCKED
-        } else {
-            NONE
-        });
-        a.add(if self.pushed_on_capture_unblocked {
-            Ability::PUSHED_ON_CAPTURE_UNBLOCKED
-        } else {
-            NONE
-        });
+        a.add(if self.friend_pull { Ability::FRIEND_PULL } else { NONE });
+        a.add(if self.enemy_pull { Ability::ENEMY_PULL } else { NONE });
+        a.add(if self.hidden_capture { Ability::HIDDEN_CAPTURE } else { NONE });
+        a.add(if self.easy_capture { Ability::EASY_CAPTURE } else { NONE });
+        a.add(if self.overt_capture { Ability::OVERT_CAPTURE } else { NONE });
+        a.add(if self.hard_capture { Ability::HARD_CAPTURE } else { NONE });
         a.add(if self.capture { Ability::CAPTURE } else { NONE });
-        a.add(if self.captured { Ability::CAPTURED } else { NONE });
-        a.add(if self.capture_on_captured { Ability::CAPTURE_ON_CAPTURED } else { NONE });
-        a.add(if self.captured_on_capture { Ability::CAPTURED_ON_CAPTURE } else { NONE });
-        a.add(if self.any_distance { Ability::ANY_DISTANCE } else { NONE });
-        a.add(if self.direction_cross { Ability::DIRECTION_CROSS } else { NONE });
-        a.add(if self.direction_diagonal { Ability::DIRECTION_DIAGONAL } else { NONE });
-        a.add(if self.direction_shape_L { Ability::DIRECTION_SHAPE_L } else { NONE });
-        a.add(if self.vital { Ability::VITAL } else { NONE });
-        a.add(if self.draw { Ability::DRAW } else { NONE });
+        a.add(if self.capturable { Ability::CAPTURABLE } else { NONE });
+        a.add(if self.counter_capture { Ability::COUNTER_CAPTURE } else { NONE });
+        a.add(if self.force_capture { Ability::FORCE_CAPTURE } else { NONE });
+        a.add(if self.swift_move { Ability::SWIFT_MOVE } else { NONE });
+        a.add(if self.orthogonal_move { Ability::ORTHOGONAL_MOVE } else { NONE });
+        a.add(if self.diagonal_move { Ability::DIAGONAL_MOVE } else { NONE });
+        a.add(if self.broad_step { Ability::BROAD_STEP } else { NONE });
+        a.add(if self.leader { Ability::LEADER } else { NONE });
+        a.add(if self.peace_talk { Ability::PEACE_TALK } else { NONE });
         a
     }
 }
@@ -300,28 +240,28 @@ impl Debug for Ability {
 }
 
 const ABILITIES: &[(Ability, &str)] = &[
-    (Ability::CONTROLLED_BY_ALLY, "controlled_by_ally"),
-    (Ability::CONTROLLED_BY_ENEMY, "controlled_by_enemy"),
-    (Ability::PUSH_ALLY, "push_ally"),
-    (Ability::PUSH_ENEMY, "push_enemy"),
-    (Ability::PUSHED_BY_ALLY, "pushed_by_ally"),
-    (Ability::PUSHED_BY_ENEMY, "pushed_by_enemy"),
-    (Ability::PULL_ALLY, "pull_ally"),
-    (Ability::PULL_ENEMY, "pull_enemy"),
-    (Ability::PULLED_BY_ALLY, "pulled_by_ally"),
-    (Ability::PULLED_BY_ENEMY, "pulled_by_enemy"),
-    (Ability::CAPTURE_ON_PUSH_BLOCKED, "capture_on_push_blocked"),
-    (Ability::CAPTURED_ON_PUSH_BLOCKED, "captured_on_push_blocked"),
-    (Ability::PUSH_ON_CAPTURE_UNBLOCKED, "push_on_capture_unblocked"),
-    (Ability::PUSHED_ON_CAPTURE_UNBLOCKED, "pushed_on_capture_unblocked"),
-    (Ability::CAPTURE, "capture"),
-    (Ability::CAPTURED, "captured"),
-    (Ability::CAPTURE_ON_CAPTURED, "capture_on_captured"),
-    (Ability::CAPTURED_ON_CAPTURE, "captured_on_capture"),
-    (Ability::ANY_DISTANCE, "any_distance"),
-    (Ability::DIRECTION_CROSS, "direction_cross"),
-    (Ability::DIRECTION_DIAGONAL, "direction_diagonal"),
-    (Ability::DIRECTION_SHAPE_L, "direction_shape_L"),
-    (Ability::VITAL, "vital"),
-    (Ability::DRAW, "draw"),
+    (Ability::INITIATIVE, "主动"),
+    (Ability::PASSIVITY, "被动"),
+    (Ability::PUSH_FRIEND, "推友"),
+    (Ability::PUSH_ENEMY, "推敌"),
+    (Ability::FRIEND_PUSH, "友推"),
+    (Ability::ENEMY_PUSH, "敌推"),
+    (Ability::PULL_FRIEND, "拉友"),
+    (Ability::PULL_ENEMY, "拉敌"),
+    (Ability::FRIEND_PULL, "友拉"),
+    (Ability::ENEMY_PULL, "敌拉"),
+    (Ability::HIDDEN_CAPTURE, "暗捉"),
+    (Ability::EASY_CAPTURE, "易捉"),
+    (Ability::OVERT_CAPTURE, "明捉"),
+    (Ability::HARD_CAPTURE, "难捉"),
+    (Ability::CAPTURE, "捕捉"),
+    (Ability::CAPTURABLE, "被捉"),
+    (Ability::COUNTER_CAPTURE, "反捉"),
+    (Ability::FORCE_CAPTURE, "强捉"),
+    (Ability::SWIFT_MOVE, "疾行"),
+    (Ability::ORTHOGONAL_MOVE, "纵横"),
+    (Ability::DIAGONAL_MOVE, "交错"),
+    (Ability::BROAD_STEP, "阔步"),
+    (Ability::LEADER, "首领"),
+    (Ability::PEACE_TALK, "议和"),
 ];

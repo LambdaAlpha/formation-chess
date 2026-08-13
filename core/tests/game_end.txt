@@ -1,5 +1,5 @@
 =====
-removing the only opposing VITAL declares a win
+removing the only opposing Leader declares a win
 -----
 行棋方：红
 红方：[]
@@ -30,7 +30,7 @@ removing the only opposing VITAL declares a win
 变化：[红车平二]
 胜负：红胜
 =====
-removing an opposing VITAL still wins when the attacker also dies
+removing an opposing Leader still wins when the attacker also dies
 -----
 行棋方：红
 红方：[]
@@ -61,7 +61,7 @@ removing an opposing VITAL still wins when the attacker also dies
 变化：[红风失 黑将失]
 胜负：红胜
 =====
-removing both VITAL pieces in one action declares a draw
+removing both Leader pieces in one action declares a draw
 -----
 行棋方：红
 红方：[]
@@ -92,7 +92,7 @@ removing both VITAL pieces in one action declares a draw
 变化：[红将失 黑将失]
 胜负：和棋
 =====
-MOVE relocation preserves the mover VITAL
+MOVE relocation preserves the mover Leader
 -----
 行棋方：红
 红方：[]
@@ -123,7 +123,7 @@ MOVE relocation preserves the mover VITAL
 变化：[红将二二]
 胜负：未分
 =====
-PUSH relocation preserves the target VITAL
+PUSH relocation preserves the target Leader
 -----
 行棋方：红
 红方：[]
@@ -154,7 +154,7 @@ PUSH relocation preserves the target VITAL
 变化：[红火平二 黑将平三]
 胜负：未分
 =====
-capture demotion relocation preserves the target VITAL
+capture demotion relocation preserves the target Leader
 -----
 行棋方：红
 红方：[]
@@ -185,7 +185,7 @@ capture demotion relocation preserves the target VITAL
 变化：[红车平二 黑将平一]
 胜负：未分
 =====
-PULL relocation preserves the mover VITAL
+PULL relocation preserves the mover Leader
 -----
 行棋方：红
 红方：[]

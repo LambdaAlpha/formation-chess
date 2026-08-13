@@ -17,9 +17,9 @@ use support::api::game_one;
 use support::api::game_with;
 
 #[test]
-fn board_valid_moves_appends_resign_for_controlled_vital() {
+fn board_valid_moves_appends_resign_for_controlled_leader() {
     let mut controlled_black_general = Piece::BLACK_GENERAL;
-    controlled_black_general.ability.add(Ability::CONTROLLED_BY_ENEMY);
+    controlled_black_general.ability.add(Ability::PASSIVITY);
     let mut board = Board::new(5, 5);
     board[(2, 2)] = Some(controlled_black_general);
     let mut actions = Vec::new();
@@ -30,7 +30,7 @@ fn board_valid_moves_appends_resign_for_controlled_vital() {
 }
 
 #[test]
-fn board_valid_moves_omits_resign_for_uncontrolled_vital() {
+fn board_valid_moves_omits_resign_for_uncontrolled_leader() {
     let mut board = Board::new(5, 5);
     board[(2, 2)] = Some(Piece::BLACK_GENERAL);
     let mut actions = Vec::new();
@@ -182,7 +182,7 @@ fn valid_moves_cross_blocked_by_ally() {
     assert!(!actions.iter().any(|a| matches!(a, Action::Capture(_) | Action::Push(_))));
 }
 
-// -- DIRECTION_CROSS ----------------------------------------------------------
+// -- ORTHOGONAL_MOVE ----------------------------------------------------------
 
 #[test]
 fn valid_moves_cross_one_step_all_directions() {
@@ -211,7 +211,7 @@ fn valid_moves_cross_capture_and_move() {
     assert_eq!(actions.len(), 4);
 }
 
-// -- DIRECTION_DIAGONAL -------------------------------------------------------
+// -- DIAGONAL_MOVE -------------------------------------------------------
 
 #[test]
 fn valid_moves_diagonal_one_step_only() {
@@ -240,7 +240,7 @@ fn valid_moves_diagonal_capture_and_move() {
     assert_eq!(actions.len(), 4);
 }
 
-// -- DIRECTION_SHAPE_L --------------------------------------------------------
+// -- BROAD_STEP --------------------------------------------------------
 
 #[test]
 fn valid_moves_shape_l_one_step_reaches_eight_points() {
@@ -286,12 +286,12 @@ fn valid_moves_shape_l_capture_and_move() {
     assert_moves(&actions, &[(0, 3), (1, 0), (1, 4), (3, 0), (3, 4), (4, 1), (4, 3)]);
 }
 
-// -- DIRECTION_SHAPE_L + ANY_DISTANCE ----------------------------------------
+// -- BROAD_STEP + SWIFT_MOVE ----------------------------------------
 
 #[test]
 fn valid_moves_shape_l_any_distance_reaches_eight_points() {
     let long_horse =
-        Piece { ability: Piece::RED_HORSE.ability | Ability::ANY_DISTANCE, ..Piece::RED_HORSE };
+        Piece { ability: Piece::RED_HORSE.ability | Ability::SWIFT_MOVE, ..Piece::RED_HORSE };
     let g = game_one(Player::Red, long_horse, (2, 2));
     let actions = g.valid_moves(2, 2);
     // Shell moves L-shaped at any distance: chained knight moves
@@ -318,7 +318,7 @@ fn valid_moves_shape_l_capture_target() {
     assert_moves(&actions, &[(0, 3), (1, 0), (1, 4), (3, 0), (3, 4), (4, 1), (4, 3)]);
 }
 
-// -- DIRECTION_DIAGONAL + PUSH -----------------------------------------------
+// -- DIAGONAL_MOVE + PUSH -----------------------------------------------
 
 #[test]
 fn valid_moves_diagonal_any_distance_on_open_board() {
@@ -393,7 +393,7 @@ fn valid_moves_diagonal_path_blocking_stops_scan() {
     assert_eq!(actions.len(), 7);
 }
 
-// -- CONTROLLED_BY_* ----------------------------------------------------------
+// -- INITIATIVE / PASSIVITY ----------------------------------------------------------
 
 #[test]
 fn valid_moves_foreign_control_grant_allows_red() {
@@ -431,7 +431,7 @@ fn valid_moves_foreign_control_grant_allows_black() {
     assert_eq!(actions.len(), 4);
 }
 
-// -- CAPTURE_ON_CAPTURED ------------------------------------------------------
+// -- COUNTER_CAPTURE ------------------------------------------------------
 
 #[test]
 fn valid_moves_mutual_destruction_target_is_capturable() {
@@ -515,7 +515,7 @@ fn valid_moves_formation_grant_adds_draw_action() {
 }
 
 #[test]
-fn valid_moves_draw_requires_an_opponent_vital_target() {
+fn valid_moves_draw_requires_an_opponent_leader_target() {
     let g = game_with(
         Player::Red,
         &[
@@ -554,7 +554,7 @@ fn valid_moves_active_push_escalation_includes_blocked_landing() {
 fn valid_moves_passive_push_escalation_includes_blocked_landing() {
     let passive_target = Piece {
         formation: Piece::RED_SPEAR.formation,
-        ability: Piece::BLACK_PAWN.ability | Ability::CAPTURED_ON_PUSH_BLOCKED,
+        ability: Piece::BLACK_PAWN.ability | Ability::EASY_CAPTURE,
         ..Piece::BLACK_PAWN
     };
     let g = game_with(
@@ -573,7 +573,7 @@ fn valid_moves_passive_push_escalation_includes_blocked_landing() {
     assert_pushes(&actions, &[(2, 1)]);
 }
 
-// -- CAPTURE_ON_CAPTURED bypasses the attacker's CAPTURE requirement -------
+// -- COUNTER_CAPTURE bypasses the attacker's CAPTURE requirement -------
 
 #[test]
 fn valid_moves_mutual_destruction_target_bypasses_capture_ability() {
