@@ -75,7 +75,7 @@ can command it.
 
 | Ability | Meaning |
 |---|---|
-| **Controlled by Red / Black** | The named player may command the piece. A piece may be controlled by both players or by neither. |
+| **Controlled by Ally / Enemy** | The piece may be commanded by its owner / the opposing player. With both abilities, both players may command it; with neither, neither player may command it. |
 | **Push Ally / Enemy** | Active permission to push a piece owned by the same / opposing player. |
 | **Pushed by Ally / Enemy** | Passive permission to be pushed by a piece owned by the same / opposing player. |
 | **Pull Ally / Enemy** | Active permission to pull a piece owned by the same / opposing player. |
@@ -148,8 +148,8 @@ position and take effect simultaneously.
 - Each effect selects specific abilities and grants or removes them.
 - If overlapping effects disagree about one selected ability, removal wins.
 - Different abilities are combined independently.
-- Control abilities follow the same rule, so a piece may end up controlled by
-  both players or by neither.
+- Control abilities follow the same rule. Since ally and enemy are relative to
+  each piece's owner, a piece may end up controlled by both players or by neither.
 
 ## Movement geometry
 
@@ -278,8 +278,8 @@ Later rules override earlier ones.
 
 ### Common to all pieces
 
-Every standard piece defaults to being controlled only by its owner, Captured,
-Pushed by Enemy, and Pulled by Enemy. All other abilities are absent by default.
+Every standard piece defaults to Controlled by Ally, Captured, Pushed by Enemy,
+and Pulled by Enemy. All other abilities are absent by default.
 
 ### Group commonalities
 
@@ -299,7 +299,7 @@ that, only General is Vital and Rook additionally has Cross.
 | Piece | Formation effect |
 |---|---|
 | **General `将`** | Allies gain Draw; enemies lose Draw |
-| **Stratagem `计`** | Enemy pieces gain control by the Stratagem's owner; allied pieces lose control by the opposing player |
+| **Stratagem `计`** | Enemy pieces gain Controlled by Enemy; allied pieces lose Controlled by Enemy |
 | **Momentum `势`** | Allies gain Capture on Push Blocked and lose Captured on Push Blocked; enemies do the reverse |
 | **Adaptation `变`** | Allies gain Pushed on Capture Unblocked and lose Push on Capture Unblocked; enemies do the reverse |
 | **Wind `风`** | Allies gain both active pull abilities; enemies lose both |

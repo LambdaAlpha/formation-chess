@@ -185,7 +185,7 @@ fn movement_actions_include_controlled_vital_resign() {
 #[test]
 fn movement_actions_include_controlled_opponent_vital_resign() {
     let mut black_general = Piece::BLACK_GENERAL;
-    black_general.ability.add(Ability::CONTROLLED_BY_RED);
+    black_general.ability.add(Ability::CONTROLLED_BY_ENEMY);
     let mut board = Board::new(5, 5);
     board[(0, 4)] = Some(Piece::RED_GENERAL);
     board[(4, 0)] = Some(black_general);

@@ -39,12 +39,9 @@ impl Piece {
         PieceId { name: self.name, player: self.player }
     }
 
-    /// (controlled_by_red, controlled_by_black) for a piece of `color`.
-    const fn controlled(player: Player) -> (bool, bool) {
-        match player {
-            Player::Red => (true, false),
-            Player::Black => (false, true),
-        }
+    /// (controlled_by_ally, controlled_by_enemy) for every piece.
+    const fn controlled() -> (bool, bool) {
+        (true, false)
     }
 
     /// Vertically mirror a formation for Black pieces, whose advance
@@ -59,14 +56,14 @@ impl Piece {
     pub const GENERAL_NAME: char = '将';
 
     const fn general(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '将',
             player,
             formation: Self::orient(player, Formation::GENERAL),
             ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
+                controlled_by_ally,
+                controlled_by_enemy,
                 push_ally: true,
                 push_enemy: true,
                 pushed_by_ally: false,
@@ -95,14 +92,14 @@ impl Piece {
     }
 
     const fn stratagem(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '计',
             player,
             formation: Self::orient(player, Formation::STRATAGEM),
             ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
+                controlled_by_ally,
+                controlled_by_enemy,
                 push_ally: true,
                 push_enemy: true,
                 pushed_by_ally: false,
@@ -131,14 +128,14 @@ impl Piece {
     }
 
     const fn momentum(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '势',
             player,
             formation: Self::orient(player, Formation::MOMENTUM),
             ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
+                controlled_by_ally,
+                controlled_by_enemy,
                 push_ally: true,
                 push_enemy: true,
                 pushed_by_ally: false,
@@ -167,14 +164,14 @@ impl Piece {
     }
 
     const fn adaptation(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '变',
             player,
             formation: Self::orient(player, Formation::ADAPTATION),
             ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
+                controlled_by_ally,
+                controlled_by_enemy,
                 push_ally: true,
                 push_enemy: true,
                 pushed_by_ally: false,
@@ -203,14 +200,14 @@ impl Piece {
     }
 
     const fn wind(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '风',
             player,
             formation: Self::orient(player, Formation::WIND),
             ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
+                controlled_by_ally,
+                controlled_by_enemy,
                 push_ally: true,
                 push_enemy: true,
                 pushed_by_ally: false,
@@ -239,14 +236,14 @@ impl Piece {
     }
 
     const fn forest(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '林',
             player,
             formation: Self::orient(player, Formation::FOREST),
             ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
+                controlled_by_ally,
+                controlled_by_enemy,
                 push_ally: true,
                 push_enemy: true,
                 pushed_by_ally: false,
@@ -275,14 +272,14 @@ impl Piece {
     }
 
     const fn fire(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '火',
             player,
             formation: Self::orient(player, Formation::FIRE),
             ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
+                controlled_by_ally,
+                controlled_by_enemy,
                 push_ally: true,
                 push_enemy: true,
                 pushed_by_ally: false,
@@ -311,14 +308,14 @@ impl Piece {
     }
 
     const fn mountain(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '山',
             player,
             formation: Self::orient(player, Formation::MOUNTAIN),
             ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
+                controlled_by_ally,
+                controlled_by_enemy,
                 push_ally: true,
                 push_enemy: true,
                 pushed_by_ally: true,
@@ -347,14 +344,14 @@ impl Piece {
     }
 
     const fn spear(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '矛',
             player,
             formation: Self::orient(player, Formation::SPEAR),
             ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
+                controlled_by_ally,
+                controlled_by_enemy,
                 push_ally: false,
                 push_enemy: false,
                 pushed_by_ally: false,
@@ -383,14 +380,14 @@ impl Piece {
     }
 
     const fn shield(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '盾',
             player,
             formation: Self::orient(player, Formation::SHIELD),
             ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
+                controlled_by_ally,
+                controlled_by_enemy,
                 push_ally: false,
                 push_enemy: false,
                 pushed_by_ally: false,
@@ -419,14 +416,14 @@ impl Piece {
     }
 
     const fn shell(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '弹',
             player,
             formation: Self::orient(player, Formation::SHELL),
             ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
+                controlled_by_ally,
+                controlled_by_enemy,
                 push_ally: false,
                 push_enemy: false,
                 pushed_by_ally: false,
@@ -455,14 +452,14 @@ impl Piece {
     }
 
     const fn mine(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '雷',
             player,
             formation: Self::orient(player, Formation::MINE),
             ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
+                controlled_by_ally,
+                controlled_by_enemy,
                 push_ally: false,
                 push_enemy: false,
                 pushed_by_ally: false,
@@ -491,14 +488,14 @@ impl Piece {
     }
 
     const fn scholar(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '士',
             player,
             formation: Self::orient(player, Formation::SCHOLAR),
             ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
+                controlled_by_ally,
+                controlled_by_enemy,
                 push_ally: false,
                 push_enemy: false,
                 pushed_by_ally: false,
@@ -527,14 +524,14 @@ impl Piece {
     }
 
     const fn pawn(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '卒',
             player,
             formation: Self::orient(player, Formation::PAWN),
             ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
+                controlled_by_ally,
+                controlled_by_enemy,
                 push_ally: false,
                 push_enemy: false,
                 pushed_by_ally: false,
@@ -563,14 +560,14 @@ impl Piece {
     }
 
     const fn horse(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '马',
             player,
             formation: Self::orient(player, Formation::HORSE),
             ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
+                controlled_by_ally,
+                controlled_by_enemy,
                 push_ally: false,
                 push_enemy: false,
                 pushed_by_ally: false,
@@ -599,14 +596,14 @@ impl Piece {
     }
 
     const fn rook(player: Player) -> Piece {
-        let (controlled_by_red, controlled_by_black) = Self::controlled(player);
+        let (controlled_by_ally, controlled_by_enemy) = Self::controlled();
         Piece {
             name: '车',
             player,
             formation: Self::orient(player, Formation::ROOK),
             ability: AbilityConfig {
-                controlled_by_red,
-                controlled_by_black,
+                controlled_by_ally,
+                controlled_by_enemy,
                 push_ally: false,
                 push_enemy: false,
                 pushed_by_ally: false,
@@ -807,13 +804,13 @@ impl Piece {
         self.ability.has(Ability::CAPTURE) && target.ability.has(Ability::CAPTURED)
     }
 
-    /// Whether `player` may command this piece, per its CONTROLLED_BY_*
-    /// abilities.
+    /// Whether player may command this piece, per its CONTROLLED_BY_*
+    /// abilities relative to the piece's owning player.
     pub fn can_controlled_by(&self, player: Player) -> bool {
-        match player {
-            Player::Red => self.ability.has(Ability::CONTROLLED_BY_RED),
-            Player::Black => self.ability.has(Ability::CONTROLLED_BY_BLACK),
+        if player == self.player {
+            return self.ability.has(Ability::CONTROLLED_BY_ALLY);
         }
+        self.ability.has(Ability::CONTROLLED_BY_ENEMY)
     }
 }
 

@@ -1655,7 +1655,7 @@ mod tests {
             | Ability::CAPTURE_ON_PUSH_BLOCKED
             | Ability::DIRECTION_DIAGONAL;
         let mut target = Piece::BLACK_PAWN;
-        target.ability = Ability::CONTROLLED_BY_BLACK | Ability::CAPTURED;
+        target.ability = Ability::CONTROLLED_BY_ALLY | Ability::CAPTURED;
         board[(6, 6)] = Some(Piece::RED_GENERAL);
         board[(0, 3)] = Some(attacker);
         board[(6, 0)] = Some(Piece::BLACK_GENERAL);

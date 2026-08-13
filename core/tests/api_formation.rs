@@ -133,7 +133,7 @@ fn formation_effects_use_player_relationships() {
     );
     assert_eq!(
         Formation::stratagem(Player::Red, Player::Black),
-        (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED)
+        (Ability::CONTROLLED_BY_ENEMY, Ability::CONTROLLED_BY_ENEMY)
     );
 }
 
@@ -141,15 +141,15 @@ fn formation_effects_use_player_relationships() {
 fn stratagem_formation_control_effects_use_player_relationships() {
     assert_eq!(
         Formation::stratagem(Player::Red, Player::Red),
-        (Ability::CONTROLLED_BY_BLACK, Ability::NONE)
+        (Ability::CONTROLLED_BY_ENEMY, Ability::NONE)
     );
     assert_eq!(
         Formation::stratagem(Player::Black, Player::Black),
-        (Ability::CONTROLLED_BY_RED, Ability::NONE)
+        (Ability::CONTROLLED_BY_ENEMY, Ability::NONE)
     );
     assert_eq!(
         Formation::stratagem(Player::Black, Player::Red),
-        (Ability::CONTROLLED_BY_BLACK, Ability::CONTROLLED_BY_BLACK)
+        (Ability::CONTROLLED_BY_ENEMY, Ability::CONTROLLED_BY_ENEMY)
     );
 }
 

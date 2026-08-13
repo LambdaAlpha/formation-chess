@@ -57,10 +57,7 @@ fn movement_game_on(width: u8, height: u8, player: Player, pieces: &[((u8, u8), 
 }
 
 fn quiet_piece(mut piece: Piece) -> Piece {
-    let control = match piece.player {
-        Player::Red => Ability::CONTROLLED_BY_RED,
-        Player::Black => Ability::CONTROLLED_BY_BLACK,
-    };
+    let control = Ability::CONTROLLED_BY_ALLY;
     let movement = piece.ability
         & (Ability::DIRECTION_CROSS
             | Ability::DIRECTION_DIAGONAL
@@ -330,7 +327,7 @@ fn immediate_loss_receives_exact_negative_score() {
 #[test]
 fn controlled_vital_resignations_receive_exact_terminal_scores() {
     let mut controlled_black_general = Piece::BLACK_GENERAL;
-    controlled_black_general.ability.add(Ability::CONTROLLED_BY_RED);
+    controlled_black_general.ability.add(Ability::CONTROLLED_BY_ENEMY);
     let game = movement_game(Player::Red, &[
         ((0, 4), Piece::RED_GENERAL),
         ((4, 1), controlled_black_general),

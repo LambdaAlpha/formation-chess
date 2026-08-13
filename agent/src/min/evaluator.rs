@@ -1798,7 +1798,7 @@ mod tests {
     #[test]
     fn vacated_dual_controlled_origin_does_not_attack_its_destination() {
         let mut dual_controlled_rook = Piece::RED_ROOK;
-        dual_controlled_rook.ability |= Ability::CONTROLLED_BY_BLACK;
+        dual_controlled_rook.ability |= Ability::CONTROLLED_BY_ENEMY;
         let mut board = Board::new(5, 5);
         board[(0, 2)] = Some(dual_controlled_rook);
         let black_actions = generate_player_actions(&board, Player::Black);
@@ -1836,7 +1836,7 @@ mod tests {
     #[test]
     fn harmful_own_capture_does_not_create_soft_action_value() {
         let mut controlled_black_rook = Piece::BLACK_ROOK;
-        controlled_black_rook.ability |= Ability::CONTROLLED_BY_RED;
+        controlled_black_rook.ability |= Ability::CONTROLLED_BY_ENEMY;
         let mut board = Board::new(5, 5);
         board[(2, 1)] = Some(controlled_black_rook);
         board[(2, 4)] = Some(Piece::RED_PAWN);

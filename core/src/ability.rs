@@ -21,8 +21,8 @@ type Bits = u32;
 #[expect(non_snake_case)]
 #[derive(Copy, Clone)]
 pub struct AbilityConfig {
-    pub controlled_by_red: bool,
-    pub controlled_by_black: bool,
+    pub controlled_by_ally: bool,
+    pub controlled_by_enemy: bool,
     pub push_ally: bool,
     pub push_enemy: bool,
     pub pushed_by_ally: bool,
@@ -50,10 +50,10 @@ pub struct AbilityConfig {
 impl Ability {
     /// The empty ability set.
     pub const NONE: Ability = Ability(0);
-    /// The red player may command (move) this piece.
-    pub const CONTROLLED_BY_RED: Ability = Ability(1 << 0);
-    /// The black player may command (move) this piece.
-    pub const CONTROLLED_BY_BLACK: Ability = Ability(1 << 1);
+    /// The piece's owning player may command (move) it.
+    pub const CONTROLLED_BY_ALLY: Ability = Ability(1 << 0);
+    /// The opponent of the piece's owning player may command (move) it.
+    pub const CONTROLLED_BY_ENEMY: Ability = Ability(1 << 1);
     /// Push: land on a target and shove it one step farther along the
     /// movement direction — for L-shaped moves, to the next knight point
     /// on the same line: a horse at (0,0) pushing the target on (1,2)
@@ -208,8 +208,8 @@ impl AbilityConfig {
     pub const fn build(self) -> Ability {
         const NONE: Ability = Ability::NONE;
         let mut a = NONE;
-        a.add(if self.controlled_by_red { Ability::CONTROLLED_BY_RED } else { NONE });
-        a.add(if self.controlled_by_black { Ability::CONTROLLED_BY_BLACK } else { NONE });
+        a.add(if self.controlled_by_ally { Ability::CONTROLLED_BY_ALLY } else { NONE });
+        a.add(if self.controlled_by_enemy { Ability::CONTROLLED_BY_ENEMY } else { NONE });
         a.add(if self.push_ally { Ability::PUSH_ALLY } else { NONE });
         a.add(if self.push_enemy { Ability::PUSH_ENEMY } else { NONE });
         a.add(if self.pushed_by_ally { Ability::PUSHED_BY_ALLY } else { NONE });
@@ -300,8 +300,8 @@ impl Debug for Ability {
 }
 
 const ABILITIES: &[(Ability, &str)] = &[
-    (Ability::CONTROLLED_BY_RED, "controlled_by_red"),
-    (Ability::CONTROLLED_BY_BLACK, "controlled_by_black"),
+    (Ability::CONTROLLED_BY_ALLY, "controlled_by_ally"),
+    (Ability::CONTROLLED_BY_ENEMY, "controlled_by_enemy"),
     (Ability::PUSH_ALLY, "push_ally"),
     (Ability::PUSH_ENEMY, "push_enemy"),
     (Ability::PUSHED_BY_ALLY, "pushed_by_ally"),

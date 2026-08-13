@@ -67,18 +67,10 @@ impl Formation {
         Self::grant_allies_strip_enemies(owner, object, Ability::DRAW)
     }
 
-    /// Allies gain control; enemies lose control.
+    /// Allies lose enemy control; enemies gain enemy control.
     pub fn stratagem(owner: Player, object: Player) -> (Ability, Ability) {
-        match (owner, object) {
-            (Player::Red, Player::Red) => (Ability::CONTROLLED_BY_BLACK, Ability::NONE),
-            (Player::Red, Player::Black) => {
-                (Ability::CONTROLLED_BY_RED, Ability::CONTROLLED_BY_RED)
-            },
-            (Player::Black, Player::Black) => (Ability::CONTROLLED_BY_RED, Ability::NONE),
-            (Player::Black, Player::Red) => {
-                (Ability::CONTROLLED_BY_BLACK, Ability::CONTROLLED_BY_BLACK)
-            },
-        }
+        let update = if owner == object { Ability::NONE } else { Ability::CONTROLLED_BY_ENEMY };
+        (Ability::CONTROLLED_BY_ENEMY, update)
     }
 
     /// Allies gain active push escalation; enemies gain passive escalation.

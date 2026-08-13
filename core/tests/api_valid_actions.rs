@@ -19,7 +19,7 @@ use support::api::game_with;
 #[test]
 fn board_valid_moves_appends_resign_for_controlled_vital() {
     let mut controlled_black_general = Piece::BLACK_GENERAL;
-    controlled_black_general.ability.add(Ability::CONTROLLED_BY_RED);
+    controlled_black_general.ability.add(Ability::CONTROLLED_BY_ENEMY);
     let mut board = Board::new(5, 5);
     board[(2, 2)] = Some(controlled_black_general);
     let mut actions = Vec::new();
