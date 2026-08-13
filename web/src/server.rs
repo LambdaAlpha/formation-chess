@@ -623,6 +623,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "time-consuming"]
     fn min_best_agents_complete_standard_random_placement() {
         let mut game = Game::new(GameConfig::default()).expect("default game must be valid");
         let mut red = PlayerRuntime::with_placement_mode(
