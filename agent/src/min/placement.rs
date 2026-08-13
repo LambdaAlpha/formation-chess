@@ -287,6 +287,7 @@ fn assign_allocation_utilities(
         current_pool,
         positions,
     ));
+    let mut candidate_board = board.clone();
 
     for candidate in candidates {
         let piece_id = placement_piece(candidate.action);
@@ -304,7 +305,7 @@ fn assign_allocation_utilities(
             if maximizing { -opportunity_units } else { opportunity_units };
         let whole_layout_units = if affects_opponent_layout(board, player, position) {
             bilateral_layout_delta(
-                board,
+                &mut candidate_board,
                 AllocationSide { player, pool: current_pool, positions, baseline: &own_baseline },
                 AllocationSide {
                     player: opponent,
@@ -333,26 +334,26 @@ struct AllocationSide<'a> {
 }
 
 fn bilateral_layout_delta(
-    board: &formation_chess_core::board::Board, current: AllocationSide<'_>,
+    board: &mut formation_chess_core::board::Board, current: AllocationSide<'_>,
     opponent: AllocationSide<'_>, piece_index: usize, position: (u8, u8),
 ) -> i64 {
     let piece = current.pool[piece_index];
-    let mut candidate_board = board.clone();
-    candidate_board
+    let candidate_changes = board
         .place(piece, position)
         .expect("placement candidate must be legal on the projected board");
     let opponent_after = greedy_assignment(&placement_potential_matrix(
-        &candidate_board,
+        board,
         opponent.player,
         opponent.pool,
         opponent.positions,
     ));
-    let opponent_after_board = project_assignment(
-        &candidate_board,
-        opponent.pool,
-        opponent.positions,
-        &opponent_after.assignments,
-    );
+    let mut opponent_changes = Vec::with_capacity(opponent_after.assignments.len());
+    for &(opponent_piece_index, position_index) in &opponent_after.assignments {
+        let changes = board
+            .place(opponent.pool[opponent_piece_index], opponent.positions[position_index])
+            .expect("opponent placement projection must be legal");
+        opponent_changes.push(changes);
+    }
 
     let mut remaining_pool = Vec::with_capacity(current.pool.len().saturating_sub(1));
     for (index, &pool_piece) in current.pool.iter().enumerate() {
@@ -367,16 +368,21 @@ fn bilateral_layout_delta(
         .filter(|candidate| *candidate != position)
         .collect::<Vec<_>>();
     let own_after_remaining = greedy_assignment(&placement_potential_matrix(
-        &opponent_after_board,
+        board,
         current.player,
         &remaining_pool,
         &remaining_positions,
     ));
     let candidate_units =
-        placement_candidate_potential_units(&opponent_after_board, current.player, piece, position);
+        placement_candidate_potential_units(board, current.player, piece, position);
     let own_after = candidate_units + own_after_remaining.total;
     let opponent_delta = opponent_after.total - opponent.baseline.total;
     let own_delta = own_after - current.baseline.total;
+
+    for changes in opponent_changes.iter().rev() {
+        board.undo(changes.as_slice());
+    }
+    board.undo(candidate_changes.as_slice());
     own_delta - opponent_delta
 }
 
@@ -974,7 +980,7 @@ mod tests {
     fn boundary_placement_changes_the_opponents_whole_layout_projection() {
         use formation_chess_core::board::Board;
 
-        let board = Board::new(9, 10);
+        let mut board = Board::new(9, 10);
         let current_pool = [Piece::RED_WIND];
         let current_positions = [(4, 5)];
         let opponent_pool = [Piece::BLACK_PAWN];
@@ -998,7 +1004,7 @@ mod tests {
             &current_positions,
         ));
         let delta = bilateral_layout_delta(
-            &board,
+            &mut board,
             AllocationSide {
                 player: Player::Red,
                 pool: &current_pool,

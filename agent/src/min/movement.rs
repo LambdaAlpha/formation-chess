@@ -451,9 +451,10 @@ fn classify_tactical_continuations(
     game: &mut Game, root_player: Player, children: &[SearchChild], require_root_turn: bool,
     actions: &mut Vec<Action>,
 ) -> Result<Vec<TacticalContinuation>, AgentError> {
+    let board_before = game.board().clone();
+    let mut preview_board = board_before.clone();
     let mut continuations = Vec::with_capacity(children.len());
     for child in children {
-        let board_before = game.board().clone();
         let destination_occupied = action_destination_occupied(&board_before, child.action);
         let reaction = game.action(child.action).map_err(|message| {
             AgentError::Decision(format!(
@@ -465,8 +466,13 @@ fn classify_tactical_continuations(
             reaction.changes,
             destination_occupied,
         );
-        let forcing_noncapture =
-            has_forcing_noncapture_impact(&board_before, child.action, reaction.changes, kind);
+        let forcing_noncapture = has_forcing_noncapture_impact_with_scratch(
+            &board_before,
+            &mut preview_board,
+            child.action,
+            reaction.changes,
+            kind,
+        );
         let search = reaction.game_result == GameResult::Unfinished
             && (!require_root_turn || game.player() == root_player)
             && should_continue_tactical_search(game, kind, forcing_noncapture, actions);
@@ -547,28 +553,28 @@ fn quick_action_shortlist(
     let before_hanging_utility =
         quick_hanging_utility(context.board, context.root_player, context.threats);
     let mut candidates = Vec::with_capacity(ordinals.len());
-    let mut preview_board = context.board.clone();
-    let mut preview_actions = Vec::new();
+    let mut scratch = QuickScratch {
+        preview_board: context.board.clone(),
+        threat_board: context.board.clone(),
+        actions: Vec::new(),
+    };
     for &ordinal in ordinals {
         let action = actions[ordinal];
         let preview = preview_action(context.board, action);
         let ordering_utility = quick_action_utility(
             context,
-            &mut preview_board,
-            &mut preview_actions,
+            &mut scratch,
             action,
             preview,
             before_position_utility,
             before_hanging_utility,
         );
         let priority = tactical_action_priority_from_preview(
-            context.board,
-            &mut preview_board,
-            context.player,
+            context,
+            &mut scratch,
             action,
             preview,
             context.recapture_target,
-            context.threats.side(opponent(context.player)),
         );
         candidates.push(TacticalCandidate {
             child: SearchChild { action, ordering_utility, ordinal },
@@ -579,20 +585,25 @@ fn quick_action_shortlist(
 }
 
 fn quick_action_utility(
-    context: QuickSelectionContext<'_>, preview_board: &mut Board,
-    preview_actions: &mut Vec<Action>, action: Action, preview: ActionPreview,
-    before_position_utility: i32, before_hanging_utility: i32,
+    context: QuickSelectionContext<'_>, scratch: &mut QuickScratch, action: Action,
+    preview: ActionPreview, before_position_utility: i32, before_hanging_utility: i32,
 ) -> i32 {
     if preview.result != GameResult::Unfinished {
         return result_utility(preview.result, context.root_player);
     }
 
-    apply_position_changes(preview_board, preview.changes.as_slice());
-    let after_position_utility = quick_board_utility(preview_board, context.root_player);
-    let after_threats = immediate_action_map(preview_board, preview_actions);
+    apply_position_changes(&mut scratch.preview_board, preview.changes.as_slice());
+    apply_position_changes(&mut scratch.threat_board, preview.changes.as_slice());
+    let after_position_utility = quick_board_utility(&scratch.preview_board, context.root_player);
+    let after_threats = immediate_action_map_with_scratch(
+        &scratch.preview_board,
+        &mut scratch.threat_board,
+        &mut scratch.actions,
+    );
     let after_hanging_utility =
-        quick_hanging_utility(preview_board, context.root_player, &after_threats);
-    restore_position_changes(preview_board, preview.changes.as_slice());
+        quick_hanging_utility(&scratch.preview_board, context.root_player, &after_threats);
+    restore_position_changes(&mut scratch.threat_board, preview.changes.as_slice());
+    restore_position_changes(&mut scratch.preview_board, preview.changes.as_slice());
 
     let position_delta = after_position_utility - before_position_utility;
     let hanging_delta = after_hanging_utility - before_hanging_utility;
@@ -684,9 +695,12 @@ fn result_utility(result: GameResult, player: Player) -> i32 {
 }
 
 fn tactical_action_priority_from_preview(
-    board: &Board, preview_board: &mut Board, player: Player, action: Action,
-    preview: ActionPreview, recapture_target: Option<(u8, u8)>, threats: &ImmediateActions,
+    context: QuickSelectionContext<'_>, scratch: &mut QuickScratch, action: Action,
+    preview: ActionPreview, recapture_target: Option<(u8, u8)>,
 ) -> u8 {
+    let board = context.board;
+    let player = context.player;
+    let threats = context.threats.side(opponent(player));
     if let Some(target) = recapture_target
         && let Some(move_) = action_move(action)
         && move_.to == target
@@ -697,7 +711,14 @@ fn tactical_action_priority_from_preview(
     if is_win(preview.result, player) {
         return 3;
     }
-    if threats.winning && preview_avoids_immediate_win(preview_board, player, preview) {
+    if threats.winning
+        && preview_avoids_immediate_win(
+            &mut scratch.preview_board,
+            &mut scratch.threat_board,
+            player,
+            preview,
+        )
+    {
         return 2;
     }
     if let Some(move_) = action_move(action)
@@ -713,7 +734,7 @@ fn tactical_action_priority_from_preview(
     );
     if has_forcing_noncapture_impact_with_scratch(
         board,
-        preview_board,
+        &mut scratch.preview_board,
         action,
         preview.changes,
         kind,
@@ -872,21 +893,39 @@ fn should_continue_tactical_search(
     }
 
     let player = game.player();
-    let immediate = immediate_actions(game.board(), player, actions);
+    let mut preview_board = game.board().clone();
+    let immediate =
+        immediate_actions_with_scratch(game.board(), &mut preview_board, player, actions);
     if immediate.winning || !immediate.capture_targets.is_empty() {
         return true;
     }
-    immediate_actions(game.board(), opponent(player), actions).winning
+    immediate_actions_with_scratch(game.board(), &mut preview_board, opponent(player), actions)
+        .winning
 }
 
 fn immediate_action_map(board: &Board, actions: &mut Vec<Action>) -> ImmediateActionMap {
+    let mut preview_board = board.clone();
+    immediate_action_map_with_scratch(board, &mut preview_board, actions)
+}
+
+fn immediate_action_map_with_scratch(
+    board: &Board, preview_board: &mut Board, actions: &mut Vec<Action>,
+) -> ImmediateActionMap {
     ImmediateActionMap {
-        red: immediate_actions(board, Player::Red, actions),
-        black: immediate_actions(board, Player::Black, actions),
+        red: immediate_actions_with_scratch(board, preview_board, Player::Red, actions),
+        black: immediate_actions_with_scratch(board, preview_board, Player::Black, actions),
     }
 }
 
+#[cfg(test)]
 fn immediate_actions(board: &Board, player: Player, actions: &mut Vec<Action>) -> ImmediateActions {
+    let mut preview_board = board.clone();
+    immediate_actions_with_scratch(board, &mut preview_board, player, actions)
+}
+
+fn immediate_actions_with_scratch(
+    board: &Board, preview_board: &mut Board, player: Player, actions: &mut Vec<Action>,
+) -> ImmediateActions {
     let mut immediate = ImmediateActions::default();
     for (position, _) in board.iter() {
         let effective =
@@ -910,7 +949,12 @@ fn immediate_actions(board: &Board, player: Player, actions: &mut Vec<Action>) -
                 immediate.capture_targets.push(move_.to);
             }
             let profitable = is_win(preview.result, player)
-                || quick_change_utility(board, preview.changes.as_slice(), player) > 0;
+                || quick_change_utility_with_scratch(
+                    board,
+                    preview_board,
+                    preview.changes.as_slice(),
+                    player,
+                ) > 0;
             if profitable && !immediate.profitable_capture_targets.contains(&move_.to) {
                 immediate.profitable_capture_targets.push(move_.to);
             }
@@ -920,7 +964,7 @@ fn immediate_actions(board: &Board, player: Player, actions: &mut Vec<Action>) -
 }
 
 fn preview_avoids_immediate_win(
-    preview_board: &mut Board, player: Player, preview: ActionPreview,
+    preview_board: &mut Board, threat_board: &mut Board, player: Player, preview: ActionPreview,
 ) -> bool {
     if is_win(preview.result, player) || preview.result == GameResult::Draw {
         return true;
@@ -930,12 +974,21 @@ fn preview_avoids_immediate_win(
     }
 
     apply_position_changes(preview_board, preview.changes.as_slice());
+    apply_position_changes(threat_board, preview.changes.as_slice());
     let mut actions = Vec::new();
-    let avoids_win = !immediate_actions(preview_board, opponent(player), &mut actions).winning;
+    let avoids_win = !immediate_actions_with_scratch(
+        preview_board,
+        threat_board,
+        opponent(player),
+        &mut actions,
+    )
+    .winning;
+    restore_position_changes(threat_board, preview.changes.as_slice());
     restore_position_changes(preview_board, preview.changes.as_slice());
     avoids_win
 }
 
+#[cfg(test)]
 fn has_forcing_noncapture_impact(
     board: &Board, action: Action, changes: PositionChanges, kind: ResolvedActionKind,
 ) -> bool {
@@ -1042,15 +1095,11 @@ fn tactical_ability_changed(before: Piece, after: Piece) -> bool {
 }
 
 fn apply_position_changes(board: &mut Board, changes: &[PositionChange]) {
-    for change in changes {
-        board[change.at] = change.new;
-    }
+    board.apply(changes);
 }
 
 fn restore_position_changes(board: &mut Board, changes: &[PositionChange]) {
-    for change in changes {
-        board[change.at] = change.old;
-    }
+    board.undo(changes);
 }
 
 fn preview_action(board: &Board, action: Action) -> ActionPreview {
@@ -1085,9 +1134,10 @@ fn preview_action(board: &Board, action: Action) -> ActionPreview {
     ActionPreview { changes, result: result_after_changes(changes.as_slice()) }
 }
 
-fn quick_change_utility(board: &Board, changes: &[PositionChange], perspective: Player) -> i32 {
-    let mut next_board = board.clone();
-    apply_position_changes(&mut next_board, changes);
+fn quick_change_utility_with_scratch(
+    board: &Board, preview_board: &mut Board, changes: &[PositionChange], perspective: Player,
+) -> i32 {
+    apply_position_changes(preview_board, changes);
 
     let mut matched_new = [false; 3];
     let mut utility = 0;
@@ -1131,7 +1181,7 @@ fn quick_change_utility(board: &Board, changes: &[PositionChange], perspective: 
         if change.new.is_none() {
             continue;
         }
-        let Some(piece) = next_board.effective(change.at) else {
+        let Some(piece) = preview_board.effective(change.at) else {
             continue;
         };
         let units = tactical_piece_units(piece);
@@ -1141,7 +1191,14 @@ fn quick_change_utility(board: &Board, changes: &[PositionChange], perspective: 
             utility -= units;
         }
     }
+    restore_position_changes(preview_board, changes);
     utility
+}
+
+#[cfg(test)]
+fn quick_change_utility(board: &Board, changes: &[PositionChange], perspective: Player) -> i32 {
+    let mut preview_board = board.clone();
+    quick_change_utility_with_scratch(board, &mut preview_board, changes, perspective)
 }
 
 fn changes_remove_player_piece(changes: &[PositionChange], player: Player) -> bool {
@@ -1340,6 +1397,12 @@ struct ChildSelection {
     probed: usize,
 }
 
+struct QuickScratch {
+    preview_board: Board,
+    threat_board: Board,
+    actions: Vec<Action>,
+}
+
 #[derive(Copy, Clone)]
 struct QuickSelectionContext<'a> {
     board: &'a Board,
@@ -1421,8 +1484,11 @@ mod tests {
     use formation_chess_core::piece::Piece;
     use formation_chess_core::piece::Player;
 
+    use super::ImmediateActionMap;
+    use super::ImmediateActions;
     use super::MIN_TERMINAL_UTILITY;
     use super::MovementSearchContext;
+    use super::QuickScratch;
     use super::QuickSelectionContext;
     use super::ResolvedActionKind;
     use super::SearchWindow;
@@ -1774,17 +1840,22 @@ mod tests {
         let threats = immediate_actions(&board, Player::Black, &mut actions);
 
         assert!(threats.winning);
-        let mut preview_board = board.clone();
+        let threat_map = ImmediateActionMap { red: ImmediateActions::default(), black: threats };
+        let context = QuickSelectionContext {
+            board: &board,
+            root_player: Player::Red,
+            player: Player::Red,
+            recapture_target: None,
+            threats: &threat_map,
+            maximizing: true,
+        };
+        let mut scratch = QuickScratch {
+            preview_board: board.clone(),
+            threat_board: board.clone(),
+            actions: Vec::new(),
+        };
         assert_eq!(
-            tactical_action_priority_from_preview(
-                &board,
-                &mut preview_board,
-                Player::Red,
-                action,
-                preview,
-                None,
-                &threats,
-            ),
+            tactical_action_priority_from_preview(context, &mut scratch, action, preview, None),
             2,
         );
     }

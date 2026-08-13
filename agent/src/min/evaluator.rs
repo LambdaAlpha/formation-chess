@@ -356,8 +356,10 @@ fn analyze_position(game: &Game) -> PositionAnalysis {
         Phase::Move => {
             let red_actions = generate_player_actions(game.board(), Player::Red);
             let black_actions = generate_player_actions(game.board(), Player::Black);
+            let mut preview_board = game.board().clone();
             analyze_player_actions(
                 game.board(),
+                &mut preview_board,
                 Player::Red,
                 &red_actions,
                 &black_actions.capture_reach,
@@ -365,6 +367,7 @@ fn analyze_position(game: &Game) -> PositionAnalysis {
             );
             analyze_player_actions(
                 game.board(),
+                &mut preview_board,
                 Player::Black,
                 &black_actions,
                 &red_actions.capture_reach,
@@ -908,11 +911,18 @@ fn analyze_placement_mobility(board: &Board, player: Player, analysis: &mut Acti
 }
 
 fn analyze_player_actions(
-    board: &Board, player: Player, generated: &GeneratedPlayerActions,
+    board: &Board, preview_board: &mut Board, player: Player, generated: &GeneratedPlayerActions,
     opponent_reach: &CaptureReachMap, analysis: &mut ActionAnalysis,
 ) {
     for candidate in &generated.actions {
-        analyze_generated_action(board, player, *candidate, opponent_reach, analysis);
+        analyze_generated_action(
+            board,
+            preview_board,
+            player,
+            *candidate,
+            opponent_reach,
+            analysis,
+        );
     }
     finish_mobility_counts(analysis);
 }
@@ -923,25 +933,39 @@ fn analyze_piece_actions(
     analysis: &mut ActionAnalysis,
 ) {
     let opponent_reach = CaptureReachMap::default();
+    let mut preview_board = board.clone();
     for &action in actions {
         let candidate = GeneratedAction { action, origin: position, piece };
-        analyze_generated_action(board, player, candidate, &opponent_reach, analysis);
+        analyze_generated_action(
+            board,
+            &mut preview_board,
+            player,
+            candidate,
+            &opponent_reach,
+            analysis,
+        );
     }
     finish_mobility_counts(analysis);
 }
 
 fn analyze_generated_action(
-    board: &Board, player: Player, candidate: GeneratedAction, opponent_reach: &CaptureReachMap,
-    analysis: &mut ActionAnalysis,
+    board: &Board, preview_board: &mut Board, player: Player, candidate: GeneratedAction,
+    opponent_reach: &CaptureReachMap, analysis: &mut ActionAnalysis,
 ) {
-    let outcome = analyze_action_outcome(board, player, candidate.action);
+    let outcome =
+        analyze_action_outcome_with_scratch(board, preview_board, player, candidate.action);
     record_action_result(outcome.game_result, player, analysis);
     let usable = !is_loss(outcome.game_result, player) && outcome.game_result != GameResult::Draw;
     if !usable {
         return;
     }
 
-    let exchange_units = reply_adjusted_exchange_units(board, player, candidate.action, &outcome);
+    let exchange_units = reply_adjusted_exchange_units_with_scratch(
+        preview_board,
+        player,
+        candidate.action,
+        &outcome,
+    );
     record_exchange(board, candidate.action, outcome.kind, exchange_units, analysis);
     if exchange_units < 0 && !is_win(outcome.game_result, player) {
         return;
@@ -953,8 +977,9 @@ fn analyze_generated_action(
         let Some(move_) = action_move(candidate.action) else {
             unreachable!("resolved quiet move must have movement coordinates");
         };
-        quiet_move_safety(
+        quiet_move_safety_with_scratch(
             board,
+            preview_board,
             player,
             candidate.origin,
             move_.to,
@@ -987,9 +1012,9 @@ fn finish_mobility_counts(analysis: &mut ActionAnalysis) {
     analysis.safe_reachable_destinations = count_true(&analysis.safe_destinations);
 }
 
-fn quiet_move_safety(
-    board: &Board, perspective: Player, from: (u8, u8), to: (u8, u8), piece: Piece,
-    opponent_reach: &CaptureReachMap,
+fn quiet_move_safety_with_scratch(
+    board: &Board, preview_board: &mut Board, perspective: Player, from: (u8, u8), to: (u8, u8),
+    piece: Piece, opponent_reach: &CaptureReachMap,
 ) -> QuietMoveSafety {
     let target_effective = projected_piece_after_quiet_move(board, to, from, to, piece, piece);
     let destination_index = board_index(board, to);
@@ -1009,10 +1034,10 @@ fn quiet_move_safety(
             }
             let Some((game_result, exchange_units)) = preview_capture_against_quiet_move(
                 board,
+                preview_board,
                 perspective,
                 origin,
-                from,
-                to,
+                Move { from, to },
                 piece,
                 target_effective,
             ) else {
@@ -1035,6 +1060,23 @@ fn quiet_move_safety(
     safety
 }
 
+#[cfg(test)]
+fn quiet_move_safety(
+    board: &Board, perspective: Player, from: (u8, u8), to: (u8, u8), piece: Piece,
+    opponent_reach: &CaptureReachMap,
+) -> QuietMoveSafety {
+    let mut preview_board = board.clone();
+    quiet_move_safety_with_scratch(
+        board,
+        &mut preview_board,
+        perspective,
+        from,
+        to,
+        piece,
+        opponent_reach,
+    )
+}
+
 fn projected_piece_after_quiet_move(
     board: &Board, position: (u8, u8), moved_from: (u8, u8), moved_to: (u8, u8),
     moved_piece: Piece, mut piece: Piece,
@@ -1054,9 +1096,10 @@ fn projected_piece_after_quiet_move(
 }
 
 fn preview_capture_against_quiet_move(
-    board: &Board, perspective: Player, attacker_from: (u8, u8), moved_from: (u8, u8),
-    to: (u8, u8), target: Piece, target_effective: Piece,
+    board: &Board, preview_board: &mut Board, perspective: Player, attacker_from: (u8, u8),
+    move_: Move, target: Piece, target_effective: Piece,
 ) -> Option<(GameResult, i64)> {
+    let Move { from: moved_from, to } = move_;
     let attacker = board.get(attacker_from)?;
     let effective =
         projected_piece_after_quiet_move(board, attacker_from, moved_from, to, target, attacker);
@@ -1081,13 +1124,14 @@ fn preview_capture_against_quiet_move(
         PositionChanges::try_from_slice(&[departure, arrival])
             .expect("predicted capture changes must remain valid")
     };
-    let mut projected = board.clone();
-    projected[moved_from] = None;
-    projected[to] = Some(target);
-    Some((
-        result_after_changes(changes.as_slice()),
-        exchange_units(&projected, changes.as_slice(), perspective),
-    ))
+    let moved_from_old = preview_board[moved_from];
+    let to_old = preview_board[to];
+    preview_board[moved_from] = None;
+    preview_board[to] = Some(target);
+    let exchange = exchange_units_with_scratch(preview_board, changes.as_slice(), perspective);
+    preview_board[moved_from] = moved_from_old;
+    preview_board[to] = to_old;
+    Some((result_after_changes(changes.as_slice()), exchange))
 }
 
 fn record_quiet_move(board: &Board, from: (u8, u8), to: (u8, u8), analysis: &mut ActionAnalysis) {
@@ -1129,28 +1173,34 @@ fn record_exchange(
         analysis.exchange_units_by_target[target_index].max(exchange_units);
 }
 
-fn analyze_action_outcome(board: &Board, player: Player, action: Action) -> ActionOutcome {
+fn analyze_action_outcome_with_scratch(
+    board: &Board, preview_board: &mut Board, player: Player, action: Action,
+) -> ActionOutcome {
     match action {
-        Action::Move(move_) => outcome_from_changes(
+        Action::Move(move_) => outcome_from_changes_with_scratch(
             board,
+            preview_board,
             player,
             action,
             board.try_move(move_.from, move_.to).expect("enumerated move must remain valid"),
         ),
-        Action::Capture(move_) => outcome_from_changes(
+        Action::Capture(move_) => outcome_from_changes_with_scratch(
             board,
+            preview_board,
             player,
             action,
             board.try_capture(move_.from, move_.to).expect("enumerated capture must remain valid"),
         ),
-        Action::Push(move_) => outcome_from_changes(
+        Action::Push(move_) => outcome_from_changes_with_scratch(
             board,
+            preview_board,
             player,
             action,
             board.try_push(move_.from, move_.to).expect("enumerated push must remain valid"),
         ),
-        Action::Pull(move_) => outcome_from_changes(
+        Action::Pull(move_) => outcome_from_changes_with_scratch(
             board,
+            preview_board,
             player,
             action,
             board.try_pull(move_.from, move_.to).expect("enumerated pull must remain valid"),
@@ -1161,7 +1211,11 @@ fn analyze_action_outcome(board: &Board, player: Player, action: Action) -> Acti
             ActionOutcome {
                 changes,
                 game_result: GameResult::Draw,
-                exchange_units: exchange_units(board, changes.as_slice(), player),
+                exchange_units: exchange_units_with_scratch(
+                    preview_board,
+                    changes.as_slice(),
+                    player,
+                ),
                 kind: ResolvedActionKind::Other,
             }
         },
@@ -1186,19 +1240,26 @@ fn analyze_action_outcome(board: &Board, player: Player, action: Action) -> Acti
     }
 }
 
-fn outcome_from_changes(
-    board: &Board, player: Player, action: Action, changes: PositionChanges,
+fn outcome_from_changes_with_scratch(
+    board: &Board, preview_board: &mut Board, player: Player, action: Action,
+    changes: PositionChanges,
 ) -> ActionOutcome {
     ActionOutcome {
         changes,
         game_result: result_after_changes(changes.as_slice()),
-        exchange_units: exchange_units(board, changes.as_slice(), player),
+        exchange_units: exchange_units_with_scratch(preview_board, changes.as_slice(), player),
         kind: resolved_action_kind(board, action, changes),
     }
 }
 
-fn reply_adjusted_exchange_units(
-    board: &Board, player: Player, action: Action, outcome: &ActionOutcome,
+#[cfg(test)]
+fn analyze_action_outcome(board: &Board, player: Player, action: Action) -> ActionOutcome {
+    let mut preview_board = board.clone();
+    analyze_action_outcome_with_scratch(board, &mut preview_board, player, action)
+}
+
+fn reply_adjusted_exchange_units_with_scratch(
+    board: &mut Board, player: Player, action: Action, outcome: &ActionOutcome,
 ) -> i64 {
     if outcome.game_result != GameResult::Unfinished || outcome.exchange_units <= 0 {
         return outcome.exchange_units;
@@ -1207,20 +1268,28 @@ fn reply_adjusted_exchange_units(
         return outcome.exchange_units;
     };
 
-    let mut next_board = board.clone();
-    apply_position_changes(&mut next_board, outcome.changes.as_slice());
-    outcome.exchange_units
-        + static_exchange_replies(
-            &next_board,
-            player,
-            opponent(player),
-            move_.to,
-            STATIC_EXCHANGE_REPLY_DEPTH,
-        )
+    apply_position_changes(board, outcome.changes.as_slice());
+    let continuation = static_exchange_replies(
+        board,
+        player,
+        opponent(player),
+        move_.to,
+        STATIC_EXCHANGE_REPLY_DEPTH,
+    );
+    restore_position_changes(board, outcome.changes.as_slice());
+    outcome.exchange_units + continuation
+}
+
+#[cfg(test)]
+fn reply_adjusted_exchange_units(
+    board: &Board, player: Player, action: Action, outcome: &ActionOutcome,
+) -> i64 {
+    let mut preview_board = board.clone();
+    reply_adjusted_exchange_units_with_scratch(&mut preview_board, player, action, outcome)
 }
 
 fn static_exchange_replies(
-    board: &Board, perspective: Player, player: Player, target: (u8, u8), depth: u8,
+    board: &mut Board, perspective: Player, player: Player, target: (u8, u8), depth: u8,
 ) -> i64 {
     if depth == 0 || board.get(target).is_none() {
         return 0;
@@ -1228,44 +1297,51 @@ fn static_exchange_replies(
 
     let maximizing = player == perspective;
     let mut best_units = 0;
-    for (from, _) in board.iter() {
-        let effective = board.effective(from).expect("occupied point must have an effective piece");
-        if !effective.can_controlled_by(player) {
-            continue;
-        }
-
-        for action in
-            [Action::Capture(Move { from, to: target }), Action::Push(Move { from, to: target })]
-        {
-            let Some(outcome) = try_static_exchange_action(board, player, action) else {
+    for y in 0 .. board.height() {
+        for x in 0 .. board.width() {
+            let from = (x, y);
+            let Some(effective) = board.effective(from) else {
                 continue;
             };
-            if is_loss(outcome.game_result, player) || outcome.game_result == GameResult::Draw {
+            if !effective.can_controlled_by(player) {
                 continue;
             }
 
-            let exchange_units = static_exchange_action_units(board, &outcome, perspective);
-            if exchange_units == 0 {
-                continue;
-            }
-            let continuation_units = if outcome.game_result == GameResult::Unfinished {
-                let mut next_board = board.clone();
-                apply_position_changes(&mut next_board, outcome.changes.as_slice());
-                static_exchange_replies(
-                    &next_board,
-                    perspective,
-                    opponent(player),
-                    target,
-                    depth - 1,
-                )
-            } else {
-                0
-            };
-            let units = exchange_units + continuation_units;
-            if maximizing {
-                best_units = best_units.max(units);
-            } else {
-                best_units = best_units.min(units);
+            for action in [
+                Action::Capture(Move { from, to: target }),
+                Action::Push(Move { from, to: target }),
+            ] {
+                let Some(outcome) = try_static_exchange_action(board, player, action) else {
+                    continue;
+                };
+                if is_loss(outcome.game_result, player) || outcome.game_result == GameResult::Draw {
+                    continue;
+                }
+
+                let exchange_units = static_exchange_action_units(board, &outcome, perspective);
+                if exchange_units == 0 {
+                    continue;
+                }
+                let continuation_units = if outcome.game_result == GameResult::Unfinished {
+                    apply_position_changes(board, outcome.changes.as_slice());
+                    let continuation = static_exchange_replies(
+                        board,
+                        perspective,
+                        opponent(player),
+                        target,
+                        depth - 1,
+                    );
+                    restore_position_changes(board, outcome.changes.as_slice());
+                    continuation
+                } else {
+                    0
+                };
+                let units = exchange_units + continuation_units;
+                if maximizing {
+                    best_units = best_units.max(units);
+                } else {
+                    best_units = best_units.min(units);
+                }
             }
         }
     }
@@ -1273,7 +1349,7 @@ fn static_exchange_replies(
 }
 
 fn try_static_exchange_action(
-    board: &Board, player: Player, action: Action,
+    board: &mut Board, player: Player, action: Action,
 ) -> Option<ActionOutcome> {
     let move_ = action_move(action)?;
     let piece = board.effective(move_.from)?;
@@ -1285,11 +1361,18 @@ fn try_static_exchange_action(
         Action::Push(move_) => board.try_push(move_.from, move_.to).ok()?,
         _ => unreachable!("static exchange only probes captures and pushes"),
     };
-    Some(outcome_from_changes(board, player, action, changes))
+    let game_result = result_after_changes(changes.as_slice());
+    let exchange_units = exchange_units_with_scratch(board, changes.as_slice(), player);
+    Some(ActionOutcome {
+        changes,
+        game_result,
+        exchange_units,
+        kind: resolved_action_kind(board, action, changes),
+    })
 }
 
 fn static_exchange_action_units(
-    board: &Board, outcome: &ActionOutcome, perspective: Player,
+    board: &mut Board, outcome: &ActionOutcome, perspective: Player,
 ) -> i64 {
     if is_win(outcome.game_result, perspective) {
         return STATIC_EXCHANGE_TERMINAL_UNITS;
@@ -1297,16 +1380,28 @@ fn static_exchange_action_units(
     if is_loss(outcome.game_result, perspective) {
         return -STATIC_EXCHANGE_TERMINAL_UNITS;
     }
-    exchange_units(board, outcome.changes.as_slice(), perspective)
+    exchange_units_with_scratch(board, outcome.changes.as_slice(), perspective)
 }
 
 fn apply_position_changes(board: &mut Board, changes: &[PositionChange]) {
-    for change in changes {
-        board[change.at] = change.new;
-    }
+    board.apply(changes);
 }
 
-fn exchange_units(board: &Board, changes: &[PositionChange], player: Player) -> i64 {
+fn restore_position_changes(board: &mut Board, changes: &[PositionChange]) {
+    board.undo(changes);
+}
+
+fn exchange_units_with_scratch(
+    board: &mut Board, changes: &[PositionChange], player: Player,
+) -> i64 {
+    let units = exchange_units_before_changes(board, changes, player);
+    apply_position_changes(board, changes);
+    let added_units = exchange_units_after_changes(board, changes, player);
+    restore_position_changes(board, changes);
+    units + added_units
+}
+
+fn exchange_units_before_changes(board: &Board, changes: &[PositionChange], player: Player) -> i64 {
     let mut matched_new = [false; 3];
     let mut units = 0;
     for change in changes {
@@ -1336,21 +1431,46 @@ fn exchange_units(board: &Board, changes: &[PositionChange], player: Player) -> 
         units -= i64::from(value);
     }
 
-    if matched_new[.. changes.len()].iter().all(|matched| *matched) {
-        return units;
+    units
+}
+
+fn exchange_units_after_changes(board: &Board, changes: &[PositionChange], player: Player) -> i64 {
+    let mut matched_new = [false; 3];
+    for change in changes {
+        let Some(old_piece) = change.old else {
+            continue;
+        };
+        for (index, new_change) in changes.iter().enumerate() {
+            if matched_new[index] {
+                continue;
+            }
+            let Some(new_piece) = new_change.new else {
+                continue;
+            };
+            if new_piece.id() != old_piece.id() {
+                continue;
+            }
+            matched_new[index] = true;
+            break;
+        }
     }
 
-    let mut next_board = board.clone();
-    apply_position_changes(&mut next_board, changes);
+    let mut units = 0;
     for (index, change) in changes.iter().enumerate() {
         if matched_new[index] || change.new.is_none() {
             continue;
         }
         let value =
-            next_board.effective(change.at).map_or(0, |piece| exchange_piece_units(piece, player));
+            board.effective(change.at).map_or(0, |piece| exchange_piece_units(piece, player));
         units += i64::from(value);
     }
     units
+}
+
+#[cfg(test)]
+fn exchange_units(board: &Board, changes: &[PositionChange], player: Player) -> i64 {
+    let mut preview_board = board.clone();
+    exchange_units_with_scratch(&mut preview_board, changes, player)
 }
 
 fn exchange_piece_units(piece: Piece, player: Player) -> i32 {
