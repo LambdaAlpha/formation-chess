@@ -289,8 +289,8 @@ Every standard piece defaults to **Initiative**, **Capturable**, **Enemy Push**,
 
 | Group | Pieces | Pattern | Added abilities |
 |---|---|---|---|
-| Strategy | `将 计 势 变` | Corners | Diagonal Move, Swift Move, Push Ally, Push Enemy, Ally Push, Enemy Push, Pull Ally, Pull Enemy, Ally Pull, Enemy Pull |
-| Restraint | `风 林 火 山` | Four edges | Orthogonal Move, Swift Move, Push Ally, Push Enemy, Ally Push, Enemy Push, Pull Ally, Pull Enemy, Ally Pull, Enemy Pull |
+| Strategy | `将 计 势 变` | Corners | Diagonal Move, Swift Move, Push Ally, Push Enemy, Pull Ally, Pull Enemy |
+| Restraint | `风 林 火 山` | Four edges | Orthogonal Move, Swift Move, Push Ally, Push Enemy, Pull Ally, Pull Enemy |
 | Offense/Defense | `矛 盾 弹 雷` | Up-pointing triangle for Red; down-pointing for Black | One-step Broad Step, Capture |
 | Mobility | `士 卒 马 车` | Opposite pentagons: down-pointing for Red; up-pointing for Black | Capture |
 
