@@ -155,6 +155,19 @@ impl Board {
             .enumerate()
             .filter_map(move |(index, piece)| (*piece).map(|piece| (self.position(index), piece)))
     }
+
+    /// Occupied points and their pieces with formation effects applied.
+    pub fn effective_iter(&self) -> impl Iterator<Item = ((u8, u8), Piece)> + '_ {
+        self.pieces.iter().enumerate().filter_map(move |(index, piece)| {
+            let Some(_) = piece else {
+                return None;
+            };
+            let position = self.position(index);
+            let effective = self.effective(position)?;
+            Some((position, effective))
+        })
+    }
+
     /// Find the unique point holding `piece`.
     ///
     /// * `Ok(pos)` — exactly one copy at `pos`.

@@ -50,6 +50,7 @@ export function renderBoard(state) {
             const pieceData = cells[y] && cells[y][x];
             if (pieceData) {
                 intn.appendChild(createPieceElement(pieceData, false));
+                intn.appendChild(createPieceTooltip(pieceData));
             }
 
             boardEl.appendChild(intn);
@@ -78,6 +79,32 @@ export function renderBoard(state) {
         el.textContent = numeral(y + 1);
         frame.appendChild(el);
     }
+}
+
+function createPieceTooltip(piece) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'board-tooltip';
+    tooltip.setAttribute('role', 'tooltip');
+
+    const abilities = document.createElement('div');
+    abilities.className = 'effective-abilities';
+
+    const title = document.createElement('div');
+    title.className = 'effective-abilities-title';
+    title.textContent = '实时能力';
+    abilities.appendChild(title);
+
+    const list = document.createElement('div');
+    list.className = 'effective-abilities-list';
+    for (const ability of piece.effective_abilities || []) {
+        const item = document.createElement('span');
+        item.className = ability.effective ? 'effective' : 'ineffective';
+        item.textContent = ability.name;
+        list.appendChild(item);
+    }
+    abilities.appendChild(list);
+    tooltip.appendChild(abilities);
+    return tooltip;
 }
 
 function buildSVG(width, height, cs, padding, w, h) {

@@ -75,8 +75,6 @@ can command it.
 
 | Ability | Meaning |
 |---|---|
-| **Initiative**（主动） | The piece's owner may command it. |
-| **Passivity**（被动） | The opposing side may command it. |
 | **Push Ally**（推友） | Active permission to push an allied piece. |
 | **Push Enemy**（推敌） | Active permission to push an enemy piece. |
 | **Ally Push**（友推） | Permission to be pushed by an allied piece. |
@@ -91,15 +89,16 @@ can command it.
 | **Hard Capture**（难捉） | When this piece would be captured but has a valid landing, it is pushed instead. |
 | **Capture**（捕捉） | Normal active permission to capture. |
 | **Capturable**（被捉） | Normal passive permission to be captured. |
-| **Force Capture**（强捉） | Capture regardless of the target's **Capturable** ability; the attacker is removed too. |
 | **Counter Capture**（反捉） | When this piece is captured, remove the capturer too; it also bypasses the attacker's **Capture** requirement. |
+| **Force Capture**（强捉） | Capture regardless of the target's **Capturable** ability; the attacker is removed too. |
 | **Swift Move**（疾行） | Repeat one enabled movement direction for multiple steps. |
 | **Orthogonal Move**（纵横） | Horizontal or vertical movement. |
 | **Diagonal Move**（交错） | Diagonal movement. |
 | **Broad Step**（阔步） | Knight-step (`日`) movement. |
+| **Initiative**（主动） | The piece's owner may command it. |
+| **Passivity**（被动） | The opposing side may command it. |
 | **Leader**（首领） | The piece contributes to its owner's survival condition. |
 | **Peace Talk**（议和） | Exchange with an opposing **Leader** and end the game in a draw. |
-
 Formation effects depend only on the current position and do not persist after
 their conditions cease to hold. After an action, the new position produces a
 new set of effective abilities. An ability gained only at the destination

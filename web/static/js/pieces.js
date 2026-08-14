@@ -67,5 +67,53 @@ export function createPieceElement(piece, pool = false) {
     const wrap = document.createElement('div');
     wrap.className = 'piece-wrap';
     wrap.appendChild(element);
+
+    const tooltip = createPoolPieceTooltip(piece);
+    wrap.appendChild(tooltip);
+    wrap.addEventListener('mouseenter', () => {
+        document.body.appendChild(tooltip);
+        tooltip.classList.add('visible');
+        positionPoolPieceTooltip(wrap, tooltip);
+    });
+    wrap.addEventListener('mouseleave', () => {
+        tooltip.classList.remove('visible');
+        wrap.appendChild(tooltip);
+    });
     return wrap;
+}
+
+function positionPoolPieceTooltip(piece, tooltip) {
+    const pieceRect = piece.getBoundingClientRect();
+    const tooltipRect = tooltip.getBoundingClientRect();
+    const gap = 6;
+    const left = Math.min(
+        Math.max(8, pieceRect.left + pieceRect.width / 2 - tooltipRect.width / 2),
+        window.innerWidth - tooltipRect.width - 8,
+    );
+    const above = pieceRect.top - tooltipRect.height - gap;
+    const top = above >= 8 ? above : pieceRect.bottom + gap;
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+}
+
+function createPoolPieceTooltip(piece) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'pool-piece-tooltip';
+    tooltip.setAttribute('role', 'tooltip');
+
+    const title = document.createElement('div');
+    title.className = 'pool-piece-tooltip-title';
+    title.textContent = '初始能力';
+    tooltip.appendChild(title);
+
+    const list = document.createElement('div');
+    list.className = 'pool-piece-tooltip-list';
+    for (const ability of piece.abilities || []) {
+        const item = document.createElement('span');
+        item.className = ability.effective ? 'effective' : 'ineffective';
+        item.textContent = ability.name;
+        list.appendChild(item);
+    }
+    tooltip.appendChild(list);
+    return tooltip;
 }

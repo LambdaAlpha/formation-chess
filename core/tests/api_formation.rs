@@ -98,8 +98,8 @@ fn formation_effects_use_player_relationships() {
         (Formation::pawn, Ability::ORTHOGONAL_MOVE),
         (Formation::horse, Ability::BROAD_STEP),
         (Formation::rook, Ability::SWIFT_MOVE),
-        (Formation::fire, Ability::PUSH_FRIEND | Ability::PUSH_ENEMY),
-        (Formation::wind, Ability::PULL_FRIEND | Ability::PULL_ENEMY),
+        (Formation::fire, Ability::PUSH_ALLY | Ability::PUSH_ENEMY),
+        (Formation::wind, Ability::PULL_ALLY | Ability::PULL_ENEMY),
         (Formation::spear, Ability::CAPTURE),
         (Formation::shell, Ability::FORCE_CAPTURE),
         (Formation::mine, Ability::COUNTER_CAPTURE),
@@ -117,19 +117,19 @@ fn formation_effects_use_player_relationships() {
     );
     assert_eq!(
         Formation::mountain(Player::Red, Player::Red),
-        (Ability::FRIEND_PUSH | Ability::ENEMY_PUSH, Ability::FRIEND_PUSH)
+        (Ability::ALLY_PUSH | Ability::ENEMY_PUSH, Ability::ALLY_PUSH)
     );
     assert_eq!(
         Formation::mountain(Player::Red, Player::Black),
-        (Ability::FRIEND_PUSH | Ability::ENEMY_PUSH, Ability::ENEMY_PUSH)
+        (Ability::ALLY_PUSH | Ability::ENEMY_PUSH, Ability::ENEMY_PUSH)
     );
     assert_eq!(
         Formation::forest(Player::Red, Player::Red),
-        (Ability::FRIEND_PULL | Ability::ENEMY_PULL, Ability::FRIEND_PULL)
+        (Ability::ALLY_PULL | Ability::ENEMY_PULL, Ability::ALLY_PULL)
     );
     assert_eq!(
         Formation::forest(Player::Red, Player::Black),
-        (Ability::FRIEND_PULL | Ability::ENEMY_PULL, Ability::ENEMY_PULL)
+        (Ability::ALLY_PULL | Ability::ENEMY_PULL, Ability::ENEMY_PULL)
     );
     assert_eq!(
         Formation::stratagem(Player::Red, Player::Black),
@@ -163,7 +163,7 @@ fn strategy_and_restraint_groups_have_active_push_pull_capabilities() {
         Piece::RED_MOUNTAIN,
     ];
     let required =
-        [Ability::PUSH_FRIEND, Ability::PUSH_ENEMY, Ability::PULL_FRIEND, Ability::PULL_ENEMY];
+        [Ability::PUSH_ALLY, Ability::PUSH_ENEMY, Ability::PULL_ALLY, Ability::PULL_ENEMY];
 
     for piece in pieces {
         for ability in required {
@@ -186,9 +186,9 @@ fn strategy_and_restraint_groups_have_expected_passive_capabilities() {
     ];
 
     for (piece, pushed_by_ally, pushed_by_enemy, pulled_by_ally, pulled_by_enemy) in pieces {
-        assert_eq!(piece.ability.has(Ability::FRIEND_PUSH), pushed_by_ally, "{piece}");
+        assert_eq!(piece.ability.has(Ability::ALLY_PUSH), pushed_by_ally, "{piece}");
         assert_eq!(piece.ability.has(Ability::ENEMY_PUSH), pushed_by_enemy, "{piece}");
-        assert_eq!(piece.ability.has(Ability::FRIEND_PULL), pulled_by_ally, "{piece}");
+        assert_eq!(piece.ability.has(Ability::ALLY_PULL), pulled_by_ally, "{piece}");
         assert_eq!(piece.ability.has(Ability::ENEMY_PULL), pulled_by_enemy, "{piece}");
     }
 }
@@ -235,4 +235,28 @@ fn effective_piece_keeps_its_base_abilities_without_a_covering_formation() {
     board[(2, 2)] = Some(Piece::RED_PAWN);
 
     assert_eq!(board.effective((2, 2)).expect("uncovered piece").ability, Piece::RED_PAWN.ability);
+}
+
+#[test]
+fn ability_effective_iter_lists_every_defined_ability() {
+    let abilities: Vec<_> = Ability::INITIATIVE.effective_iter().collect();
+    assert_eq!(abilities.len(), 24);
+    assert_eq!(abilities[0], ("推友", false));
+    assert_eq!(abilities[20], ("主动", true));
+    assert_eq!(abilities[21], ("被动", false));
+    assert_eq!(Ability::CAPTURE.name(), "捕捉");
+}
+
+#[test]
+fn board_effective_iter_applies_formation_effects() {
+    let mut board = Board::new(3, 3);
+    board[(1, 1)] = Some(Piece::RED_GENERAL);
+    board[(0, 0)] = Some(Piece::RED_MOMENTUM);
+
+    let pieces: Vec<_> = board.effective_iter().collect();
+    assert_eq!(pieces.len(), 2);
+    let Some((_, piece)) = pieces.into_iter().find(|(position, _)| *position == (1, 1)) else {
+        panic!("expected general at (1, 1)");
+    };
+    assert!(piece.ability.has(Ability::HIDDEN_CAPTURE));
 }

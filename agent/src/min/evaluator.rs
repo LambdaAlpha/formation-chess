@@ -1672,13 +1672,13 @@ pub(super) fn tactical_piece_units(piece: Piece) -> i32 {
 }
 
 fn ability_units(ability: Ability) -> i32 {
-    ability_weight(ability, Ability::PUSH_FRIEND, 1)
+    ability_weight(ability, Ability::PUSH_ALLY, 1)
         + ability_weight(ability, Ability::PUSH_ENEMY, 4)
-        + ability_weight(ability, Ability::FRIEND_PUSH, 1)
+        + ability_weight(ability, Ability::ALLY_PUSH, 1)
         + ability_weight(ability, Ability::ENEMY_PUSH, -3)
-        + ability_weight(ability, Ability::PULL_FRIEND, 1)
+        + ability_weight(ability, Ability::PULL_ALLY, 1)
         + ability_weight(ability, Ability::PULL_ENEMY, 4)
-        + ability_weight(ability, Ability::FRIEND_PULL, 1)
+        + ability_weight(ability, Ability::ALLY_PULL, 1)
         + ability_weight(ability, Ability::ENEMY_PULL, -3)
         + ability_weight(ability, Ability::HIDDEN_CAPTURE, 4)
         + ability_weight(ability, Ability::EASY_CAPTURE, -4)
@@ -1695,9 +1695,9 @@ fn ability_units(ability: Ability) -> i32 {
 }
 
 fn active_power_units(ability: Ability) -> i32 {
-    ability_weight(ability, Ability::PUSH_FRIEND, 1)
+    ability_weight(ability, Ability::PUSH_ALLY, 1)
         + ability_weight(ability, Ability::PUSH_ENEMY, 4)
-        + ability_weight(ability, Ability::PULL_FRIEND, 1)
+        + ability_weight(ability, Ability::PULL_ALLY, 1)
         + ability_weight(ability, Ability::PULL_ENEMY, 4)
         + ability_weight(ability, Ability::HIDDEN_CAPTURE, 4)
         + ability_weight(ability, Ability::CAPTURE, 5)

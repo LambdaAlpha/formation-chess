@@ -45,14 +45,51 @@ pub struct ApiPiece {
     pub name: char,
     pub player: String,
     pub formation: u8,
+    pub abilities: Vec<ApiAbility>,
 }
 
 impl ApiPiece {
     pub fn from_piece(piece: Piece) -> Self {
+        let abilities = piece
+            .ability
+            .effective_iter()
+            .map(|(name, effective)| ApiAbility { name: name.to_owned(), effective })
+            .collect();
         Self {
             name: piece.name,
             player: player_to_str(piece.player),
             formation: piece.formation.points,
+            abilities,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ApiAbility {
+    pub name: String,
+    pub effective: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ApiBoardPiece {
+    pub name: char,
+    pub player: String,
+    pub formation: u8,
+    pub effective_abilities: Vec<ApiAbility>,
+}
+
+impl ApiBoardPiece {
+    pub fn from_piece(piece: Piece) -> Self {
+        let effective_abilities = piece
+            .ability
+            .effective_iter()
+            .map(|(name, effective)| ApiAbility { name: name.to_string(), effective })
+            .collect();
+        Self {
+            name: piece.name,
+            player: player_to_str(piece.player),
+            formation: piece.formation.points,
+            effective_abilities,
         }
     }
 }
@@ -61,7 +98,7 @@ impl ApiPiece {
 pub struct ApiBoard {
     pub width: u8,
     pub height: u8,
-    pub cells: Vec<Vec<Option<ApiPiece>>>,
+    pub cells: Vec<Vec<Option<ApiBoardPiece>>>,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -181,7 +218,9 @@ impl ApiState {
         let board = game.board();
         let cells = (0 .. board.height())
             .map(|y| {
-                (0 .. board.width()).map(|x| board.get((x, y)).map(ApiPiece::from_piece)).collect()
+                (0 .. board.width())
+                    .map(|x| board.effective((x, y)).map(ApiBoardPiece::from_piece))
+                    .collect()
             })
             .collect();
         let current = match game.player() {
@@ -530,6 +569,30 @@ mod tests {
             })
         );
         assert_eq!(api_resign.to_action().expect("decode resign"), resign);
+    }
+
+    #[test]
+    fn board_piece_protocol_includes_effective_abilities() {
+        let board_piece = ApiBoardPiece::from_piece(Piece::RED_GENERAL);
+        assert_eq!(board_piece.effective_abilities.len(), 24);
+        assert_eq!(board_piece.effective_abilities[0].name, "推友");
+        assert!(board_piece.effective_abilities[0].effective);
+        assert_eq!(board_piece.effective_abilities[20].name, "主动");
+        assert!(board_piece.effective_abilities[20].effective);
+        assert_eq!(board_piece.effective_abilities[21].name, "被动");
+        assert!(!board_piece.effective_abilities[21].effective);
+    }
+
+    #[test]
+    fn pool_piece_protocol_includes_initial_abilities() {
+        let piece = ApiPiece::from_piece(Piece::RED_GENERAL);
+        assert_eq!(piece.abilities.len(), 24);
+        assert_eq!(piece.abilities[0].name, "推友");
+        assert!(piece.abilities[0].effective);
+        assert_eq!(piece.abilities[20].name, "主动");
+        assert!(piece.abilities[20].effective);
+        assert_eq!(piece.abilities[21].name, "被动");
+        assert!(!piece.abilities[21].effective);
     }
 
     #[test]

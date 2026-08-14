@@ -43,16 +43,27 @@ function addTargetMarker(intersection, state) {
 
 function addTooltip(intersection, text, state) {
     if (!text) return;
-    const tooltip = document.createElement('div');
-    tooltip.className = `action-tooltip tooltip-${state}`;
-    tooltip.setAttribute('role', 'tooltip');
-    tooltip.textContent = text;
-    intersection.appendChild(tooltip);
+
+    let tooltip = intersection.querySelector('.board-tooltip');
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.className = 'board-tooltip';
+        tooltip.setAttribute('role', 'tooltip');
+        intersection.appendChild(tooltip);
+    }
+
+    const action = document.createElement('div');
+    action.className = `board-tooltip-action tooltip-${state}`;
+    action.textContent = text;
+    tooltip.prepend(action);
 }
 
 function removeElements(selector) {
     for (const element of document.querySelectorAll(selector)) {
         element.remove();
+    }
+    for (const tooltip of document.querySelectorAll('.board-tooltip:empty')) {
+        tooltip.remove();
     }
 }
 

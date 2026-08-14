@@ -109,29 +109,29 @@ impl Formation {
 
     /// Allies gain Pull Ally and Pull Enemy; enemies lose both.
     pub fn wind(owner: Player, object: Player) -> (Ability, Ability) {
-        let mask = Ability::PULL_FRIEND | Ability::PULL_ENEMY;
+        let mask = Ability::PULL_ALLY | Ability::PULL_ENEMY;
         Self::grant_allies_strip_enemies(owner, object, mask)
     }
 
     /// Replaces both passive pull abilities: allies gain Ally Pull and lose Enemy Pull;
     /// enemies gain Enemy Pull and lose Ally Pull.
     pub fn forest(owner: Player, object: Player) -> (Ability, Ability) {
-        let mask = Ability::FRIEND_PULL | Ability::ENEMY_PULL;
-        let update = if owner == object { Ability::FRIEND_PULL } else { Ability::ENEMY_PULL };
+        let mask = Ability::ALLY_PULL | Ability::ENEMY_PULL;
+        let update = if owner == object { Ability::ALLY_PULL } else { Ability::ENEMY_PULL };
         (mask, update)
     }
 
     /// Allies gain Push Ally and Push Enemy; enemies lose both.
     pub fn fire(owner: Player, object: Player) -> (Ability, Ability) {
-        let mask = Ability::PUSH_FRIEND | Ability::PUSH_ENEMY;
+        let mask = Ability::PUSH_ALLY | Ability::PUSH_ENEMY;
         Self::grant_allies_strip_enemies(owner, object, mask)
     }
 
     /// Replaces both passive push abilities: allies gain Ally Push and lose Enemy Push;
     /// enemies gain Enemy Push and lose Ally Push.
     pub fn mountain(owner: Player, object: Player) -> (Ability, Ability) {
-        let mask = Ability::FRIEND_PUSH | Ability::ENEMY_PUSH;
-        let update = if owner == object { Ability::FRIEND_PUSH } else { Ability::ENEMY_PUSH };
+        let mask = Ability::ALLY_PUSH | Ability::ENEMY_PUSH;
+        let update = if owner == object { Ability::ALLY_PUSH } else { Ability::ENEMY_PUSH };
         (mask, update)
     }
 
