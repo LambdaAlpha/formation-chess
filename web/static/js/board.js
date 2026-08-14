@@ -19,9 +19,9 @@ function cellSize(cols) {
 export function renderBoard(state) {
     const { width, height, cells } = state.board;
     const cs = cellSize(width);
-    const padding = cs;
-    const boardW = (width + 1) * cs;
-    const boardH = (height + 1) * cs;
+    const padding = Math.round(cs / 2);
+    const boardW = width * cs;
+    const boardH = height * cs;
     const label = Math.max(16, Math.round(cs * 0.42));
     const fontSize = Math.max(10, Math.round(cs * 0.26));
 
@@ -63,7 +63,7 @@ export function renderBoard(state) {
         el.style.width = `${cs}px`;
         el.style.height = `${label}px`;
         el.style.left = `${label + padding + x * cs - cs / 2}px`;
-        el.style.top = `${label}px`;
+        el.style.top = '0px';
         el.style.fontSize = `${fontSize}px`;
         el.textContent = numeral(x + 1);
         frame.appendChild(el);
@@ -74,6 +74,7 @@ export function renderBoard(state) {
         el.className = 'board-coord board-coord-left';
         el.style.width = `${label}px`;
         el.style.height = `${cs}px`;
+        el.style.left = '0px';
         el.style.top = `${label + padding + y * cs - cs / 2}px`;
         el.style.fontSize = `${fontSize}px`;
         el.textContent = numeral(y + 1);
