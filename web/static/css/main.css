@@ -102,7 +102,8 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 .board-tooltip {
   position: absolute; left: 50%; bottom: calc(100% - 2px); z-index: 30;
   width: max-content; max-width: 210px; padding: 6px 8px; border-radius: 5px;
-  background: #242424; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  background: #fff; color: #222; border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
   font-size: 11px; line-height: 1.45; pointer-events: none;
   opacity: 0; visibility: hidden; transform: translate(-50%, -2px);
   transition: opacity .12s, transform .12s, visibility .12s;
@@ -112,23 +113,23 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
   opacity: 1; visibility: visible; transform: translate(-50%, -6px);
 }
 .board-tooltip-title {
-  margin-bottom: 3px; color: #fff; font-weight: 600; font-size: 11px;
+  margin-bottom: 3px; color: #333; font-weight: 600; font-size: 11px;
 }
 .board-tooltip-action {
-  color: #fff; font-size: 11px; line-height: 1.45; white-space: nowrap;
+  color: #222; font-size: 11px; line-height: 1.45; white-space: nowrap;
 }
 .board-tooltip-action + .effective-abilities {
-  margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(255,255,255,.2);
+  margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(0,0,0,.12);
 }
-.effective-abilities-title { margin-bottom: 3px; color: #fff; font-weight: 600; }
+.effective-abilities-title { margin-bottom: 3px; color: #333; font-weight: 600; }
 .effective-abilities-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px 6px; }
-.effective-abilities-list span.effective { color: #fff; font-weight: 700; }
-.effective-abilities-list span.ineffective { color: #b0b0b0; }
+.effective-abilities-list span.effective { color: #222; font-weight: 700; }
+.effective-abilities-list span.ineffective { color: #999; }
 .formation-effect {
-  margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(255,255,255,.2);
+  margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(0,0,0,.12);
 }
-.formation-effect-title { margin-bottom: 3px; color: #fff; font-weight: 600; }
-.formation-effect-line { color: #fff; }
+.formation-effect-title { margin-bottom: 3px; color: #333; font-weight: 600; }
+.formation-effect-line { color: #222; }
 
 
 /* ---- pieces ---- */
@@ -155,20 +156,21 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 .pool .piece-wrap .piece { width: 100%; height: 100%; }
 .pool-piece-tooltip {
   position: fixed; z-index: 50; width: max-content; max-width: 210px;
-  padding: 6px 8px; border-radius: 5px; background: #242424; color: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,.25); font-size: 11px; line-height: 1.45;
+  padding: 6px 8px; border-radius: 5px; background: #fff; color: #222;
+  border: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  font-size: 11px; line-height: 1.45;
   pointer-events: none; opacity: 0; visibility: hidden;
   transform: translateY(2px); transition: opacity .12s, transform .12s, visibility .12s;
 }
 .pool-piece-tooltip.visible {
   opacity: 1; visibility: visible; transform: translateY(0);
 }
-.pool-piece-tooltip-title { margin-bottom: 3px; color: #fff; font-weight: 600; }
+.pool-piece-tooltip-title { margin-bottom: 3px; color: #333; font-weight: 600; }
 .pool-piece-tooltip-list {
   display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px 6px;
 }
-.pool-piece-tooltip-list span.effective { color: #fff; font-weight: 700; }
-.pool-piece-tooltip-list span.ineffective { color: #b0b0b0; }
+.pool-piece-tooltip-list span.effective { color: #222; font-weight: 700; }
+.pool-piece-tooltip-list span.ineffective { color: #999; }
 
 .piece-text {
   position: relative; z-index: 1; font-size: 18px; line-height: 1;
