@@ -56,13 +56,45 @@ function bindToolbar() {
 }
 
 function bindBoard() {
-    document.getElementById('board').addEventListener('click', (event) => {
+    const board = document.getElementById('board');
+    board.addEventListener('click', (event) => {
         const intersection = event.target.closest('.intersection');
         if (!intersection) return;
         const x = Number(intersection.dataset.x);
         const y = Number(intersection.dataset.y);
         handleBoardClick(x, y);
     });
+    board.addEventListener('mouseover', (event) => {
+        const intersection = event.target.closest('.intersection');
+        if (!intersection) return;
+        const tooltip = intersection.querySelector('.board-tooltip');
+        if (!tooltip) return;
+        positionBoardTooltip(intersection, tooltip);
+    });
+}
+
+function positionBoardTooltip(intersection, tooltip) {
+    const wrap = document.getElementById('board-wrap').getBoundingClientRect();
+    const rect = intersection.getBoundingClientRect();
+    const gap = 2;
+    const width = tooltip.offsetWidth;
+    const height = tooltip.offsetHeight;
+
+    const spaceUp = rect.top - wrap.top;
+    const spaceDown = wrap.bottom - rect.bottom;
+    const spaceLeft = rect.left - wrap.left;
+    const spaceRight = wrap.right - rect.right;
+
+    let side;
+    if (spaceUp >= height + gap || spaceDown >= height + gap) {
+        side = spaceUp >= spaceDown ? 'up' : 'down';
+    } else {
+        side = spaceLeft >= spaceRight ? 'left' : 'right';
+    }
+
+    tooltip.classList.toggle('tooltip-down', side === 'down');
+    tooltip.classList.toggle('tooltip-left', side === 'left');
+    tooltip.classList.toggle('tooltip-right', side === 'right');
 }
 
 function bindPool() {

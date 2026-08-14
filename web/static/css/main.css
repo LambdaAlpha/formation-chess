@@ -112,6 +112,27 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 .intersection:hover > .board-tooltip {
   opacity: 1; visibility: visible; transform: translate(-50%, -6px);
 }
+.board-tooltip.tooltip-down {
+  bottom: auto; top: calc(100% - 2px);
+  transform: translate(-50%, 2px);
+}
+.board-tooltip.tooltip-left {
+  left: auto; right: calc(100% - 2px); bottom: auto; top: 50%;
+  transform: translate(-2px, -50%);
+}
+.board-tooltip.tooltip-right {
+  left: calc(100% - 2px); bottom: auto; top: 50%;
+  transform: translate(2px, -50%);
+}
+.intersection:hover > .board-tooltip.tooltip-down {
+  transform: translate(-50%, 6px);
+}
+.intersection:hover > .board-tooltip.tooltip-left {
+  transform: translate(-6px, -50%);
+}
+.intersection:hover > .board-tooltip.tooltip-right {
+  transform: translate(6px, -50%);
+}
 .board-tooltip-title {
   margin-bottom: 3px; color: #333; font-weight: 600; font-size: 11px;
 }
