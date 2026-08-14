@@ -111,8 +111,11 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 .intersection:hover > .board-tooltip {
   opacity: 1; visibility: visible; transform: translate(-50%, -6px);
 }
+.board-tooltip-title {
+  margin-bottom: 3px; color: #fff; font-weight: 600; font-size: 11px;
+}
 .board-tooltip-action {
-  color: #fff; font-size: 12px; font-weight: 600; line-height: 1.2; white-space: nowrap;
+  color: #fff; font-size: 11px; line-height: 1.45; white-space: nowrap;
 }
 .board-tooltip-action + .effective-abilities {
   margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(255,255,255,.2);

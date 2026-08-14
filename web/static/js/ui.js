@@ -369,11 +369,24 @@ function switchablePositionsFrom(selectedX, selectedY) {
     return [...positions.values()];
 }
 
+function otherPiecePositions(selectedX, selectedY) {
+    if (!gameState) return [];
+    const positions = [];
+    const cells = gameState.board.cells || [];
+    for (let y = 0; y < cells.length; y++) {
+        const row = cells[y] || [];
+        for (let x = 0; x < row.length; x++) {
+            if (row[x] && (x !== selectedX || y !== selectedY)) positions.push([x, y]);
+        }
+    }
+    return positions;
+}
+
 function selectBoardPiece(x, y) {
     clearInteraction();
     setSelected(x, y);
     const actions = legalActionsFrom(x, y);
-    showMoveHints(actions, switchablePositionsFrom(x, y));
+    showMoveHints(actions, switchablePositionsFrom(x, y), otherPiecePositions(x, y));
     resignableAt = actions.some((action) => action.type === 'resign') ? [x, y] : null;
     refreshInteractivity();
     if (actions.length === 0) {

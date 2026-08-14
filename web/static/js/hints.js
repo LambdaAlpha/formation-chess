@@ -41,7 +41,7 @@ function addTargetMarker(intersection, state) {
     intersection.appendChild(marker);
 }
 
-function addTooltip(intersection, text, state) {
+function addTooltip(intersection, text, state, title) {
     if (!text) return;
 
     let tooltip = intersection.querySelector('.board-tooltip');
@@ -52,10 +52,18 @@ function addTooltip(intersection, text, state) {
         intersection.appendChild(tooltip);
     }
 
+    const content = document.createDocumentFragment();
+    if (title) {
+        const titleEl = document.createElement('div');
+        titleEl.className = 'board-tooltip-title';
+        titleEl.textContent = title;
+        content.appendChild(titleEl);
+    }
     const action = document.createElement('div');
     action.className = `board-tooltip-action tooltip-${state}`;
     action.textContent = text;
-    tooltip.prepend(action);
+    content.appendChild(action);
+    tooltip.prepend(content);
 }
 
 function removeElements(selector) {
@@ -67,7 +75,7 @@ function removeElements(selector) {
     }
 }
 
-export function showMoveHints(actions, switchablePositions = []) {
+export function showMoveHints(actions, switchablePositions = [], piecePositions = []) {
     clearHints();
     if (!actions) return;
 
@@ -84,6 +92,12 @@ export function showMoveHints(actions, switchablePositions = []) {
         const key = `${x},${y}`;
         if (!byPosition[key]) byPosition[key] = [];
         byPosition[key].push('switch');
+    }
+
+    const inactive = [];
+    for (const [x, y] of piecePositions) {
+        const key = `${x},${y}`;
+        if (!byPosition[key]) inactive.push(key);
     }
 
     for (const [key, actionTypes] of Object.entries(byPosition)) {
@@ -105,7 +119,14 @@ export function showMoveHints(actions, switchablePositions = []) {
 
         if (actionTargets.has(key)) addTargetMarker(intersection, 'legal');
         const labels = types.map(actionLabel);
-        addTooltip(intersection, multiple ? `可选：${labels.join(' · ')}` : labels[0], 'legal');
+        addTooltip(intersection, labels.join(' · '), 'legal', '可选操作');
+    }
+
+    for (const key of inactive) {
+        const [x, y] = key.split(',').map(Number);
+        const intersection = getIntersection(x, y);
+        if (!intersection) continue;
+        addTooltip(intersection, '无', 'legal', '可选操作');
     }
 }
 
@@ -117,7 +138,7 @@ export function clearHints() {
         delete element.dataset.hintType;
         delete element.dataset.hintTypes;
     }
-    removeElements('.marker-legal, .tooltip-legal');
+    removeElements('.marker-legal, .tooltip-legal, .board-tooltip-title');
 }
 
 export function clearSelection() {
