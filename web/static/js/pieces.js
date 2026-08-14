@@ -115,5 +115,31 @@ function createPoolPieceTooltip(piece) {
         list.appendChild(item);
     }
     tooltip.appendChild(list);
+    appendFormationEffect(tooltip, piece);
     return tooltip;
+}
+
+export function appendFormationEffect(tooltip, piece) {
+    const effect = piece.formation_effect;
+    if (!effect) return;
+
+    const formation = document.createElement('div');
+    formation.className = 'formation-effect';
+
+    const title = document.createElement('div');
+    title.className = 'formation-effect-title';
+    title.textContent = '阵法效果';
+    formation.appendChild(title);
+
+    const allies = document.createElement('div');
+    allies.className = 'formation-effect-line';
+    allies.textContent = '对己方：' + (effect.allies || '无');
+    formation.appendChild(allies);
+
+    const enemies = document.createElement('div');
+    enemies.className = 'formation-effect-line';
+    enemies.textContent = '对敌方：' + (effect.enemies || '无');
+    formation.appendChild(enemies);
+
+    tooltip.appendChild(formation);
 }

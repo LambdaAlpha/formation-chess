@@ -1,4 +1,4 @@
-import { createPieceElement } from './pieces.js';
+import { appendFormationEffect, createPieceElement } from './pieces.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const boardEl = document.getElementById('board');
@@ -105,6 +105,7 @@ function createPieceTooltip(piece) {
     }
     abilities.appendChild(list);
     tooltip.appendChild(abilities);
+    appendFormationEffect(tooltip, piece);
     return tooltip;
 }
 

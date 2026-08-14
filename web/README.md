@@ -100,6 +100,14 @@ Board and pool pieces identify their owner with the `player` field:
 pentagon orientations (`93` down and `186` up), as well as the mirrored triangle
 patterns.
 
+Board and pool pieces also carry `formation_effect`, two strings describing what
+the piece's formation grants (`赋予`) or strips (`剥夺`) from `allies` and
+`enemies`, using the official Chinese ability names:
+
+```json
+{ "formation_effect": { "allies": "赋予 拉友、拉敌", "enemies": "剥夺 拉友、拉敌" } }
+```
+
 ### Human actions
 
 All actions use a tagged `type` field:

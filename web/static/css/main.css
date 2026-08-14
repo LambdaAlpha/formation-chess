@@ -121,6 +121,11 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 .effective-abilities-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px 6px; }
 .effective-abilities-list span.effective { color: #fff; font-weight: 700; }
 .effective-abilities-list span.ineffective { color: #b0b0b0; }
+.formation-effect {
+  margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(255,255,255,.2);
+}
+.formation-effect-title { margin-bottom: 3px; color: #fff; font-weight: 600; }
+.formation-effect-line { color: #fff; }
 
 
 /* ---- pieces ---- */

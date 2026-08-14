@@ -1,8 +1,10 @@
+use formation_chess_core::ability::Ability;
 use formation_chess_core::action::Action;
 use formation_chess_core::action::GameResult;
 use formation_chess_core::action::Move;
 use formation_chess_core::action::Place;
 use formation_chess_core::board::Board;
+use formation_chess_core::formation::Formation;
 use formation_chess_core::game::Game;
 use formation_chess_core::game::GameConfig;
 use formation_chess_core::game::Phase;
@@ -46,6 +48,7 @@ pub struct ApiPiece {
     pub player: String,
     pub formation: u8,
     pub abilities: Vec<ApiAbility>,
+    pub formation_effect: ApiFormationEffect,
 }
 
 impl ApiPiece {
@@ -60,6 +63,7 @@ impl ApiPiece {
             player: player_to_str(piece.player),
             formation: piece.formation.points,
             abilities,
+            formation_effect: ApiFormationEffect::from_piece(piece),
         }
     }
 }
@@ -76,6 +80,7 @@ pub struct ApiBoardPiece {
     pub player: String,
     pub formation: u8,
     pub effective_abilities: Vec<ApiAbility>,
+    pub formation_effect: ApiFormationEffect,
 }
 
 impl ApiBoardPiece {
@@ -90,8 +95,65 @@ impl ApiBoardPiece {
             player: player_to_str(piece.player),
             formation: piece.formation.points,
             effective_abilities,
+            formation_effect: ApiFormationEffect::from_piece(piece),
         }
     }
+}
+
+/// The formation aura of a piece, described as two lines: what it grants or
+/// strips from allies and from enemies. Ability names use the official
+/// Chinese names from [`Ability::name`].
+#[derive(Debug, Clone, Serialize)]
+pub struct ApiFormationEffect {
+    pub allies: String,
+    pub enemies: String,
+}
+
+impl ApiFormationEffect {
+    pub fn from_piece(piece: Piece) -> Self {
+        Self {
+            allies: describe_formation_effect(piece.player, piece.player, piece.formation),
+            enemies: describe_formation_effect(
+                piece.player,
+                opponent(piece.player),
+                piece.formation,
+            ),
+        }
+    }
+}
+
+fn opponent(player: Player) -> Player {
+    match player {
+        Player::Red => Player::Black,
+        Player::Black => Player::Red,
+    }
+}
+
+/// Render the formation's effect on `object` (relative to `owner`) as a single
+/// line stating which abilities are granted and which are stripped.
+fn describe_formation_effect(owner: Player, object: Player, formation: Formation) -> String {
+    let (mask, update) = (formation.effect)(owner, object);
+    let mut gained = Vec::new();
+    let mut stripped = Vec::new();
+    for ability in Ability::iter() {
+        if !mask.has(ability) {
+            continue;
+        }
+        if update.has(ability) {
+            gained.push(ability.name());
+        } else {
+            stripped.push(ability.name());
+        }
+    }
+
+    let mut parts = Vec::new();
+    if !gained.is_empty() {
+        parts.push(format!("赋予 {}", gained.join("、")));
+    }
+    if !stripped.is_empty() {
+        parts.push(format!("剥夺 {}", stripped.join("、")));
+    }
+    if parts.is_empty() { "无".to_owned() } else { parts.join("；") }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -593,6 +655,21 @@ mod tests {
         assert!(piece.abilities[20].effective);
         assert_eq!(piece.abilities[21].name, "被动");
         assert!(!piece.abilities[21].effective);
+    }
+
+    #[test]
+    fn piece_protocol_includes_formation_effect_description() {
+        let general = ApiPiece::from_piece(Piece::RED_GENERAL);
+        assert_eq!(general.formation_effect.allies, "赋予 议和");
+        assert_eq!(general.formation_effect.enemies, "剥夺 议和");
+
+        let momentum = ApiPiece::from_piece(Piece::RED_MOMENTUM);
+        assert_eq!(momentum.formation_effect.allies, "赋予 暗捉；剥夺 易捉");
+        assert_eq!(momentum.formation_effect.enemies, "赋予 易捉；剥夺 暗捉");
+
+        let shield = ApiBoardPiece::from_piece(Piece::BLACK_SHIELD);
+        assert_eq!(shield.formation_effect.allies, "剥夺 被捉");
+        assert_eq!(shield.formation_effect.enemies, "赋予 被捉");
     }
 
     #[test]
