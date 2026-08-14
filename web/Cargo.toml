@@ -1,6 +1,6 @@
 [package]
 name = "formation-chess-web"
-version = "0.3.2"
+version = "0.3.3"
 edition = "2024"
 description = "Local browser interface and HTTP server for Formation Chess (阵棋)"
 repository = "https://github.com/LambdaAlpha/formation-chess"
@@ -12,8 +12,8 @@ categories = ["games"]
 workspace = true
 
 [dependencies]
-formation-chess-core = { path = "../core", version = "0.3.2" }
-formation-chess-agent = { path = "../agent", version = "0.3.2" }
+formation-chess-core = { path = "../core", version = "0.3.3" }
+formation-chess-agent = { path = "../agent", version = "0.3.3" }
 axum = "0.8"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
