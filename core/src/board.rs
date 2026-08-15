@@ -138,14 +138,21 @@ impl Board {
 
     /// The piece at (x,y) with formation effects from its neighbors applied.
     /// Returns None when (x,y) is empty or outside the board.
-    pub fn effective(&self, (x, y): (u8, u8)) -> Option<Piece> {
+    pub fn effective(&self, pos: (u8, u8)) -> Option<Piece> {
+        self.effective_pair(pos).map(|(_, effective)| effective)
+    }
+
+    /// The raw (base) and effective pieces at (x,y). Returns None when (x,y)
+    /// is empty or outside the board.
+    pub fn effective_pair(&self, (x, y): (u8, u8)) -> Option<(Piece, Piece)> {
         if !self.in_bounds((x, y)) {
             return None;
         }
         let local = self.local((x, y));
-        let mut piece = local.center?;
-        piece.take_effect(&local.neighbors);
-        Some(piece)
+        let base = local.center?;
+        let mut effective = base;
+        effective.take_effect(&local.neighbors);
+        Some((base, effective))
     }
 
     /// Occupied points and their pieces, in row-major order.

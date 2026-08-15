@@ -164,10 +164,6 @@ impl Ability {
         ]
         .into_iter()
     }
-    /// Every defined ability and whether it is currently present.
-    pub fn effective_iter(self) -> impl Iterator<Item = (&'static str, bool)> {
-        Self::iter().map(move |ability| (ability.name(), self.has(ability)))
-    }
 
     /// AND `other` into the bits selected by `mask`; bits outside `mask`
     /// are unchanged.

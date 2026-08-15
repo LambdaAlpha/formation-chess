@@ -238,16 +238,6 @@ fn effective_piece_keeps_its_base_abilities_without_a_covering_formation() {
 }
 
 #[test]
-fn ability_effective_iter_lists_every_defined_ability() {
-    let abilities: Vec<_> = Ability::INITIATIVE.effective_iter().collect();
-    assert_eq!(abilities.len(), 24);
-    assert_eq!(abilities[0], ("推友", false));
-    assert_eq!(abilities[20], ("主动", true));
-    assert_eq!(abilities[21], ("被动", false));
-    assert_eq!(Ability::CAPTURE.name(), "捕捉");
-}
-
-#[test]
 fn board_effective_iter_applies_formation_effects() {
     let mut board = Board::new(3, 3);
     board[(1, 1)] = Some(Piece::RED_GENERAL);

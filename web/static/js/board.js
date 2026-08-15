@@ -99,7 +99,7 @@ function createPieceTooltip(piece) {
     list.className = 'effective-abilities-list';
     for (const ability of piece.effective_abilities || []) {
         const item = document.createElement('span');
-        item.className = ability.effective ? 'effective' : 'ineffective';
+        item.className = abilityClass(ability);
         item.textContent = ability.name;
         list.appendChild(item);
     }
@@ -107,6 +107,11 @@ function createPieceTooltip(piece) {
     tooltip.appendChild(abilities);
     appendFormationEffect(tooltip, piece);
     return tooltip;
+}
+
+function abilityClass(ability) {
+    if (!ability.changed) return ability.effective ? 'effective' : 'ineffective';
+    return ability.effective ? 'added' : 'removed';
 }
 
 function buildSVG(width, height, cs, padding, w, h) {

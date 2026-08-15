@@ -53,10 +53,12 @@ pub struct ApiPiece {
 
 impl ApiPiece {
     pub fn from_piece(piece: Piece) -> Self {
-        let abilities = piece
-            .ability
-            .effective_iter()
-            .map(|(name, effective)| ApiAbility { name: name.to_owned(), effective })
+        let abilities = ability_rows(piece.ability, piece.ability)
+            .map(|(name, effective, changed)| ApiAbility {
+                name: name.to_owned(),
+                effective,
+                changed,
+            })
             .collect();
         Self {
             name: piece.name,
@@ -72,6 +74,17 @@ impl ApiPiece {
 pub struct ApiAbility {
     pub name: String,
     pub effective: bool,
+    /// Whether the effective value differs from the piece's configured ability.
+    pub changed: bool,
+}
+
+/// Every defined ability with its current presence and whether that presence
+/// differs from the piece's configured (base) ability, in display order.
+fn ability_rows(effective: Ability, base: Ability) -> impl Iterator<Item = (&'static str, bool, bool)> {
+    Ability::iter().map(move |item| {
+        let present = effective.has(item);
+        (item.name(), present, present != base.has(item))
+    })
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -84,40 +97,45 @@ pub struct ApiBoardPiece {
 }
 
 impl ApiBoardPiece {
-    pub fn from_piece(piece: Piece) -> Self {
-        let effective_abilities = piece
-            .ability
-            .effective_iter()
-            .map(|(name, effective)| ApiAbility { name: name.to_string(), effective })
+    pub fn from_pieces(base: Piece, effective: Piece) -> Self {
+        let effective_abilities = ability_rows(effective.ability, base.ability)
+            .map(|(name, effective, changed)| ApiAbility {
+                name: name.to_owned(),
+                effective,
+                changed,
+            })
             .collect();
         Self {
-            name: piece.name,
-            player: player_to_str(piece.player),
-            formation: piece.formation.points,
+            name: effective.name,
+            player: player_to_str(effective.player),
+            formation: effective.formation.points,
             effective_abilities,
-            formation_effect: ApiFormationEffect::from_piece(piece),
+            formation_effect: ApiFormationEffect::from_piece(effective),
         }
     }
 }
 
-/// The formation aura of a piece, described as two lines: what it grants or
-/// strips from allies and from enemies. Ability names use the official
-/// Chinese names from [`Ability::name`].
+/// The formation aura of a piece: which abilities it grants or strips from
+/// allies and from enemies. Ability names use the official Chinese names from
+/// [`Ability::name`].
 #[derive(Debug, Clone, Serialize)]
 pub struct ApiFormationEffect {
-    pub allies: String,
-    pub enemies: String,
+    pub allies: ApiFormationEffectLine,
+    pub enemies: ApiFormationEffectLine,
+}
+
+/// The granted and stripped abilities of one side of a formation effect.
+#[derive(Debug, Clone, Serialize)]
+pub struct ApiFormationEffectLine {
+    pub grants: Vec<String>,
+    pub strips: Vec<String>,
 }
 
 impl ApiFormationEffect {
     pub fn from_piece(piece: Piece) -> Self {
         Self {
-            allies: describe_formation_effect(piece.player, piece.player, piece.formation),
-            enemies: describe_formation_effect(
-                piece.player,
-                opponent(piece.player),
-                piece.formation,
-            ),
+            allies: formation_effect_line(piece.player, piece.player, piece.formation),
+            enemies: formation_effect_line(piece.player, opponent(piece.player), piece.formation),
         }
     }
 }
@@ -129,31 +147,27 @@ fn opponent(player: Player) -> Player {
     }
 }
 
-/// Render the formation's effect on `object` (relative to `owner`) as a single
-/// line stating which abilities are granted and which are stripped.
-fn describe_formation_effect(owner: Player, object: Player, formation: Formation) -> String {
+/// Which abilities the formation grants or strips from `object` (relative to
+/// `owner`).
+fn formation_effect_line(
+    owner: Player,
+    object: Player,
+    formation: Formation,
+) -> ApiFormationEffectLine {
     let (mask, update) = (formation.effect)(owner, object);
-    let mut gained = Vec::new();
-    let mut stripped = Vec::new();
+    let mut grants = Vec::new();
+    let mut strips = Vec::new();
     for ability in Ability::iter() {
         if !mask.has(ability) {
             continue;
         }
         if update.has(ability) {
-            gained.push(ability.name());
+            grants.push(ability.name().to_owned());
         } else {
-            stripped.push(ability.name());
+            strips.push(ability.name().to_owned());
         }
     }
-
-    let mut parts = Vec::new();
-    if !gained.is_empty() {
-        parts.push(format!("赋予 {}", gained.join("、")));
-    }
-    if !stripped.is_empty() {
-        parts.push(format!("剥夺 {}", stripped.join("、")));
-    }
-    if parts.is_empty() { "无".to_owned() } else { parts.join("；") }
+    ApiFormationEffectLine { grants, strips }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -281,7 +295,11 @@ impl ApiState {
         let cells = (0 .. board.height())
             .map(|y| {
                 (0 .. board.width())
-                    .map(|x| board.effective((x, y)).map(ApiBoardPiece::from_piece))
+                    .map(|x| {
+                        board
+                            .effective_pair((x, y))
+                            .map(|(base, effective)| ApiBoardPiece::from_pieces(base, effective))
+                    })
                     .collect()
             })
             .collect();
@@ -635,14 +653,46 @@ mod tests {
 
     #[test]
     fn board_piece_protocol_includes_effective_abilities() {
-        let board_piece = ApiBoardPiece::from_piece(Piece::RED_GENERAL);
+        let board_piece = ApiBoardPiece::from_pieces(Piece::RED_GENERAL, Piece::RED_GENERAL);
         assert_eq!(board_piece.effective_abilities.len(), 24);
         assert_eq!(board_piece.effective_abilities[0].name, "推友");
         assert!(board_piece.effective_abilities[0].effective);
+        assert!(!board_piece.effective_abilities[0].changed);
         assert_eq!(board_piece.effective_abilities[20].name, "主动");
         assert!(board_piece.effective_abilities[20].effective);
         assert_eq!(board_piece.effective_abilities[21].name, "被动");
         assert!(!board_piece.effective_abilities[21].effective);
+    }
+
+    #[test]
+    fn board_piece_protocol_marks_added_and_removed_abilities() {
+        // An allied momentum grants Hidden Capture (added).
+        let mut board = Board::new(3, 3);
+        board[(1, 1)] = Some(Piece::RED_GENERAL);
+        board[(0, 0)] = Some(Piece::RED_MOMENTUM);
+        let (base, effective) = board.effective_pair((1, 1)).expect("general at (1, 1)");
+        let piece = ApiBoardPiece::from_pieces(base, effective);
+        let hidden = piece
+            .effective_abilities
+            .iter()
+            .find(|ability| ability.name == "暗捉")
+            .expect("hidden capture ability");
+        assert!(hidden.effective);
+        assert!(hidden.changed);
+
+        // An enemy general strips Peace Talk (removed).
+        let mut board = Board::new(3, 3);
+        board[(1, 1)] = Some(Piece::RED_GENERAL);
+        board[(0, 0)] = Some(Piece::BLACK_GENERAL);
+        let (base, effective) = board.effective_pair((1, 1)).expect("general at (1, 1)");
+        let piece = ApiBoardPiece::from_pieces(base, effective);
+        let peace = piece
+            .effective_abilities
+            .iter()
+            .find(|ability| ability.name == "议和")
+            .expect("peace talk ability");
+        assert!(!peace.effective);
+        assert!(peace.changed);
     }
 
     #[test]
@@ -651,6 +701,7 @@ mod tests {
         assert_eq!(piece.abilities.len(), 24);
         assert_eq!(piece.abilities[0].name, "推友");
         assert!(piece.abilities[0].effective);
+        assert!(!piece.abilities[0].changed);
         assert_eq!(piece.abilities[20].name, "主动");
         assert!(piece.abilities[20].effective);
         assert_eq!(piece.abilities[21].name, "被动");
@@ -660,16 +711,22 @@ mod tests {
     #[test]
     fn piece_protocol_includes_formation_effect_description() {
         let general = ApiPiece::from_piece(Piece::RED_GENERAL);
-        assert_eq!(general.formation_effect.allies, "赋予 议和");
-        assert_eq!(general.formation_effect.enemies, "剥夺 议和");
+        assert_eq!(general.formation_effect.allies.grants, ["议和".to_owned()]);
+        assert!(general.formation_effect.allies.strips.is_empty());
+        assert!(general.formation_effect.enemies.grants.is_empty());
+        assert_eq!(general.formation_effect.enemies.strips, ["议和".to_owned()]);
 
         let momentum = ApiPiece::from_piece(Piece::RED_MOMENTUM);
-        assert_eq!(momentum.formation_effect.allies, "赋予 暗捉；剥夺 易捉");
-        assert_eq!(momentum.formation_effect.enemies, "赋予 易捉；剥夺 暗捉");
+        assert_eq!(momentum.formation_effect.allies.grants, ["暗捉".to_owned()]);
+        assert_eq!(momentum.formation_effect.allies.strips, ["易捉".to_owned()]);
+        assert_eq!(momentum.formation_effect.enemies.grants, ["易捉".to_owned()]);
+        assert_eq!(momentum.formation_effect.enemies.strips, ["暗捉".to_owned()]);
 
-        let shield = ApiBoardPiece::from_piece(Piece::BLACK_SHIELD);
-        assert_eq!(shield.formation_effect.allies, "剥夺 被捉");
-        assert_eq!(shield.formation_effect.enemies, "赋予 被捉");
+        let shield = ApiBoardPiece::from_pieces(Piece::BLACK_SHIELD, Piece::BLACK_SHIELD);
+        assert!(shield.formation_effect.allies.grants.is_empty());
+        assert_eq!(shield.formation_effect.allies.strips, ["被捉".to_owned()]);
+        assert_eq!(shield.formation_effect.enemies.grants, ["被捉".to_owned()]);
+        assert!(shield.formation_effect.enemies.strips.is_empty());
     }
 
     #[test]

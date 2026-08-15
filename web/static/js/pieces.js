@@ -192,15 +192,35 @@ export function appendFormationEffect(tooltip, piece) {
     title.textContent = '阵法效果';
     formation.appendChild(title);
 
-    const allies = document.createElement('div');
-    allies.className = 'formation-effect-line';
-    allies.textContent = '对己方：' + (effect.allies || '无');
-    formation.appendChild(allies);
-
-    const enemies = document.createElement('div');
-    enemies.className = 'formation-effect-line';
-    enemies.textContent = '对敌方：' + (effect.enemies || '无');
-    formation.appendChild(enemies);
+    formation.appendChild(formationEffectLine('对己方：', effect.allies));
+    formation.appendChild(formationEffectLine('对敌方：', effect.enemies));
 
     tooltip.appendChild(formation);
+}
+
+function formationEffectLine(prefix, effectLine) {
+    const line = document.createElement('div');
+    line.className = 'formation-effect-line';
+    line.appendChild(document.createTextNode(prefix));
+
+    const grants = (effectLine && effectLine.grants) || [];
+    const strips = (effectLine && effectLine.strips) || [];
+
+    if (grants.length === 0 && strips.length === 0) {
+        line.appendChild(document.createTextNode('无'));
+        return line;
+    }
+    if (grants.length > 0) {
+        const grant = document.createElement('span');
+        grant.className = 'formation-grant';
+        grant.textContent = '赋予 ' + grants.join('、');
+        line.appendChild(grant);
+    }
+    if (strips.length > 0) {
+        const strip = document.createElement('span');
+        strip.className = 'formation-strip';
+        strip.textContent = '剥夺 ' + strips.join('、');
+        line.appendChild(strip);
+    }
+    return line;
 }
