@@ -195,9 +195,6 @@ export function showPlayedAction(action) {
         if (from) {
             from.classList.add('played-from');
             addOriginMarker(from, 'played');
-            if (!action.to) {
-                addTooltip(from, `上一步：${actionLabel(action.type)}`, 'played');
-            }
         }
     }
     if (action.to) {
@@ -205,7 +202,6 @@ export function showPlayedAction(action) {
         if (to) {
             to.classList.add('played-to');
             addTargetMarker(to, 'played');
-            addTooltip(to, `上一步：${actionLabel(action.type)}`, 'played');
         }
     }
 }
@@ -214,5 +210,5 @@ export function clearPlayedAction() {
     for (const element of document.querySelectorAll('.played-from, .played-to')) {
         element.classList.remove('played-from', 'played-to');
     }
-    removeElements('.marker-played, .tooltip-played');
+    removeElements('.marker-played');
 }
