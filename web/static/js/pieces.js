@@ -70,16 +70,77 @@ export function createPieceElement(piece, pool = false) {
 
     const tooltip = createPoolPieceTooltip(piece);
     wrap.appendChild(tooltip);
-    wrap.addEventListener('mouseenter', () => {
-        document.body.appendChild(tooltip);
-        tooltip.classList.add('visible');
-        positionPoolPieceTooltip(wrap, tooltip);
-    });
-    wrap.addEventListener('mouseleave', () => {
-        tooltip.classList.remove('visible');
-        wrap.appendChild(tooltip);
-    });
+    bindPoolTooltip(wrap, tooltip);
     return wrap;
+}
+
+function showPoolPieceTooltip(wrap, tooltip) {
+    document.body.appendChild(tooltip);
+    tooltip.classList.add('visible');
+    positionPoolPieceTooltip(wrap, tooltip);
+}
+
+function hidePoolPieceTooltip(wrap, tooltip) {
+    tooltip.classList.remove('visible');
+    wrap.appendChild(tooltip);
+}
+
+function bindPoolTooltip(wrap, tooltip) {
+    if (window.matchMedia('(hover: hover)').matches) {
+        wrap.addEventListener('mouseenter', () => showPoolPieceTooltip(wrap, tooltip));
+        wrap.addEventListener('mouseleave', () => hidePoolPieceTooltip(wrap, tooltip));
+        return;
+    }
+
+    const LONG_PRESS_MS = 500;
+    const MOVE_TOLERANCE = 10;
+    let timer = null;
+    let startX = 0;
+    let startY = 0;
+    let longPressed = false;
+
+    function cancel() {
+        if (timer) {
+            clearTimeout(timer);
+            timer = null;
+        }
+        hidePoolPieceTooltip(wrap, tooltip);
+    }
+
+    // 长按触发后，阻止随后冒泡的 click 触发棋池选中
+    wrap.addEventListener('click', (event) => {
+        if (!longPressed) return;
+        event.preventDefault();
+        event.stopPropagation();
+        longPressed = false;
+    }, true);
+
+    wrap.addEventListener('touchstart', (event) => {
+        longPressed = false;
+        cancel();
+        if (event.touches.length !== 1) return;
+        const touch = event.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+        timer = setTimeout(() => {
+            longPressed = true;
+            showPoolPieceTooltip(wrap, tooltip);
+        }, LONG_PRESS_MS);
+    }, { passive: true });
+
+    wrap.addEventListener('touchmove', (event) => {
+        if (!timer) return;
+        const touch = event.touches[0];
+        if (!touch ||
+            Math.abs(touch.clientX - startX) > MOVE_TOLERANCE ||
+            Math.abs(touch.clientY - startY) > MOVE_TOLERANCE) {
+            cancel();
+            longPressed = false;
+        }
+    }, { passive: true });
+
+    wrap.addEventListener('touchend', cancel);
+    wrap.addEventListener('touchcancel', cancel);
 }
 
 function positionPoolPieceTooltip(piece, tooltip) {

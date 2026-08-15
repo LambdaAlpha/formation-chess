@@ -108,10 +108,6 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
   opacity: 0; visibility: hidden; transform: translate(-50%, -2px);
   transition: opacity .12s, transform .12s, visibility .12s;
 }
-.intersection:hover { z-index: 20; }
-.intersection:hover > .board-tooltip {
-  opacity: 1; visibility: visible; transform: translate(-50%, -6px);
-}
 .board-tooltip.tooltip-down {
   bottom: auto; top: calc(100% - 2px);
   transform: translate(-50%, 2px);
@@ -124,14 +120,25 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
   left: calc(100% - 2px); bottom: auto; top: 50%;
   transform: translate(2px, -50%);
 }
-.intersection:hover > .board-tooltip.tooltip-down {
-  transform: translate(-50%, 6px);
+
+/* 长按显示（不支持 hover 的设备） */
+.intersection.tooltip-visible { z-index: 20; }
+.intersection.tooltip-visible > .board-tooltip {
+  opacity: 1; visibility: visible; transform: translate(-50%, -6px);
 }
-.intersection:hover > .board-tooltip.tooltip-left {
-  transform: translate(-6px, -50%);
-}
-.intersection:hover > .board-tooltip.tooltip-right {
-  transform: translate(6px, -50%);
+.intersection.tooltip-visible > .board-tooltip.tooltip-down { transform: translate(-50%, 6px); }
+.intersection.tooltip-visible > .board-tooltip.tooltip-left { transform: translate(-6px, -50%); }
+.intersection.tooltip-visible > .board-tooltip.tooltip-right { transform: translate(6px, -50%); }
+
+/* 悬停显示（支持 hover 的设备） */
+@media (hover: hover) {
+  .intersection:hover { z-index: 20; }
+  .intersection:hover > .board-tooltip {
+    opacity: 1; visibility: visible; transform: translate(-50%, -6px);
+  }
+  .intersection:hover > .board-tooltip.tooltip-down { transform: translate(-50%, 6px); }
+  .intersection:hover > .board-tooltip.tooltip-left { transform: translate(-6px, -50%); }
+  .intersection:hover > .board-tooltip.tooltip-right { transform: translate(6px, -50%); }
 }
 .board-tooltip-title {
   margin-bottom: 3px; color: #333; font-weight: 600; font-size: 11px;

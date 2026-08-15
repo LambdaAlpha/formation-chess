@@ -71,6 +71,71 @@ function bindBoard() {
         if (!tooltip) return;
         positionBoardTooltip(intersection, tooltip);
     });
+    if (!window.matchMedia('(hover: hover)').matches) {
+        bindLongPressTooltips(board);
+    }
+}
+
+function bindLongPressTooltips(board) {
+    const LONG_PRESS_MS = 500;
+    const MOVE_TOLERANCE = 10;
+    let timer = null;
+    let startX = 0;
+    let startY = 0;
+    let pressed = null;
+    let longPressed = false;
+
+    function cancel() {
+        if (timer) {
+            clearTimeout(timer);
+            timer = null;
+        }
+        if (pressed) {
+            pressed.classList.remove('tooltip-visible');
+            pressed = null;
+        }
+    }
+
+    // 长按触发后，阻止随后冒泡的 click 执行落子/选中操作
+    board.addEventListener('click', (event) => {
+        if (!longPressed) return;
+        event.preventDefault();
+        event.stopPropagation();
+        longPressed = false;
+    }, true);
+
+    board.addEventListener('touchstart', (event) => {
+        longPressed = false;
+        cancel();
+        if (event.touches.length !== 1) return;
+        const touch = event.touches[0];
+        const intersection = event.target.closest('.intersection');
+        if (!intersection || !intersection.querySelector('.board-tooltip')) return;
+
+        pressed = intersection;
+        startX = touch.clientX;
+        startY = touch.clientY;
+        timer = setTimeout(() => {
+            longPressed = true;
+            const tooltip = intersection.querySelector('.board-tooltip');
+            if (tooltip) positionBoardTooltip(intersection, tooltip);
+            intersection.classList.add('tooltip-visible');
+        }, LONG_PRESS_MS);
+    }, { passive: true });
+
+    board.addEventListener('touchmove', (event) => {
+        if (!pressed || !timer) return;
+        const touch = event.touches[0];
+        if (!touch ||
+            Math.abs(touch.clientX - startX) > MOVE_TOLERANCE ||
+            Math.abs(touch.clientY - startY) > MOVE_TOLERANCE) {
+            cancel();
+            longPressed = false;
+        }
+    }, { passive: true });
+
+    board.addEventListener('touchend', cancel);
+    board.addEventListener('touchcancel', cancel);
 }
 
 function positionBoardTooltip(intersection, tooltip) {
