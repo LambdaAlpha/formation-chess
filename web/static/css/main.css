@@ -305,6 +305,7 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 
 .rules-content { font-size: 13px; line-height: 1.7; white-space: pre-wrap; max-height: 60vh; overflow-y: auto; font-family: monospace; }
 
+.abilities-intro { color: #666; font-size: 12px; line-height: 1.6; margin: -6px 0 14px; }
 .abilities-content { font-size: 13px; line-height: 1.6; max-height: 60vh; overflow-y: auto; }
 .ability-group { margin-bottom: 18px; }
 .ability-group:last-child { margin-bottom: 0; }
