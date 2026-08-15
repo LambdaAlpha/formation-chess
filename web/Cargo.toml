@@ -1,6 +1,6 @@
 [package]
 name = "formation-chess-web"
-version = "0.3.4"
+version = "0.3.5"
 edition = "2024"
 description = "Local browser interface and HTTP server for Formation Chess (阵棋)"
 repository = "https://github.com/LambdaAlpha/formation-chess"
