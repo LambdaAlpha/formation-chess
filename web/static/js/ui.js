@@ -10,7 +10,7 @@ import {
     showPlayedAction as highlightPlayedAction,
     clearPlayedAction,
 } from './hints.js';
-import { getRules } from './api.js';
+import { getAbilities, getRules } from './api.js';
 
 let gameState = null;
 let selection = { type: null };
@@ -43,6 +43,7 @@ function bindToolbar() {
         sendCommand({ type: 'undo' });
     });
     document.getElementById('btn-custom').addEventListener('click', openCustomPanel);
+    document.getElementById('btn-abilities').addEventListener('click', openAbilitiesPanel);
     document.getElementById('btn-rules').addEventListener('click', openRulesPanel);
     document.getElementById('btn-agent-hint').addEventListener('click', () => {
         sendCommand({ type: 'agent_analyze' });
@@ -356,6 +357,7 @@ export function showLoading(message) {
     document.getElementById('overlay').classList.remove('hidden');
     document.getElementById('panel-custom').classList.add('hidden');
     document.getElementById('panel-rules').classList.add('hidden');
+    document.getElementById('panel-abilities').classList.add('hidden');
     document.getElementById('panel-loading').classList.remove('hidden');
 }
 
@@ -715,6 +717,7 @@ function openCustomPanel() {
     document.getElementById('overlay').classList.remove('hidden');
     document.getElementById('panel-custom').classList.remove('hidden');
     document.getElementById('panel-rules').classList.add('hidden');
+    document.getElementById('panel-abilities').classList.add('hidden');
 }
 
 function confirmSizeGame() {
@@ -790,6 +793,7 @@ function closeAllPanels() {
     document.getElementById('overlay').classList.add('hidden');
     document.getElementById('panel-custom').classList.add('hidden');
     document.getElementById('panel-rules').classList.add('hidden');
+    document.getElementById('panel-abilities').classList.add('hidden');
     document.getElementById('panel-loading').classList.add('hidden');
 }
 
@@ -801,6 +805,7 @@ async function openRulesPanel() {
     document.getElementById('overlay').classList.remove('hidden');
     document.getElementById('panel-rules').classList.remove('hidden');
     document.getElementById('panel-custom').classList.add('hidden');
+    document.getElementById('panel-abilities').classList.add('hidden');
 
     const content = document.getElementById('panel-rules').querySelector('.rules-content');
     if (content.dataset.loaded === '1') return;
@@ -811,6 +816,58 @@ async function openRulesPanel() {
         content.textContent = data.text || '';
     } catch (error) {
         content.textContent = '无法加载规则：' + error.message;
+    }
+}
+
+async function openAbilitiesPanel() {
+    document.getElementById('overlay').classList.remove('hidden');
+    document.getElementById('panel-abilities').classList.remove('hidden');
+    document.getElementById('panel-custom').classList.add('hidden');
+    document.getElementById('panel-rules').classList.add('hidden');
+
+    const content = document.getElementById('panel-abilities').querySelector('.abilities-content');
+    if (content.dataset.loaded === '1') return;
+    content.dataset.loaded = '1';
+
+    try {
+        const data = await getAbilities();
+        renderAbilities(content, data.groups || []);
+    } catch (error) {
+        content.textContent = '无法加载能力表：' + error.message;
+    }
+}
+
+function renderAbilities(container, groups) {
+    container.innerHTML = '';
+    for (const group of groups) {
+        const section = document.createElement('section');
+        section.className = 'ability-group';
+
+        const title = document.createElement('h3');
+        title.className = 'ability-group-title';
+        title.textContent = group.category;
+        section.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'ability-grid';
+        for (const ability of group.abilities || []) {
+            const card = document.createElement('div');
+            card.className = 'ability-card';
+
+            const name = document.createElement('div');
+            name.className = 'ability-name';
+            name.textContent = ability.name;
+            card.appendChild(name);
+
+            const meaning = document.createElement('div');
+            meaning.className = 'ability-meaning';
+            meaning.textContent = ability.meaning;
+            card.appendChild(meaning);
+
+            grid.appendChild(card);
+        }
+        section.appendChild(grid);
+        container.appendChild(section);
     }
 }
 

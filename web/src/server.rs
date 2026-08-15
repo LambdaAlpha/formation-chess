@@ -318,17 +318,31 @@ impl GameSession {
 struct AppState {
     session: Mutex<GameSession>,
     rules_text: String,
+    abilities: Vec<ApiAbilityGroup>,
 }
 
 type SharedState = Arc<AppState>;
 type ApiResult<T> = Result<Json<T>, (StatusCode, Json<ApiError>)>;
+
+fn load_abilities() -> Vec<ApiAbilityGroup> {
+    let bytes = Assets::get("abilities.zh-Hans.json")
+        .expect("abilities.zh-Hans.json not embedded")
+        .data
+        .into_owned();
+    serde_json::from_slice(&bytes).expect("abilities.zh-Hans.json is not valid JSON")
+}
 
 pub fn build_app() -> Router {
     let rules_text = String::from_utf8(
         Assets::get("rules.zh-Hans.md").expect("rules.zh-Hans.md not embedded").data.into_owned(),
     )
     .expect("rules.zh-Hans.md is not valid UTF-8");
-    let state = Arc::new(AppState { session: Mutex::new(GameSession::standard()), rules_text });
+    let abilities = load_abilities();
+    let state = Arc::new(AppState {
+        session: Mutex::new(GameSession::standard()),
+        rules_text,
+        abilities,
+    });
 
     Router::new()
         .route("/", get(index_handler))
@@ -339,6 +353,7 @@ pub fn build_app() -> Router {
         .route("/api/new", post(new_handler))
         .route("/api/undo", post(undo_handler))
         .route("/api/rules", get(rules_handler))
+        .route("/api/abilities", get(abilities_handler))
         .route("/{*path}", get(asset_handler))
         .with_state(state)
 }
@@ -487,6 +502,10 @@ async fn undo_handler(
 
 async fn rules_handler(State(state): State<SharedState>) -> Json<ApiRulesResponse> {
     Json(ApiRulesResponse { text: state.rules_text.clone() })
+}
+
+async fn abilities_handler(State(state): State<SharedState>) -> Json<ApiAbilitiesResponse> {
+    Json(ApiAbilitiesResponse { groups: state.abilities.clone() })
 }
 
 fn api_error(status: StatusCode, error: String) -> (StatusCode, Json<ApiError>) {

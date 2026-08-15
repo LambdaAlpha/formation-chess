@@ -305,6 +305,20 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
 
 .rules-content { font-size: 13px; line-height: 1.7; white-space: pre-wrap; max-height: 60vh; overflow-y: auto; font-family: monospace; }
 
+.abilities-content { font-size: 13px; line-height: 1.6; max-height: 60vh; overflow-y: auto; }
+.ability-group { margin-bottom: 18px; }
+.ability-group:last-child { margin-bottom: 0; }
+.ability-group-title {
+  font-size: 14px; font-weight: 700; color: #333; margin-bottom: 8px;
+  padding-bottom: 5px; border-bottom: 1px solid #e0e0e0;
+}
+.ability-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ability-card {
+  padding: 8px 10px; border: 1px solid #e8e8e8; border-radius: 6px; background: #fafafa;
+}
+.ability-name { font-weight: 700; color: #222; margin-bottom: 2px; }
+.ability-meaning { color: #555; font-size: 12px; line-height: 1.55; }
+
 /* ---- popup for capture/push choice ---- */
 .popup { position: fixed; z-index: 200; background: #fff; border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,.18); overflow: hidden; }
 .popup button { display: block; width: 100%; padding: 8px 20px; border: none; background: none; cursor: pointer; font-size: 14px; text-align: left; white-space: nowrap; }
@@ -397,6 +411,7 @@ html, body { height: 100%; font-family: system-ui, sans-serif; background: #eee;
   .panel { padding: 16px; }
   .panel h2 { font-size: 16px; margin-bottom: 12px; }
   .panel-tabs .tab { font-size: 12px; padding: 4px 10px; }
+  .ability-grid { grid-template-columns: 1fr; }
 
   .popup button { font-size: 13px; padding: 6px 14px; }
 }

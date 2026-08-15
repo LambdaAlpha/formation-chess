@@ -41,6 +41,10 @@ export function getRules() {
     return requestJson('/api/rules');
 }
 
+export function getAbilities() {
+    return requestJson('/api/abilities');
+}
+
 export function postUndo(request) {
     return requestJson('/api/undo', jsonOptions(request));
 }

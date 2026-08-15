@@ -560,6 +560,25 @@ pub struct ApiRulesResponse {
     pub text: String,
 }
 
+/// One ability row in the static ability reference table.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiAbilityInfo {
+    pub name: String,
+    pub meaning: String,
+}
+
+/// A category grouping related abilities for the reference table.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiAbilityGroup {
+    pub category: String,
+    pub abilities: Vec<ApiAbilityInfo>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ApiAbilitiesResponse {
+    pub groups: Vec<ApiAbilityGroup>,
+}
+
 #[derive(Debug, Serialize)]
 pub struct ApiError {
     pub error: String,
